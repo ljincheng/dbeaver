@@ -227,7 +227,7 @@ public class GeneratorSourceCodeHtmlThymeleafListTable extends GeneratorSourceCo
 				 String codeName_upperCamelCase=CodeHelper.toUpperCamelCase(columnName);
 				 
 				 CodeHelper.addCodeLine(html_theadList, String.format("<th th:text=\"#{%s.%s.%s}\">%s</th>", mGroupName,tableName_lowerCamelCase,codeName,attr.getDescription()));
-				 CodeHelper.addCodeLine(html_thbodyList, String.format("<td th:text=\"#{modelObj?.%s}\"></td>", codeName));
+				 CodeHelper.addCodeLine(html_thbodyList, String.format("<td th:text=\"${modelObj?.%s}\"></td>", codeName));
 			 }
 		 }
 	    
@@ -249,9 +249,9 @@ public class GeneratorSourceCodeHtmlThymeleafListTable extends GeneratorSourceCo
 		 		"                <div class=\"dropdown\">\n" + 
 		 		"                    <a class=\"btn-link dropdown-toggle\" data-toggle=\"dropdown\" ><th:block th:text=\"#{i18n.actions}\" /> <span\n" + 
 		 		"                            class=\"caret\"></span></a>\n" + 
-		 		"                    <ul class=\"dropdown-menu pull-right\" role=\"menu\">\n" + 
-		 		"                        <li shiro:hasPermission=\"shop_category_edit\"><a class=\"btn-link\"  data-toggle=\"modal\" th:href=\"@{add(id=${modelObj.id })}\" th:text=\"#{i18n.edit}\">修改</a></li>\n" + 
-		 		"                        <li shiro:hasPermission=\"shop_category_delete\" ><a class=\"btn-link\" th:onclick=\"deleteData('[[${modelObj.id}]]',[[${modelObj.status}]])\" th:text=\"#{i18n.delete}\" >删除</a></li>\n" + 
+		 		"                    <ul class=\"dropdown-menu pull-right dropdown-menu-right\" role=\"menu\">\n" + 
+		 		"                        <li class=\"dropdown-item\" shiro:hasPermission=\"shop:category:edit\"><a class=\"btn-link\"  data-toggle=\"modal\" th:href=\"@{add(id=${modelObj.id })}\" th:text=\"#{i18n.edit}\">修改</a></li>\n" + 
+		 		"                        <li class=\"dropdown-item\" shiro:hasPermission=\"shop:category:delete\" ><a class=\"btn-link\" th:onclick=\"deleteData('[[${modelObj.id}]]',[[${modelObj.status}]])\" th:text=\"#{i18n.delete}\" >删除</a></li>\n" + 
 		 		"                    </ul>\n" + 
 		 		"                </div>\n" + 
 		 		"            </td>\n" + 
@@ -261,8 +261,8 @@ public class GeneratorSourceCodeHtmlThymeleafListTable extends GeneratorSourceCo
 		 		"    </table>\n" + 
 		 		"\n" + 
 		 		"\n" + 
-		 		"    <ul class=\"pager\" id=\"pager\">\n" + 
-		 		"    </ul>\n" + 
+		 		"    <nav aria-label=\"Page navigation\"><ul class=\"pager\" id=\"pager\">\n" + 
+		 		"    </ul></nav>\n" + 
 		 		"    <script type=\"text/javascript\" th:inline=\"javascript\">\n" + 
 		 		"        <!--\n" + 
 		 		"        $(function(){\n" + 
@@ -283,6 +283,20 @@ public class GeneratorSourceCodeHtmlThymeleafListTable extends GeneratorSourceCo
 	@Override
 	protected void generateCode(DBRProgressMonitor monitor, StringBuilder sql, DBPScriptObject object)
 			throws DBException {
+		// TODO Auto-generated method stub
+		
+	}
+	  
+
+	@Override
+	protected String saveFileName(DBRProgressMonitor monitor, DBSTable table) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void generateOneTableSourceCode(StringBuilder sql, DBRProgressMonitor monitor, DBSTable table,
+			Map<String, Object> options) throws DBException {
 		// TODO Auto-generated method stub
 		
 	}

@@ -2,6 +2,7 @@ package org.jkiss.dbeaver.model.sourcecode.html;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,6 +11,11 @@ import org.jkiss.dbeaver.model.DBPScriptObject;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sourcecode.GeneratorSourceCode;
 import org.jkiss.dbeaver.model.sourcecode.GeneratorSourceCodeExport;
+import org.jkiss.dbeaver.model.sourcecode.core.JavaTemplateContext;
+import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeTable;
+import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeTableAdapter;
+import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeTableColumn;
+import org.jkiss.dbeaver.model.sourcecode.template.TemplateEngine;
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.DBStructUtils;
@@ -30,8 +36,8 @@ public class GeneratorSourceCodeHtmlThymeleafAdd extends GeneratorSourceCode{
 	 
 	private GeneratorSourceCodeExport codeExport;
 	
-	 @Override
-	public void generateTableListCode(DBRProgressMonitor monitor, StringBuilder sql, List<DBSTable> tablesOrViews,Map<String, Object> options) throws DBException {
+	 
+	public void generateTableListCode_back(DBRProgressMonitor monitor, StringBuilder sql, List<DBSTable> tablesOrViews,Map<String, Object> options) throws DBException {
 		 
 		 
 		 	List<DBSTable> goodTableList = new ArrayList<>();
@@ -123,6 +129,13 @@ public class GeneratorSourceCodeHtmlThymeleafAdd extends GeneratorSourceCode{
 	 
 	 private void generateTableMybatisCode( StringBuilder sql,DBRProgressMonitor monitor,DBSTable table, Map<String, Object> options)throws DBException
 	 {
+		 String tplHtml=CodeHelper.loadResource("html_thymeleaf_add");
+		 sql.append(tplHtml);
+		 if(tplHtml!=null)
+		 {
+			 return;
+		 }
+		 
 		 String lf = GeneralUtils.getDefaultLineSeparator();
 		 String tableName=table.getName();
 		 String description=CodeHelper.emptyString(table.getDescription(),false);
@@ -287,6 +300,56 @@ public class GeneratorSourceCodeHtmlThymeleafAdd extends GeneratorSourceCode{
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	protected String saveFileName(DBRProgressMonitor monitor, DBSTable table) {
+		String mybatisFilePath=sourceCodeSetting.getOutPutDir()+"/"+sourceCodeSetting.getGroupName()+"/html/add.html";
+		return mybatisFilePath;
+	}
+
+	@Override
+	public void generateOneTableSourceCode(StringBuilder sql, DBRProgressMonitor monitor, DBSTable table,
+			Map<String, Object> options) throws DBException {
+		 String tplHtml=CodeHelper.loadResource("html_thymeleaf_add");
+		 try {
+			 	JavaTemplateContext context=new JavaTemplateContext(table, this.sourceCodeSetting, monitor);
+			 	String result=TemplateEngine.process(tplHtml, context);
+				System.out.println("result:"+result);
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
+	String html=null;
+		 if(tplHtml!=null)
+		 {
+			 SourceCodeTableAdapter tableAdapter=new SourceCodeTableAdapter();
+			 SourceCodeTable codeTable= tableAdapter.adapterTable(table, sourceCodeSetting, monitor);
+			 List<SourceCodeTableColumn> inputForms= codeTable.getInputForms();
+			 StringBuilder addFormSB=new StringBuilder();
+			 if(inputForms!=null && inputForms.size()>0)
+			 {
+				 String tplHtml_form=CodeHelper.loadResource("html_thymeleaf_add_form");
+				
+				 for(int i=0,k=inputForms.size();i<k;i++)
+				 {
+					 SourceCodeTableColumn tableColumn=inputForms.get(i);
+					 Map<String,String> params=new HashMap<String, String>();
+					 params.put("desciption",  tableColumn.getDesciption());
+					 params.put("column_i18n",  sourceCodeSetting.getGroupName()+(".")+(codeTable.getTableNameLowerCamelCase())+(tableColumn.getLowerCamelCaseName()));
+					 params.put("column_lowerCamelCaseName", tableColumn.getLowerCamelCaseName());
+					 String addFormHtml=CodeHelper.matchCodeTemplate(tplHtml_form, params);
+					addFormSB.append(addFormHtml);
+				 }
+			 }
+			 Map<String,String>params=new HashMap<String,String>();
+			 params.put("addForm", addFormSB.toString());
+			 html=CodeHelper.matchCodeTemplate(tplHtml, params);
+			// html=tplHtml.replaceAll("@addForm@", addFormSB.toString());
+			 
+		 }
+		 sql.append(html);
+		
+	}
 	    
+	
 
 }

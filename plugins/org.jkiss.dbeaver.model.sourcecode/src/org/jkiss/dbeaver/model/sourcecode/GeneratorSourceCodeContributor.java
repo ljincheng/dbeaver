@@ -30,8 +30,6 @@ import org.jkiss.dbeaver.model.sourcecode.ui.dialog.GeneratorSourceCodeDialog;
 import org.jkiss.dbeaver.model.sql.generator.SQLGenerator;
 import org.jkiss.dbeaver.model.sql.generator.SQLGeneratorProcedureCall;
 import org.jkiss.dbeaver.model.sql.generator.SQLGeneratorSelect;
-import org.jkiss.dbeaver.model.sql.registry.SQLGeneratorConfigurationRegistry;
-import org.jkiss.dbeaver.model.sql.registry.SQLGeneratorDescriptor;
 import org.jkiss.dbeaver.model.struct.DBSDataContainer;
 import org.jkiss.dbeaver.model.struct.DBSEntity;
 import org.jkiss.dbeaver.model.struct.DBSObject;

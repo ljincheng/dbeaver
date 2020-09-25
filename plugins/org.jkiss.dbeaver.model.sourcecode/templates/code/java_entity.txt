@@ -1,0 +1,28 @@
+package @@${entity.packageName}@@;
+import org.apache.ibatis.type.Alias;
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * @@${tableDesciption}@@
+ * @author @@${setting.author}@@
+ * @version v1.0
+ */
+@Alias("@@${entity.paramName}@@")
+public class @@${entity.simpleName}@@ implements Serializable {
+
+private static final long serialVersionUID = 1L;
+ 
+ @@#each{list:columns item:item text:"private ${item.javaType} ${item.lowerCamelCaseName};//${item.desciption}${system.lf}"}@@
+ 
+ @@#each{list:columns item:item text:"
+	 public void set${item.UpperCamelCaseName}(${item.javaType} ${item.lowerCamelCaseName}){
+	 	this.${item.lowerCamelCaseName}=${item.lowerCamelCaseName}; 
+	 };${system.lf}
+	 public ${item.javaType} get${item.UpperCamelCaseName}(){
+	 	return this.${item.lowerCamelCaseName}; 
+	 };${system.lf}
+	 "}@@
+	 
+ 
+}

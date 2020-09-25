@@ -12,12 +12,13 @@ import org.jkiss.dbeaver.model.DBPScriptObject;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithResult;
+import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeSetting;
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.struct.DBSEntity;
 
 public abstract class SourceCodeGenerator<OBJECT> extends DBRRunnableWithResult<String> {
     protected List<OBJECT> objects;
-    
+    protected SourceCodeSetting sourceCodeSetting=new SourceCodeSetting();
     private int generatorType=0;//生成代码处理类型：（0: console即直接显示, 1: file 生成文件保存）
     private boolean generatorResult=true;//生成代码处理结果:true成功，false失败
     private String rootPath;//代码存放根目录
@@ -76,7 +77,17 @@ public abstract class SourceCodeGenerator<OBJECT> extends DBRRunnableWithResult<
         options.putAll(generatorOptions);
     }
 
-    @Override
+    
+    
+    public SourceCodeSetting getSourceCodeSetting() {
+		return sourceCodeSetting;
+	}
+
+	public void setSourceCodeSetting(SourceCodeSetting sourceCodeSetting) {
+		this.sourceCodeSetting = sourceCodeSetting;
+	}
+
+	@Override
     public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException
     {
         StringBuilder code = new StringBuilder(100);

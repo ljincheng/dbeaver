@@ -1,5 +1,10 @@
 package org.jkiss.dbeaver.model.sourcecode.utils;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.Types;
 import java.util.Collection;
@@ -12,8 +17,10 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableColumn;
+import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
+import org.jkiss.utils.IOUtils;
 
 /**
  * 代码辅助方法
@@ -21,6 +28,8 @@ import org.jkiss.utils.CommonUtils;
  *
  */
 public class CodeHelper {
+	
+	private static final String TEMPLATE_DIR = "templates/code/";
 
 	public static boolean isEmpty(@Nullable String value) {
         return value == null || value.length() == 0;
@@ -327,5 +336,64 @@ public class CodeHelper {
 		    m.appendTail(sb);
 		   return sb.toString();
 	 }
+	 
+	 
+	 public static String matchCodeTemplate(String template, Map<String, String> params){
+		    StringBuffer sb = new StringBuffer();
+		    Matcher m = Pattern.compile("\\@\\@\\w+\\@\\@").matcher(template);
+		    while (m.find()) {
+		        String param = m.group();
+		        
+		        String value = params.get(param.substring(2, param.length() - 2));
+		        m.appendReplacement(sb, value==null ? "" :m.quoteReplacement(value));
+		    }
+		    m.appendTail(sb);
+		   return sb.toString();
+	 }
+	 
+//	 public static String standardExpressionPreprocessor(String template, Map<String, String> params)
+//	 {
+//		 StringBuffer sb = new StringBuffer();
+//		 Matcher m = Pattern.compile("\\@\\w+\\@").matcher(template);
+//		 if(m.find())
+//		 {
+//			 sb.append(template.substring(0,m.start(0)))
+//		 }
+//		 
+//	 }
+	 
+//	  public static String strPatternValuen( String pattern) {
+//		  if(pattern==null)
+//		  {
+//			  return "";
+//		  }
+//	        final String pat = pattern.replaceAll("\\\\", "\\\\\\\\").replaceAll("\\$","\\\\\$");
+//	        return pat;
+//	    }
+	 
+	 
+		public static String loadResource(String templateName) {
+			String resourceName = TEMPLATE_DIR + templateName + ".txt";
+
+			InputStream in = CodeHelper.class.getClassLoader().getResourceAsStream(resourceName);
+
+			if (in == null) {
+				return null;
+			}
+
+			try {
+				try (InputStreamReader isr = new InputStreamReader(in)) {
+					String viewTemplate = IOUtils.readToString(isr);
+					return viewTemplate;
+				} finally {
+					ContentUtils.close(in);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+
+			}
+			return null;
+
+		}
 
 }

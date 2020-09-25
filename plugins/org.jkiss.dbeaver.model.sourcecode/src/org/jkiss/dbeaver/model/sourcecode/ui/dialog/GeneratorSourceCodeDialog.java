@@ -12,6 +12,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
+import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeSetting;
 import org.jkiss.dbeaver.model.sourcecode.internal.UIMessages;
 import org.jkiss.dbeaver.model.sourcecode.registry.SourceCodeGenerator;
 import org.jkiss.dbeaver.model.sourcecode.ui.preferences.SourceCodePreferences;
@@ -25,6 +26,7 @@ import org.jkiss.utils.CommonUtils;
 public class GeneratorSourceCodeDialog extends ViewSQLDialog {
 
     private final SourceCodeGenerator<?> sqlGenerator;
+    private SourceCodeSetting sourceCodeSetting;
     private Text directoryText;
     private Text packageNameText;
     private Text pageClassFullNameText;
@@ -55,11 +57,12 @@ public class GeneratorSourceCodeDialog extends ViewSQLDialog {
     @Override
     protected Composite createDialogArea(Composite parent) {
 
-    	
+    	sourceCodeSetting=new SourceCodeSetting();
         Composite composite = super.createDialogArea(parent);
         Group settings = UIUtils.createControlGroup(composite, UIMessages.dbeaver_generate_sourcecode_settings, 2, GridData.FILL_HORIZONTAL, SWT.DEFAULT);
         directoryText=DialogUtils.createOutputFolderChooser(settings, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder,store.getString(SourceCodePreferences.SOURCECODE_CODEOUTPUTFOLDER), e->{
         	sqlGenerator.setRootPath(directoryText.getText());
+        	sourceCodeSetting.setOutPutDir(directoryText.getText());
         });
         packageNameText= UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_packageName, store.getString(SourceCodePreferences.SOURCECODE_PACKAGENAME));
         pageClassFullNameText= UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_pageClassFullName, store.getString(SourceCodePreferences.SOURCECODE_PAGECLASSFULLNAME));
@@ -71,27 +74,43 @@ public class GeneratorSourceCodeDialog extends ViewSQLDialog {
         tpl_baseController= UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_baseController, store.getString(SourceCodePreferences.SOURCECODE_BASECONTROLLER));
         
         sqlGenerator.setRootPath(directoryText.getText());
+        sourceCodeSetting.setOutPutDir(directoryText.getText());
         sqlGenerator.setPackageName(packageNameText.getText());
+        sourceCodeSetting.setPackagePath(packageNameText.getText());
 //        sqlGenerator.setEntitySuffix(fileRuleText.getText());
         sqlGenerator.setPageClassFullName(pageClassFullNameText.getText());
+        sourceCodeSetting.setClassPage(pageClassFullNameText.getText());
         sqlGenerator.setAuthor(store.getString(SourceCodePreferences.SOURCECODE_AUTHOR));
+        sourceCodeSetting.setAuthor(store.getString(SourceCodePreferences.SOURCECODE_AUTHOR));
         sqlGenerator.setGroupName(groupNameText.getText());
+        sourceCodeSetting.setGroupName(groupNameText.getText());
         
         sqlGenerator.setTpl_assertUtils(tpl_assertUtils.getText());
+        sourceCodeSetting.setClassAssertUtils(tpl_assertUtils.getText());
         sqlGenerator.setTpl_baseController(tpl_baseController.getText());
+        sourceCodeSetting.setClassBaseController(tpl_baseController.getText());
         sqlGenerator.setTpl_businessException(tpl_businessException.getText());
+        sourceCodeSetting.setClassBusinessException(tpl_businessException.getText());
         sqlGenerator.setTpl_jsonView(tpl_jsonView.getText());
+        sourceCodeSetting.setClassJsonView(tpl_jsonView.getText());
         
         //设置文件规则
         sqlGenerator.setRuleEntity(store.getString(SourceCodePreferences.SOURCECODE_RULE_ENTITY));
+        sourceCodeSetting.setRuleEntity(store.getString(SourceCodePreferences.SOURCECODE_RULE_ENTITY));
         sqlGenerator.setRuleEntityLombokData(store.getString(SourceCodePreferences.SOURCECODE_RULE_ENTITY_LOMBOKDATA));
         sqlGenerator.setRuleDao(store.getString(SourceCodePreferences.SOURCECODE_RULE_DAO));
+        sourceCodeSetting.setRuleDao(store.getString(SourceCodePreferences.SOURCECODE_RULE_DAO));
         sqlGenerator.setRuleComponent(store.getString(SourceCodePreferences.SOURCECODE_RULE_COMPONENT));
+        sourceCodeSetting.setRuleComponent(store.getString(SourceCodePreferences.SOURCECODE_RULE_COMPONENT));
         sqlGenerator.setRuleComponentImpl(store.getString(SourceCodePreferences.SOURCECODE_RULE_COMPONENT_IMPL));
+        sourceCodeSetting.setRuleComponentImpl(store.getString(SourceCodePreferences.SOURCECODE_RULE_COMPONENT_IMPL));
         sqlGenerator.setRuleService(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE));
+        sourceCodeSetting.setRuleService(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE));
         sqlGenerator.setRuleServiceImpl(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE_IMPL));
+        sourceCodeSetting.setRuleServiceImpl(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE_IMPL));
         sqlGenerator.setRuleController(store.getString(SourceCodePreferences.SOURCECODE_RULE_CONTROLLER));
-        
+        sourceCodeSetting.setRuleController(store.getString(SourceCodePreferences.SOURCECODE_RULE_CONTROLLER));
+        sqlGenerator.setSourceCodeSetting(sourceCodeSetting);
         UIUtils.runInUI(sqlGenerator);
         
         Object sql = sqlGenerator.getResult();
@@ -118,14 +137,24 @@ public class GeneratorSourceCodeDialog extends ViewSQLDialog {
         if (buttonId == IDialogConstants.RETRY_ID) {
         	 sqlGenerator.setGeneratorType(0);
         	 sqlGenerator.setRootPath(directoryText.getText());
+        	 sourceCodeSetting.setOutPutDir(directoryText.getText());
              sqlGenerator.setPackageName(packageNameText.getText());
+             sourceCodeSetting.setPackagePath(packageNameText.getText());
              sqlGenerator.setTpl_assertUtils(tpl_assertUtils.getText());
+             sourceCodeSetting.setClassAssertUtils(tpl_assertUtils.getText());
              sqlGenerator.setTpl_baseController(tpl_baseController.getText());
+             sourceCodeSetting.setClassBaseController(tpl_baseController.getText());
              sqlGenerator.setTpl_businessException(tpl_businessException.getText());
+             sourceCodeSetting.setClassBusinessException(tpl_businessException.getText());
              sqlGenerator.setTpl_jsonView(tpl_jsonView.getText());
+             sourceCodeSetting.setClassJsonView(tpl_jsonView.getText());
 //             sqlGenerator.setEntitySuffix(fileRuleText.getText());
              sqlGenerator.setPageClassFullName(pageClassFullNameText.getText());
+             sourceCodeSetting.setClassPage(pageClassFullNameText.getText());
              sqlGenerator.setGroupName(groupNameText.getText());
+             sourceCodeSetting.setGroupName(groupNameText.getText());
+             sqlGenerator.setSourceCodeSetting(sourceCodeSetting);
+             sqlGenerator.setSourceCodeSetting(sourceCodeSetting);
              SourceCodePreferences.saveDefaultPreferencesValue(store, SourceCodePreferences.SOURCECODE_GROUPNAME, groupNameText.getText());
         	UIUtils.runInUI(sqlGenerator);
         	 Object sql = sqlGenerator.getResult();
@@ -138,16 +167,23 @@ public class GeneratorSourceCodeDialog extends ViewSQLDialog {
 //        	GeneratorSourceCodeExport export=new GeneratorSourceCodeExport(directoryText.getText());
 //        	export.sa
         	sqlGenerator.setGeneratorType(1);
-        	sqlGenerator.setRootPath(directoryText.getText());
-            sqlGenerator.setPackageName(packageNameText.getText());
-            sqlGenerator.setTpl_assertUtils(tpl_assertUtils.getText());
-            sqlGenerator.setTpl_baseController(tpl_baseController.getText());
-            sqlGenerator.setTpl_businessException(tpl_businessException.getText());
-            sqlGenerator.setTpl_jsonView(tpl_jsonView.getText());
-//            sqlGenerator.setEntitySuffix(entitySuffixText.getText());
-            sqlGenerator.setPageClassFullName(pageClassFullNameText.getText());
-            sqlGenerator.setAuthor(groupNameText.getText());
-            sqlGenerator.setGroupName(groupNameText.getText());
+        	 sqlGenerator.setRootPath(directoryText.getText());
+        	 sourceCodeSetting.setOutPutDir(directoryText.getText());
+             sqlGenerator.setPackageName(packageNameText.getText());
+             sourceCodeSetting.setPackagePath(packageNameText.getText());
+             sqlGenerator.setTpl_assertUtils(tpl_assertUtils.getText());
+             sourceCodeSetting.setClassAssertUtils(tpl_assertUtils.getText());
+             sqlGenerator.setTpl_baseController(tpl_baseController.getText());
+             sourceCodeSetting.setClassBaseController(tpl_baseController.getText());
+             sqlGenerator.setTpl_businessException(tpl_businessException.getText());
+             sourceCodeSetting.setClassBusinessException(tpl_businessException.getText());
+             sqlGenerator.setTpl_jsonView(tpl_jsonView.getText());
+             sourceCodeSetting.setClassJsonView(tpl_jsonView.getText());
+             sqlGenerator.setPageClassFullName(pageClassFullNameText.getText());
+             sourceCodeSetting.setClassPage(pageClassFullNameText.getText());
+             sqlGenerator.setGroupName(groupNameText.getText());
+             sourceCodeSetting.setGroupName(groupNameText.getText());
+             sqlGenerator.setSourceCodeSetting(sourceCodeSetting);
             SourceCodePreferences.saveDefaultPreferencesValue(store, SourceCodePreferences.SOURCECODE_GROUPNAME, groupNameText.getText());
         	UIUtils.runInUI(sqlGenerator);
         	boolean result=sqlGenerator.getGeneratorResult();

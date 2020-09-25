@@ -214,46 +214,62 @@ public class GeneratorSourceCodeHtmlThymeleafList extends GeneratorSourceCode{
 	         }
 	         
 	     }
+	     
+	     StringBuilder form_list=new StringBuilder();
+	     if(attrs!=null)
+		 {
+			 for(DBSEntityAttribute attr:attrs)
+			 { 
+				 String columnName=attr.getName();
+				 String codeName=CodeHelper.toLowerCamelCase(columnName);
+				 String codeName_upperCamelCase=CodeHelper.toUpperCamelCase(columnName);
+				 
+				 CodeHelper.addCodeLine(form_list, String.format("<div class=\"form-group\">\n" + 
+				 		"    <label th:text=\"#{%s.%s.%s}\">%s</label>\n" + 
+				 		"    <input type=\"text\" class=\"form-control\" name=\"%s\" >\n" + 
+				 		"</div>", mGroupName,tableName_lowerCamelCase,codeName,attr.getDescription(),codeName));
+			 }
+		 }
+	    
     
 		 String html="<!DOCTYPE html>\n" + 
 		 		"<html lang=\"en\" xmlns:th=\"http://www.thymeleaf.org\" xmlns:secure=\"http://www.pollix.at/thymeleaf/shiro\">\n" + 
 		 		"<head >\n" + 
 		 		"    <meta charset=\"UTF-8\">\n" + 
 		 		"    <title>%s</title>\n" + 
+		 		"<th:block th:replace=\"fragments/headTag2 ::style \"></th:block>"+
 		 		"</head>\n" + 
 		 		"<body>\n" + 
-		 		"<div id=\"alertContent\"></div>\n" + 
-		 		"\n" + 
-		 		"<div   id=\"promptMsg\"></div>\n" + 
-		 		"<div class=\"container-fluid\">\n" + 
-		 		"    <div class=\"k_container k_container_bg_color\">\n" + 
-		 		"\n" + 
-		 		"        <div class=\"panel panel-default\">\n" + 
-		 		"            <div class=\"panel-body\">\n" + 
+		 		"<div class=\"page-inner\">\n" + 
+		 		" <div class=\"card\">\n" + 
+		 		"<div class=\"card-header\">\n" + 
 		 		"                <form id=\"form_1\" name=\"form\" onsubmit=\"return queryStart()\"  method=\"post\"  class=\"form-inline\">\n" + 
 		 		"                    <input type=\"hidden\" name=\"pageIndex\" value=\"1\" id=\"pageIndex\">\n" + 
 		 		"                    <input type=\"hidden\" name=\"pageSize\" value=\"20\" >\n" + 
-		 		"                    <input type=\"hidden\" name=\"parentId\" value=\"0\" id=\"parentId\" >\n" + 
+		 		"%s"+
 		 		"                    <div class=\"form-group\">\n" + 
 		 		"                        <input type=\"submit\" class=\"btn btn-primary\" id=\"queryBtn\" value=\"查询\" th:value=\"#{i18n.query}\" />\n" + 
-		 		"                        <a secure:hasPermission=\"%s\" class=\"btn btn-primary\" href=\"add\"  data-toggle=\"modal\" th:text=\"#{i18n.add('')}\" >添加</a>\n" + 
+		 		"                        <input type=\"button\" secure:hasPermission=\"%s\" class=\"btn btn-primary\" id=\"addBtn\" th:value=\"#{i18n.add('')}\" />\n" + 
 		 		"                    </div>\n" + 
 		 		"\n" + 
 		 		"                </form>\n" + 
 		 		"\n" + 
-		 		"            </div>\n" + 
-		 		"        </div>\n" + 
-		 		"        <div class=\"panel panel-default mt10\">\n" + 
-		 		"            <div class=\"panel-body\" id=\"datalist\" >\n" + 
-		 		"\n" + 
-		 		"            </div>\n" + 
-		 		"        </div>\n" + 
-		 		"    </div>\n" + 
-		 		"</div>\n" + 
-		 		"<th:block th:replace=\"fragments/headTag ::copy \"></th:block>\n" + 
+		 		"            </div>\n" +  
+		 		"<div class=\"card-body table-responsive\" id=\"datalist\"></div>"+
+		 		"</div>"+
+		 		"<th:block th:replace=\"fragments/headTag2 ::script \"></th:block>\n" + 
 		 		"<script type=\"text/javascript\" th:inline=\"javascript\">\n" + 
 		 		"    $(function(){\n" + 
 		 		"        $(\"#queryBtn\").click(queryStart);\n" + 
+		 		"		 $(\"#addBtn\").click(function () {\n" + 
+		 		"            openWindow({\n" + 
+		 		"                title:/*[[#{i18n.add('')}]]*/\"\",\n" + 
+		 		"                url:\"add\",\n" + 
+		 		"                complete:function (resData){\n" + 
+		 		"                    loadData();\n" + 
+		 		"                }\n" + 
+		 		"            });\n" + 
+		 		"        });"+
 		 		"        queryStart();\n" + 
 		 		"    });\n" + 
 		 		"    function loadData()\n" + 
@@ -274,7 +290,7 @@ public class GeneratorSourceCodeHtmlThymeleafList extends GeneratorSourceCode{
 		 		"</script>\n" + 
 		 		"</body>\n" + 
 		 		"</html>";
-		 sql.append(String.format(html, description,String.format("%s:%s:add", mGroupName,tableName_lowerCamelCase)));
+		 sql.append(String.format(html, description,form_list.toString(),String.format("%s:%s:add", mGroupName,tableName_lowerCamelCase)));
 		 
 
 	 }
@@ -291,4 +307,18 @@ public class GeneratorSourceCodeHtmlThymeleafList extends GeneratorSourceCode{
 	}
 	    
 
+
+	@Override
+	protected String saveFileName(DBRProgressMonitor monitor, DBSTable table) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void generateOneTableSourceCode(StringBuilder sql, DBRProgressMonitor monitor, DBSTable table,
+			Map<String, Object> options) throws DBException {
+		// TODO Auto-generated method stub
+		
+	}
+	    
 }

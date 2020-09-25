@@ -1,111 +1,27 @@
 package org.jkiss.dbeaver.model.sourcecode.entity;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.DBPScriptObject;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sourcecode.GeneratorSourceCode;
 import org.jkiss.dbeaver.model.sourcecode.GeneratorSourceCodeExport;
+import org.jkiss.dbeaver.model.sourcecode.core.JavaTemplateContext;
+import org.jkiss.dbeaver.model.sourcecode.template.TemplateEngine;
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.DBStructUtils;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTable;
-import org.jkiss.dbeaver.model.struct.rdb.DBSTableColumn;
-import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndex;
-import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndexColumn;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.utils.GeneralUtils;
-import org.jkiss.utils.CommonUtils;
 
 public class GeneratorSourceCodeEntity extends GeneratorSourceCode{
 	 
 	private GeneratorSourceCodeExport codeExport;
-	 @Override
-	public void generateTableListCode(DBRProgressMonitor monitor, StringBuilder sql, List<DBSTable> tablesOrViews,Map<String, Object> options) throws DBException {
-		 
-		 
-		 	List<DBSTable> goodTableList = new ArrayList<>();
-	        List<DBSTable> cycleTableList = new ArrayList<>();
-	        List<DBSTable> viewList = new ArrayList<>();
-
-	        DBStructUtils.sortTableList(monitor, tablesOrViews, goodTableList, cycleTableList, viewList);
-
-	        // Good tables: generate full DDL
-	        if(getGeneratorType()==1)
-	        {
-	        	boolean runGenResult=true;
-	        	for (DBSTable table : goodTableList) { 
-	        		StringBuilder code=new StringBuilder(100);
-		        	generateTableMybatisCode(code,monitor, table, options);
-		        	codeExport=new GeneratorSourceCodeExport(getRootPath());
-		        	boolean genResult=codeExport.exportEntity(javaFileName(table,".java"), code.toString(),table.getDataSource().getName());
-		        	if(!genResult)
-		        	{
-		        		if(!DBWorkbench.getPlatformUI().confirmAction("错误", "生成出现错误，是否继续"))
-		        		{
-		        			runGenResult=false;
-		        			setGeneratorResult(runGenResult);
-		        			monitor.done();
-		        			return ;
-		        		}
-		        		runGenResult=false;
-		        	}
-		        }
-	        	for (DBSTable table : cycleTableList) { 
-	        		StringBuilder code=new StringBuilder(100);
-		        	generateTableMybatisCode(code,monitor, table, options);
-		        	codeExport=new GeneratorSourceCodeExport(getRootPath());
-		        	boolean genResult=codeExport.exportEntity(javaFileName(table,".java"), code.toString(),table.getDataSource().getName());
-		        	if(!genResult)
-		        	{
-		        		if(!DBWorkbench.getPlatformUI().confirmAction("错误", "生成出现错误，是否继续"))
-		        		{
-		        			runGenResult=false;
-		        			setGeneratorResult(runGenResult);
-		        			monitor.done();
-		        			return ;
-		        		}
-		        		runGenResult=false;
-		        	}
-		        }
-	        	for (DBSTable table : viewList) { 
-	        		StringBuilder code=new StringBuilder(100);
-	        		generateTableMybatisCode(code,monitor, table, options);
-	        		codeExport=new GeneratorSourceCodeExport(getRootPath());
-	        		boolean genResult=codeExport.exportEntity(javaFileName(table,".java"), code.toString(),table.getDataSource().getName());
-	        		if(!genResult)
-	        		{
-	        			if(!DBWorkbench.getPlatformUI().confirmAction("错误", "生成出现错误，是否继续"))
-	        			{
-	        				runGenResult=false;
-	        				setGeneratorResult(runGenResult);
-	        				monitor.done();
-	        				return ;
-	        			}
-	        			runGenResult=false;
-	        		}
-	        	}
-	        	setGeneratorResult(runGenResult);
-	        }else {
-	        	for (DBSTable table : goodTableList) { 
-		        	generateTableMybatisCode(sql,monitor, table, options);
-		        }
-	        	for (DBSTable table : cycleTableList) { 
-	        		generateTableMybatisCode(sql,monitor, table, options);
-	        	}
-	        	for (DBSTable table : viewList) { 
-	        		generateTableMybatisCode(sql,monitor, table, options);
-	        	}
-	        }
-	        
-	        monitor.done();
-		 
-	 }
+	 
 	 
 	 private String javaFileName(DBSTable table,String extFileName)
 	 {
@@ -217,7 +133,28 @@ public class GeneratorSourceCodeEntity extends GeneratorSourceCode{
 		
 	}
 	    
-	 
+	JavaTemplateContext mContext;
+	@Override
+	protected String saveFileName(DBRProgressMonitor monitor, DBSTable table) {
+		String javaName= javaFileName(table,".java");
+		String mybatisFilePath=sourceCodeSetting.getOutPutDir()+"/"+sourceCodeSetting.getGroupName()+"/"+javaName;
+		return mybatisFilePath;
+	}
+
+	@Override
+	public void generateOneTableSourceCode(StringBuilder sql, DBRProgressMonitor monitor, DBSTable table,
+			Map<String, Object> options) throws DBException {
+		 String tplHtml=CodeHelper.loadResource("java_entity");
+		 try {
+				mContext=new JavaTemplateContext(table, this.sourceCodeSetting, monitor);
+				String result=TemplateEngine.process(tplHtml, mContext) ;
+				//System.out.println("result:\r\n "+result);
+				sql.append(result);
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+	    
 	
 
 }

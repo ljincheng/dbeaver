@@ -301,7 +301,20 @@ public class GeneratorSourceCodeMybatis extends GeneratorSourceCode{
 		
 	}
 	    
-	 
+
+	@Override
+	protected String saveFileName(DBRProgressMonitor monitor, DBSTable table) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void generateOneTableSourceCode(StringBuilder sql, DBRProgressMonitor monitor, DBSTable table,
+			Map<String, Object> options) throws DBException {
+		// TODO Auto-generated method stub
+		
+	}
+	     
 	
 
 }
