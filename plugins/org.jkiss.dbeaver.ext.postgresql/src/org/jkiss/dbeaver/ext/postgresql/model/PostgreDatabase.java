@@ -194,6 +194,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
         if (executionContext == null) {
             initializeMainContext(monitor);
             initializeMetaContext(monitor);
+            cacheDataTypes(monitor, true);
         }
     }
 
@@ -243,7 +244,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
     @Nullable
     @Override
     public String getDescription() {
-        return null;
+        return description;
     }
 
     @NotNull
@@ -258,7 +259,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
         return JDBCExecutionContext.TYPE_METADATA + " <" + getName() + ">";
     }
 
-    @Property(viewable = true, multiline = true, order = 100)
+    @Property(viewable = true, editable = true, updatable = true, multiline = true, order = 100)
     public String getDescription(DBRProgressMonitor monitor) {
         if (!getDataSource().getServerType().supportsDatabaseDescription()) {
             return null;
@@ -279,6 +280,10 @@ public class PostgreDatabase extends JDBCRemoteInstance
         }
         
         return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
@@ -596,7 +601,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
 
     @NotNull
     @Override
-    public Class<? extends DBSObject> getPrimaryChildType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public Class<? extends DBSObject> getPrimaryChildType(@Nullable DBRProgressMonitor monitor) throws DBException {
         return PostgreSchema.class;
     }
 

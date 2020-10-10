@@ -25,6 +25,7 @@ import org.jkiss.dbeaver.model.struct.DBSEntityConstraintType;
 import org.jkiss.dbeaver.model.struct.DBSObjectState;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -38,6 +39,7 @@ public class PostgreConstants {
     public static final String DEFAULT_DATA_TYPE = "varchar";
     public static final String DEFAULT_USER = "postgres";
 
+    public static final String PROP_CHOSEN_ROLE = DBConstants.INTERNAL_PROP_PREFIX + "chosen-role@";
     public static final String PROP_SHOW_NON_DEFAULT_DB = DBConstants.INTERNAL_PROP_PREFIX + "show-non-default-db@";
     public static final String PROP_SHOW_UNAVAILABLE_DB = DBConstants.INTERNAL_PROP_PREFIX + "show-unavailable-db@";
     public static final String PROP_SHOW_TEMPLATES_DB = DBConstants.INTERNAL_PROP_PREFIX + "show-template-db@";
@@ -84,6 +86,8 @@ public class PostgreConstants {
     public static final String TYPE_GEOMETRY = "geometry";
     public static final String TYPE_GEOGRAPHY = "geography";
     public static final String TYPE_INTERVAL = "interval";
+    public static final String TYPE_TIME = "time";
+    public static final String TYPE_TIMESTAMP = "timestamp";
 
     public static final String HANDLER_SSL = "postgre_ssl";
 
@@ -100,7 +104,7 @@ public class PostgreConstants {
     public static final String PG_INSTALL_PROP_DATA_DIRECTORY = "Data Directory";
     public static final String BIN_FOLDER = "bin";
 
-    public static final Map<String, String> SERIAL_TYPES = new HashMap<>();
+    public static final Map<String, String> SERIAL_TYPES = new LinkedHashMap<>();
     public static final Map<String, String> DATA_TYPE_ALIASES = new HashMap<>();
     public static final Map<String, String> DATA_TYPE_CANONICAL_NAMES = new HashMap<>();
 

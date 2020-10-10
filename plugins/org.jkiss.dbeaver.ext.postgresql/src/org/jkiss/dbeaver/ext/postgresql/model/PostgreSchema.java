@@ -348,7 +348,7 @@ public class PostgreSchema implements
 
     @NotNull
     @Override
-    public Class<? extends DBSEntity> getPrimaryChildType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public Class<? extends DBSEntity> getPrimaryChildType(@Nullable DBRProgressMonitor monitor) throws DBException {
         return PostgreTableRegular.class;
     }
 
@@ -573,7 +573,7 @@ public class PostgreSchema implements
 
     @Override
     public void collectObjectStatistics(DBRProgressMonitor monitor, boolean totalSizeOnly, boolean forceRefresh) throws DBException {
-        if (hasStatistics && !forceRefresh) {
+        if (!getDataSource().getServerType().supportsTableStatistics() || hasStatistics && !forceRefresh) {
             return;
         }
         try (DBCSession session = DBUtils.openMetaSession(monitor, this, "Read relation statistics")) {

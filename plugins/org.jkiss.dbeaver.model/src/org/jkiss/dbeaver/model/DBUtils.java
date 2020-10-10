@@ -759,7 +759,7 @@ public final class DBUtils {
                         Collection<? extends DBSEntityAttribute> entityAttrs = docEntity.getAttributes(session.getProgressMonitor());
                         if (!CommonUtils.isEmpty(entityAttrs)) {
                             for (DBSEntityAttribute ea : entityAttrs) {
-                                metaColumns.add(new DBDAttributeBindingType(docBinding, ea));
+                                metaColumns.add(new DBDAttributeBindingType(docBinding, ea, metaColumns.size()));
                             }
                         }
                     }
@@ -842,7 +842,7 @@ public final class DBUtils {
     }
 
     @NotNull
-    public static DBDValueHandler findValueHandler(@Nullable DBPDataSource dataSource, @Nullable DBDPreferences preferences, @NotNull DBSTypedObject column)
+    public static DBDValueHandler findValueHandler(@Nullable DBPDataSource dataSource, @Nullable DBDFormatSettings preferences, @NotNull DBSTypedObject column)
     {
         DBDValueHandler valueHandler = null;
         // Get handler provider from datasource

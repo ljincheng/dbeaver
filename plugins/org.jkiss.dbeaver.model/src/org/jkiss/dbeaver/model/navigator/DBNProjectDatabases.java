@@ -44,9 +44,7 @@ public class DBNProjectDatabases extends DBNNode implements DBNContainer, DBPEve
     public DBNProjectDatabases(DBNProject parentNode, DBPDataSourceRegistry dataSourceRegistry)
     {
         super(parentNode);
-        this.dataSourceRegistry = getModel().isGlobal() ?
-            dataSourceRegistry :
-            dataSourceRegistry.createCopy(parentNode.getProject(), ds -> !ds.isTemplate());
+        this.dataSourceRegistry = dataSourceRegistry;
         this.dataSourceRegistry.addDataSourceListener(this);
 
         List<? extends DBPDataSourceContainer> projectDataSources = this.dataSourceRegistry.getDataSources();
@@ -401,12 +399,14 @@ public class DBNProjectDatabases extends DBNNode implements DBNContainer, DBPEve
                         nodeChange);
 
                     if (event.getObject() instanceof DBPDataSourceContainer) {
-                        if (enabled != null && !enabled) {
-                            // Clear disabled node
-                            dbmNode.clearNode(false);
+                        if (enabled != null) {
+                            if (!enabled) {
+                                // Clear disabled node
+                                dbmNode.clearNode(false);
+                            }
                         } else {
                             if (event.getAction() == DBPEvent.Action.OBJECT_UPDATE) {
-                                // Force reorder
+                                // Force reorder.
                                 children = null;
                                 getModel().fireNodeEvent(new DBNEvent(this, DBNEvent.Action.UPDATE, this));
                             }

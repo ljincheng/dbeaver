@@ -29,10 +29,7 @@ import org.eclipse.jface.viewers.*;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.*;
-import org.eclipse.swt.events.FocusEvent;
-import org.eclipse.swt.events.FocusListener;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.*;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
@@ -141,6 +138,7 @@ public class ResultSetViewer extends Viewer
     public static final String DEFAULT_QUERY_TEXT = "SQL";
     public static final String CUSTOM_FILTER_VALUE_STRING = "..";
 
+
     private static final DecimalFormat ROW_COUNT_FORMAT = new DecimalFormat("###,###,###,###,###,##0");
     private static final IResultSetListener[] EMPTY_LISTENERS = new IResultSetListener[0];
 
@@ -201,7 +199,7 @@ public class ResultSetViewer extends Viewer
 
     private final List<IResultSetListener> listeners = new ArrayList<>();
 
-    private final List<ResultSetJobDataRead> dataPumpJobQueue = new ArrayList<>();
+    private final List<ResultSetJobAbstract> dataPumpJobQueue = new ArrayList<>();
     private final AtomicBoolean dataPumpRunning = new AtomicBoolean();
 
     private final ResultSetModel model = new ResultSetModel();
@@ -1627,6 +1625,15 @@ public class ResultSetViewer extends Viewer
             resultSetSize.setLayoutData(new RowData(5 * fontHeight, SWT.DEFAULT));
             resultSetSize.setBackground(UIStyles.getDefaultTextBackground());
             resultSetSize.setToolTipText(DataEditorsMessages.resultset_segment_size);
+            resultSetSize.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    String realValue = String.valueOf(getSegmentMaxRows());
+                    if (!realValue.equals(resultSetSize.getText())) {
+                        resultSetSize.setText(realValue);
+                    }
+                }
+            });
             resultSetSize.addModifyListener(e -> {
                 DBSDataContainer dataContainer = getDataContainer();
                 int fetchSize = CommonUtils.toInt(resultSetSize.getText());
@@ -1882,7 +1889,7 @@ public class ResultSetViewer extends Viewer
 
         DBSDataContainer dataContainer = getDataContainer();
         if (dataContainer != null && dataContainer.getDataSource() != null) {
-            resultSetSize.setText(String.valueOf(dataContainer.getDataSource().getContainer().getPreferenceStore().getInt(ModelPreferences.RESULT_SET_MAX_ROWS)));
+            resultSetSize.setText(String.valueOf(getSegmentMaxRows()));
         }
     }
 
@@ -2217,12 +2224,12 @@ public class ResultSetViewer extends Viewer
     }
 
     public void cancelJobs() {
-        List<ResultSetJobDataRead> dpjCopy;
+        List<ResultSetJobAbstract> dpjCopy;
         synchronized (dataPumpJobQueue) {
             dpjCopy = new ArrayList<>(this.dataPumpJobQueue);
             this.dataPumpJobQueue.clear();
         }
-        for (ResultSetJobDataRead dpj : dpjCopy) {
+        for (ResultSetJobAbstract dpj : dpjCopy) {
             if (dpj.isActiveTask()) {
                 dpj.cancel();
             }
@@ -3566,10 +3573,16 @@ public class ResultSetViewer extends Viewer
         if (getDataContainer() == null) {
             return 0;
         }
+        int size;
         if (segmentFetchSize != null && segmentFetchSize > 0) {
-            return segmentFetchSize;
+            size = segmentFetchSize;
+        } else {
+            size = getPreferenceStore().getInt(ModelPreferences.RESULT_SET_MAX_ROWS);
         }
-        return getPreferenceStore().getInt(ModelPreferences.RESULT_SET_MAX_ROWS);
+        if (size < ResultSetPreferences.MIN_SEGMENT_SIZE) {
+            size = ResultSetPreferences.MIN_SEGMENT_SIZE;
+        }
+        return size;
     }
 
     @NotNull
@@ -3652,7 +3665,7 @@ public class ResultSetViewer extends Viewer
      * with references panel). We need to execute only current one and the last one. All
      * intrmediate data read requests must be ignored.
      */
-    private void queueDataPump(ResultSetJobDataRead dataPumpJob) {
+    void queueDataPump(ResultSetJobAbstract dataPumpJob) {
         synchronized (dataPumpJobQueue) {
             // Clear queue
             dataPumpJobQueue.clear();
@@ -3673,7 +3686,7 @@ public class ResultSetViewer extends Viewer
                             schedule(50);
                         } else {
                             if (!dataPumpJobQueue.isEmpty()) {
-                                ResultSetJobDataRead curJob = dataPumpJobQueue.get(0);
+                                ResultSetJobAbstract curJob = dataPumpJobQueue.get(0);
                                 dataPumpJobQueue.remove(curJob);
                                 curJob.schedule();
                             }
@@ -3685,7 +3698,7 @@ public class ResultSetViewer extends Viewer
         }.schedule();
     }
 
-    void removeDataPump(ResultSetJobDataRead dataPumpJob) {
+    void removeDataPump(ResultSetJobAbstract dataPumpJob) {
         synchronized (dataPumpJobQueue) {
             dataPumpJobQueue.remove(dataPumpJob);
             if (!dataPumpRunning.get()) {
@@ -3693,6 +3706,26 @@ public class ResultSetViewer extends Viewer
             }
             dataPumpRunning.set(false);
         }
+    }
+
+    void releaseDataReadLock() {
+        synchronized (dataPumpJobQueue) {
+            if (!dataPumpRunning.get()) {
+                log.debug("Internal error: data read status is empty");
+            }
+            dataPumpRunning.set(false);
+        }
+    }
+
+    boolean acquireDataReadLock() {
+        synchronized (dataPumpJobQueue) {
+            if (dataPumpRunning.get()) {
+                log.debug("Internal error: multiple data reads started (" + dataPumpJobQueue + ")");
+                return false;
+            }
+            dataPumpRunning.set(true);
+        }
+        return true;
     }
 
     public void clearData()
@@ -4413,12 +4446,8 @@ public class ResultSetViewer extends Viewer
 
         @Override
         protected IStatus run(DBRProgressMonitor monitor) {
-            synchronized (dataPumpJobQueue) {
-                if (dataPumpRunning.get()) {
-                    log.debug("Internal error: multiple data reads started (" + dataPumpJobQueue + ")");
-                    return Status.CANCEL_STATUS;
-                }
-                dataPumpRunning.set(true);
+            if (!acquireDataReadLock()) {
+                return Status.CANCEL_STATUS;
             }
             beforeDataRead();
             try {
@@ -4426,12 +4455,7 @@ public class ResultSetViewer extends Viewer
                 afterDataRead();
                 return status;
             } finally {
-                synchronized (dataPumpJobQueue) {
-                    if (!dataPumpRunning.get()) {
-                        log.debug("Internal error: data read status is empty");
-                    }
-                    dataPumpRunning.set(false);
-                }
+                releaseDataReadLock();
             }
         }
 
@@ -4559,4 +4583,5 @@ public class ResultSetViewer extends Viewer
             });
         }
     }
+
 }

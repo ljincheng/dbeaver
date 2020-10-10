@@ -16,7 +16,8 @@
  */
 package org.jkiss.dbeaver.registry;
 
-import org.eclipse.core.resources.*;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.equinox.security.storage.ISecurePreferences;
@@ -45,9 +46,9 @@ import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class DataSourceRegistry implements DBPDataSourceRegistry {
@@ -67,7 +68,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
     private final DBPPlatform platform;
     private final DBPProject project;
 
-    private final Map<IFile, DataSourceOrigin> origins = new LinkedHashMap<>();
+    private final Map<File, DataSourceOrigin> origins = new LinkedHashMap<>();
     private final Map<String, DataSourceDescriptor> dataSources = new LinkedHashMap<>();
     private final List<DBPEventListener> dataSourceListeners = new ArrayList<>();
     private final List<DataSourceFolder> dataSourceFolders = new ArrayList<>();
@@ -85,27 +86,6 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
         loadDataSources(true);
         DataSourceProviderRegistry.getInstance().fireRegistryChange(this, true);
-
-        addDataSourceListener(modelChangeListener);
-    }
-
-    /**
-     * Create copy
-     */
-    public DataSourceRegistry(DataSourceRegistry source, ProjectMetadata project, Function<DBPDataSourceContainer, Boolean> filter) {
-        this.platform = source.platform;
-        this.project = project;
-        {
-            // Copy all or only template datasources.
-            // Provided and template datasources are needed for global model mode
-            // FIXME: we don't need to copy provided datasources. It is a temporary workaround for CB, replaced with templates
-            for (DataSourceDescriptor ds : source.dataSources.values()) {
-                if (filter == null || filter.apply(ds)) {
-                    DataSourceDescriptor dsCopy = new DataSourceDescriptor(ds, this, false);
-                    dataSources.put(dsCopy.getId(), dsCopy);
-                }
-            }
-        }
 
         addDataSourceListener(modelChangeListener);
     }
@@ -163,9 +143,9 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
                     return origin;
                 }
             }
-            IFile defFile = getModernConfigFile();
+            File defFile = getModernConfigFile();
             if (!defFile.exists()) {
-                IFile legacyFile = getLegacyConfigFile();
+                File legacyFile = getLegacyConfigFile();
                 if (legacyFile.exists()) {
                     defFile = legacyFile;
                 }
@@ -176,16 +156,12 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         }
     }
 
-    private IFile getLegacyConfigFile() {
-        return project
-            .getEclipseProject()
-            .getFile(LEGACY_CONFIG_FILE_NAME);
+    private File getLegacyConfigFile() {
+        return new File(project.getAbsolutePath(), LEGACY_CONFIG_FILE_NAME);
     }
 
-    private IFile getModernConfigFile() {
-        return project
-            .getMetadataFolder(false)
-            .getFile(MODERN_CONFIG_FILE_NAME);
+    private File getModernConfigFile() {
+        return new File(project.getMetadataFolder(false), MODERN_CONFIG_FILE_NAME);
     }
 
     @NotNull
@@ -314,11 +290,6 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
             }
         }
         dataSourceFolders.remove(folderImpl);
-    }
-
-    @Override
-    public DBPDataSourceRegistry createCopy(DBPProject project, Function<DBPDataSourceContainer, Boolean> filter) {
-        return new DataSourceRegistry(this, (ProjectMetadata) project, filter);
     }
 
     private DataSourceFolder findRootFolder(String name) {
@@ -530,6 +501,9 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
     @Override
     public void flushConfig() {
+        if (project.isInMemory()) {
+            return;
+        }
         // Use async config saver to avoid too frequent configuration re-save during some massive configuration update
         if (configSaver == null) {
             configSaver = new ConfigSaver();
@@ -618,7 +592,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
     }
 
     @Override
-    public List<? extends DBPDataSourceContainer> loadDataSourcesFromFile(@NotNull DBPDataSourceConfigurationStorage configurationStorage, @NotNull IFile fromFile) {
+    public List<? extends DBPDataSourceContainer> loadDataSourcesFromFile(@NotNull DBPDataSourceConfigurationStorage configurationStorage, @NotNull File fromFile) {
         ParseResults parseResults = new ParseResults();
         loadDataSources(fromFile, false, true, parseResults, configurationStorage);
         return new ArrayList<>(parseResults.addedDataSources);
@@ -633,44 +607,38 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
         // Parse datasources
         ParseResults parseResults = new ParseResults();
-        try {
-            // Modern way - search json configs in metadata folder
-            boolean modernFormat = false;
-            IFolder metadataFolder = project.getMetadataFolder(false);
-            if (metadataFolder.exists()) {
-                if (refresh) {
-                    metadataFolder.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
-                }
-                for (IResource res : metadataFolder.members(IContainer.INCLUDE_HIDDEN | IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS)) {
-                    if (res instanceof IFile && res.exists() &&
+
+        // Modern way - search json configs in metadata folder
+        boolean modernFormat = false;
+        File metadataFolder = project.getMetadataFolder(false);
+        if (metadataFolder.exists()) {
+            File[] mdFiles = metadataFolder.listFiles();
+            if (mdFiles != null) {
+                for (File res : mdFiles) {
+                    if (!res.isDirectory() && res.exists() &&
                         res.getName().startsWith(MODERN_CONFIG_FILE_PREFIX) && res.getName().endsWith(MODERN_CONFIG_FILE_EXT)) {
-                        loadDataSources((IFile) res, refresh, true, parseResults);
+                        loadDataSources(res, refresh, true, parseResults);
                         modernFormat = true;
                     }
                 }
             }
-            if (!modernFormat) {
-                // Logacy way (search config.xml in project folder)
-                for (IResource res : project.getEclipseProject().members(IContainer.INCLUDE_HIDDEN)) {
-                    if (res instanceof IFile) {
-                        IFile file = (IFile) res;
+        }
+        if (!modernFormat) {
+            // Logacy way (search config.xml in project folder)
+            File[] mdFiles = project.getAbsolutePath().listFiles();
+            if (mdFiles != null) {
+                for (File res : mdFiles) {
+                    if (!res.isDirectory() && res.exists()) {
                         if (res.getName().startsWith(LEGACY_CONFIG_FILE_PREFIX) && res.getName().endsWith(LEGACY_CONFIG_FILE_EXT)) {
-                            if (file.exists()) {
-                                if (file.exists()) {
-                                    loadDataSources(file, refresh, false, parseResults);
-                                }
-                            }
+                            loadDataSources(res, refresh, false, parseResults);
                         }
                     }
                 }
-                if (!origins.isEmpty()) {
-                    // Save config immediately in the new format
-                    flushConfig();
-                }
             }
-
-        } catch (CoreException e) {
-            log.error("Error reading data sources configuration", e);
+            if (!origins.isEmpty()) {
+                // Save config immediately in the new format
+                flushConfig();
+            }
         }
 
         {
@@ -699,7 +667,9 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
             List<DataSourceDescriptor> removedDataSource = new ArrayList<>();
             for (DataSourceDescriptor ds : dataSources.values()) {
-                if (!parseResults.addedDataSources.contains(ds) && !parseResults.updatedDataSources.contains(ds)) {
+                if (!parseResults.addedDataSources.contains(ds) && !parseResults.updatedDataSources.contains(ds) &&
+                    !ds.isProvided() && !ds.getOrigin().isDynamic() && !ds.isDetached())
+                {
                     removedDataSource.add(ds);
                 }
             }
@@ -711,7 +681,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         }
     }
 
-    private void loadDataSources(@NotNull IFile fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults) {
+    private void loadDataSources(@NotNull File fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults) {
         boolean extraConfig = !fromFile.getName().equalsIgnoreCase(modern ? MODERN_CONFIG_FILE_NAME : LEGACY_CONFIG_FILE_NAME);
         DataSourceOrigin origin;
         synchronized (origins) {
@@ -724,7 +694,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         loadDataSources(fromFile, refresh, modern, parseResults, origin);
     }
 
-    private void loadDataSources(@NotNull IFile fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults, @NotNull DBPDataSourceConfigurationStorage configurationStorage) {
+    private void loadDataSources(@NotNull File fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults, @NotNull DBPDataSourceConfigurationStorage configurationStorage) {
         if (!fromFile.exists()) {
             return;
         }
@@ -734,11 +704,15 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
             serializer.parseDataSources(fromFile, configurationStorage, refresh, parseResults);
             updateProjectNature();
         } catch (Exception ex) {
-            log.error("Error loading datasource config from " + fromFile.getFullPath(), ex);
+            log.error("Error loading datasource config from " + fromFile.getAbsolutePath(), ex);
         }
     }
 
     private void saveDataSources() {
+        if (project.isInMemory()) {
+            return;
+        }
+
         updateProjectNature();
         final DBRProgressMonitor monitor = new VoidProgressMonitor();
         saveInProgress = true;
@@ -746,13 +720,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
             for (DataSourceOrigin origin : origins.values()) {
                 List<DataSourceDescriptor> localDataSources = getDataSources(origin);
 
-                IFile configFile = origin.getSourceFile();
-
-                try {
-                    configFile.getParent().refreshLocal(IResource.DEPTH_ONE, new NullProgressMonitor());
-                } catch (Exception e) {
-                    log.debug("Error refreshing config directory", e);
-                }
+                File configFile = origin.getSourceFile();
 
                 if (origin.isDefault()) {
                     if (project.isModernProject()) {
@@ -761,12 +729,13 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
                         configFile = getLegacyConfigFile();
                     }
                 } else {
-                    if (configFile.getName().startsWith(LEGACY_CONFIG_FILE_PREFIX) && "xml".equals(configFile.getFileExtension())) {
+                    String configFileName = configFile.getName();
+                    if (configFileName.startsWith(LEGACY_CONFIG_FILE_PREFIX) && configFileName.endsWith(".xml")) {
                         // Legacy configuration - move to metadata folder as json
-                        String newFileName = MODERN_CONFIG_FILE_PREFIX + configFile.getName().substring(LEGACY_CONFIG_FILE_PREFIX.length());
+                        String newFileName = MODERN_CONFIG_FILE_PREFIX + configFileName.substring(LEGACY_CONFIG_FILE_PREFIX.length());
                         int divPos = newFileName.lastIndexOf(".");
                         newFileName = newFileName.substring(0, divPos) + ".json";
-                        configFile = project.getMetadataFolder(false).getFile(newFileName);
+                        configFile = new File(project.getMetadataFolder(false), newFileName);
                     }
                 }
                 try {
@@ -774,7 +743,9 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
                     if (localDataSources.isEmpty()) {
                         if (configFile.exists()) {
-                            configFile.delete(true, false, monitor.getNestedMonitor());
+                            if (!configFile.delete()) {
+                                log.error("Error deleting file '" + configFile.getAbsolutePath() + "'");
+                            }
                         }
                     } else {
                         DataSourceSerializer serializer;

@@ -30,7 +30,7 @@ apps:
 
 parts:
   dbeaver-ce:
-    source: https://dbeaver.io/files/dbeaver-ce_latest_amd64.deb
+    source: ${SOURCE}
     plugin: dump
     build-packages:
       - ca-certificates
@@ -46,6 +46,8 @@ parts:
       - xdg-utils
       - mariadb-client
       - mysql-client
+      - ibus-gtk3
+      - libibus-1.0-5
     override-build: |
       set -e
       snapcraftctl build

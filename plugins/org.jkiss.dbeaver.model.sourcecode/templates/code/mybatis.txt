@@ -21,6 +21,8 @@
 	<@each:{columns} item:"item" separator:"		"  @><if test="<@{item.paramName}@>!= null "> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
 	</select>
 	
+	<@if:"{primaryColumn}!=null"@>
+	
 	<update id="updateBy<@{primaryColumn.codeName}@>" parameterType="<@{entity.paramName}@>"> 
 	 UPDATE <@{tableName}@> SET <@each:{mybatisInsertColumns} item:"item" separator:"," @><@{item.columnName}@> = #{<@{item.paramName}@>}<@endEach@>
 	  WHERE <@{primaryColumn.columnName}@> = #{<@{primaryColumn.paramName}@>} 
@@ -34,4 +36,6 @@
 	<select id="findBy<@{primaryColumn.codeName}@>" parameterType="<@{primaryColumn.javaType}@>" resultType="<@{entity.paramName}@>">
 	 SELECT * FROM <@{tableName}@> WHERE <@{primaryColumn.columnName}@> = #{<@{primaryColumn.paramName}@>}
 	</select>
+	
+	<@endIf@>
 </mapper>

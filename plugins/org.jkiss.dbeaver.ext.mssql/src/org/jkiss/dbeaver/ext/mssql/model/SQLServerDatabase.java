@@ -47,7 +47,14 @@ import java.util.List;
 /**
 * SQL Server database
 */
-public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefreshableObject, DBPSystemObject, DBPObjectStatistics {
+public class SQLServerDatabase
+    implements
+        DBSCatalog,
+        DBPSaveableObject,
+        DBPRefreshableObject,
+        DBPSystemObject,
+        DBPNamedObject2,
+        DBPObjectStatistics {
 
     private static final Log log = Log.getLog(SQLServerDatabase.class);
 
@@ -82,6 +89,12 @@ public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefr
         }
     }
 
+    public SQLServerDatabase(SQLServerDataSource dataSource) {
+        this.dataSource = dataSource;
+        this.databaseId = 0;
+        this.persisted = false;
+    }
+
     @NotNull
     @Override
     public SQLServerDataSource getDataSource() {
@@ -93,6 +106,11 @@ public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefr
     @Property(viewable = true, editable = true, order = 1)
     public String getName() {
         return name;
+    }
+
+    @Override
+    public void setName(String newName) {
+        name = newName;
     }
 
     @Override
@@ -129,6 +147,10 @@ public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefr
         return name.equals("msdb");
     }
 
+    public DataTypeCache getDataTypesCache() {
+        return typesCache;
+    }
+
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) {
         typesCache.clearCache();
@@ -137,6 +159,11 @@ public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefr
         databaseTotalSize = null;
         return this;
     }
+
+    void refreshDataTypes() {
+        typesCache.clearCache();
+    }
+
 
     //////////////////////////////////////////////////
     // Data types
@@ -301,7 +328,7 @@ public class SQLServerDatabase implements DBSCatalog, DBPSaveableObject, DBPRefr
 
     @NotNull
     @Override
-    public Class<? extends DBSObject> getPrimaryChildType(@NotNull DBRProgressMonitor monitor) {
+    public Class<? extends DBSObject> getPrimaryChildType(@Nullable DBRProgressMonitor monitor) {
         return SQLServerSchema.class;
     }
 

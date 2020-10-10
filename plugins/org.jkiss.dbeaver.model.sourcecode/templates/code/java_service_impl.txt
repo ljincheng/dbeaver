@@ -35,6 +35,7 @@ public class <@{serviceImpl.simpleName}@> implements <@{service.simpleName}@> {
 		return <@{component.paramName}@>.query<@{tableCodeName}@>ListPage(pageIndex,pageSize,selectItem);
 	}
 
+<@if:"{primaryColumn}!=null"@>
 	@Override
 	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
 		return <@{component.paramName}@>.update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
@@ -49,5 +50,5 @@ public class <@{serviceImpl.simpleName}@> implements <@{service.simpleName}@> {
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{component.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
-
+<@endIf@>
 }

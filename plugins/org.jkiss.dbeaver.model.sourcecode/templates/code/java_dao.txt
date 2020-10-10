@@ -33,6 +33,7 @@ public interface <@{dao.simpleName}@> {
 	 */
 	public List<<@{entity.simpleName}@>> queryListPage(Map<String,Object> selectItem);
 	
+	<@if:"{primaryColumn}!=null"@>
 	/**
 	 * 根据<@{primaryColumn.paramName}@>修改
 	 * @param <@{entity.paramName}@>
@@ -55,4 +56,5 @@ public interface <@{dao.simpleName}@> {
 	public <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
 
 
+<@endIf@>
 }

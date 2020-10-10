@@ -18,6 +18,7 @@ package org.jkiss.dbeaver.ext.mssql.model;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ModelPreferences;
@@ -38,6 +39,7 @@ import org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
 import org.jkiss.dbeaver.model.meta.Association;
+import org.jkiss.dbeaver.model.net.DBWHandlerConfiguration;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.utils.GeneralUtils;
@@ -108,6 +110,10 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
         return this;
     }
 
+    public DatabaseCache getDatabaseCache() {
+        return databaseCache;
+    }
+
     @Override
     protected Properties getAllConnectionProperties(@NotNull DBRProgressMonitor monitor, JDBCExecutionContext context, String purpose, DBPConnectionConfiguration connectionInfo) throws DBCException {
         Properties properties = super.getAllConnectionProperties(monitor, context, purpose, connectionInfo);
@@ -125,7 +131,41 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
 
         authSchema.getInitializer().initializeAuthentication(connectionInfo, properties);
 
+        final DBWHandlerConfiguration sslConfig = getContainer().getActualConnectionConfiguration().getHandler(SQLServerConstants.HANDLER_SSL);
+        if (sslConfig != null && sslConfig.isEnabled()) {
+            initSSL(monitor, properties, sslConfig);
+        }
+
         return properties;
+    }
+
+    private void initSSL(DBRProgressMonitor monitor, Properties properties, DBWHandlerConfiguration sslConfig) throws DBCException {
+        monitor.subTask("Install SSL certificates");
+
+        try {
+//            SSLHandlerTrustStoreImpl.initializeTrustStore(monitor, this, sslConfig);
+//            DBACertificateStorage certificateStorage = getContainer().getPlatform().getCertificateStorage();
+//            String keyStorePath = certificateStorage.getKeyStorePath(getContainer(), "ssl").getAbsolutePath();
+
+            properties.setProperty("encrypt", "true");
+
+            final String keystoreFileProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE);
+            if (!CommonUtils.isEmpty(keystoreFileProp)) {
+                properties.put("trustStore", keystoreFileProp);
+            }
+
+            final String keystorePasswordProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE_PASSWORD);
+            if (!CommonUtils.isEmpty(keystorePasswordProp)) {
+                properties.put("trustStorePassword", keystorePasswordProp);
+            }
+
+            final String keystoreHostnameProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE_HOSTNAME);
+            if (!CommonUtils.isEmpty(keystoreHostnameProp)) {
+                properties.put("hostNameInCertificate", keystoreHostnameProp);
+            }
+        } catch (Exception e) {
+            throw new DBCException("Error initializing SSL trust store", e);
+        }
     }
 
     @Override
@@ -232,7 +272,7 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
             case NUMERIC: return "int";
             case STRING: return "varchar";
             case DATETIME: return SQLServerConstants.TYPE_DATETIME;
-            case BINARY: return "binary";
+            case BINARY:
             case CONTENT: return "varbinary";
             case ROWID: return "uniqueidentifier";
             default:
@@ -288,7 +328,7 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
 
     @NotNull
     @Override
-    public Class<? extends DBSObject> getPrimaryChildType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public Class<? extends DBSObject> getPrimaryChildType(@Nullable DBRProgressMonitor monitor) throws DBException {
         return SQLServerDatabase.class;
     }
 

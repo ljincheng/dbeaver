@@ -29,20 +29,19 @@ import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
-import org.jkiss.dbeaver.model.struct.DBSDataType;
-import org.jkiss.dbeaver.model.struct.DBSObject;
-import org.jkiss.dbeaver.model.struct.DBSObjectWithScript;
-import org.jkiss.dbeaver.model.struct.DBSTypedObject;
+import org.jkiss.dbeaver.model.struct.*;
 
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
  * SQL Server data type
  */
-public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQualifiedObject, DBPScriptObject, DBSObjectWithScript {
+public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQualifiedObject, DBPScriptObject, DBSObjectWithScript, DBSEntity {
 
     private static final Log log = Log.getLog(SQLServerDataType.class);
 
@@ -144,6 +143,11 @@ public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQuali
         return this;
     }
 
+    public SQLServerDatabase getContainer() {
+        if (owner instanceof SQLServerDatabase) return (SQLServerDatabase) owner;
+        return null;
+    }
+
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
     public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBCException {
@@ -214,6 +218,11 @@ public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQuali
     @Property(viewable = false, order = 22)
     public long getMaxLength() {
         return maxLength;
+    }
+
+    @Override
+    public long getTypeModifiers() {
+        return 0;
     }
 
     @Override
@@ -336,11 +345,11 @@ public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQuali
                 return DBPDataKind.STRING;
 
             case SQLServerConstants.TYPE_BINARY:
+            case SQLServerConstants.TYPE_VARBINARY:
             case SQLServerConstants.TYPE_TIMESTAMP:
                 return DBPDataKind.BINARY;
 
             case SQLServerConstants.TYPE_IMAGE:
-            case SQLServerConstants.TYPE_VARBINARY:
                 return DBPDataKind.CONTENT;
 
             case SQLServerConstants.TYPE_UNIQUEIDENTIFIER:
@@ -440,5 +449,35 @@ public class SQLServerDataType implements DBSDataType, SQLServerObject, DBPQuali
     @Override
     public void setObjectDefinitionText(String source) {
         
+    }
+
+    @Override
+    public DBSEntityType getEntityType() {
+        return DBSEntityType.TYPE;
+    }
+
+    @Override
+    public List<SQLServerTableColumn> getAttributes(DBRProgressMonitor monitor) throws DBException {
+        return getSysSchema(monitor).getTableType(monitor, tableTypeId).getAttributes(monitor);
+    }
+
+    @Override
+    public SQLServerTableColumn getAttribute(DBRProgressMonitor monitor, String attributeName) throws DBException {
+        return getSysSchema(monitor).getTableType(monitor, tableTypeId).getAttribute(monitor, attributeName);
+    }
+
+    @Override
+    public Collection<SQLServerTableUniqueKey> getConstraints(DBRProgressMonitor monitor) throws DBException {
+        return getSysSchema(monitor).getTableType(monitor, tableTypeId).getConstraints(monitor);
+    }
+
+    @Override
+    public Collection<SQLServerTableForeignKey> getAssociations(DBRProgressMonitor monitor) throws DBException {
+        return null;
+    }
+
+    @Override
+    public Collection<SQLServerTableForeignKey> getReferences(DBRProgressMonitor monitor) throws DBException {
+        return null;
     }
 }

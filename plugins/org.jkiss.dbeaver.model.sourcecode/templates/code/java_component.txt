@@ -34,6 +34,7 @@ public interface <@{component.simpleName}@> {
 	 */
 	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem);
 
+<@if:"{primaryColumn}!=null"@>
 	/**
 	 * 根据<@{primaryColumn.paramName}@>修改
 	 * @param <@{entity.paramName}@>
@@ -54,5 +55,5 @@ public interface <@{component.simpleName}@> {
 	 * @return
 	 */
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
-
+<@endIf@>
 }

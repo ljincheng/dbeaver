@@ -39,7 +39,7 @@ import org.jkiss.dbeaver.utils.SystemVariablesResolver;
  */
 public class PrefPageConnections extends TargetPrefPage
 {
-    public static final String PAGE_ID = "org.jkiss.dbeaver.preferences.main.connections"; //$NON-NLS-1$
+    public static final String PAGE_ID = "org.jkiss.dbeaver.preferences.client.connections"; //$NON-NLS-1$
 
     private static final String[] ALLOWED_VARIABLES = new String[] {
         DBPConnectionConfiguration.VARIABLE_HOST,
@@ -49,6 +49,7 @@ public class PrefPageConnections extends TargetPrefPage
         DBPConnectionConfiguration.VARIABLE_USER,
         DBPConnectionConfiguration.VARIABLE_PASSWORD,
         DBPConnectionConfiguration.VARIABLE_URL,
+        DBPConnectionConfiguration.VARIABLE_CONN_TYPE,
 
         DBConstants.VAR_CONTEXT_NAME,
         DBConstants.VAR_CONTEXT_ID,

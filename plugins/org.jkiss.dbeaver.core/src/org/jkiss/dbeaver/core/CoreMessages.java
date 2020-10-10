@@ -320,6 +320,8 @@ public class CoreMessages extends NLS {
 	public static String pref_page_eclipse_ui_general_group_general;
 	public static String pref_page_eclipse_ui_general_group_label;
 
+	public static String pref_page_eclipse_ui_general_connections_group_label;
+
 	public static String runtime_jobs_connect_name;
 	public static String runtime_jobs_connect_status_connected;
 	public static String runtime_jobs_connect_status_error;
@@ -430,6 +432,7 @@ public class CoreMessages extends NLS {
 	public static String pref_page_connection_types_label_delete_connection_type;
 	public static String pref_page_connection_types_label_delete_connection_type_description;
 	public static String pref_page_connection_types_group_settings;
+	public static String pref_page_connection_types_label_id;
 	public static String pref_page_connection_types_label_name;
 	public static String pref_page_connection_types_label_description;
 	public static String pref_page_connection_types_label_color;

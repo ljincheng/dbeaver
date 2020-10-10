@@ -41,6 +41,7 @@ public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@
 	 	return pageBean;
 	}
 
+<@if:"{primaryColumn}!=null"@>
 	@Override
 	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
 		return <@{dao.paramName}@>.updateBy<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
@@ -55,5 +56,5 @@ public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{dao.paramName}@>.findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
-
+<@endIf@>
 }

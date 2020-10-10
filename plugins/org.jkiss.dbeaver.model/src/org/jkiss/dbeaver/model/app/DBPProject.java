@@ -17,7 +17,6 @@
 
 package org.jkiss.dbeaver.model.app;
 
-import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.jkiss.code.NotNull;
@@ -40,6 +39,12 @@ public interface DBPProject extends DBPObject
     @NotNull
     DBPWorkspace getWorkspace();
 
+    // In multi-use environment virtual project is a project owned by user
+    boolean isVirtual();
+
+    // Project with no persistent state
+    boolean isInMemory();
+
     @NotNull
     String getName();
 
@@ -52,7 +57,7 @@ public interface DBPProject extends DBPObject
     IProject getEclipseProject();
 
     @NotNull
-    IFolder getMetadataFolder(boolean create);
+    File getMetadataFolder(boolean create);
 
     boolean isOpen();
 

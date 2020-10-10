@@ -229,9 +229,7 @@
                     description="IBM Informix Dynamic Server"
                     categories="sql">
 
-                    <file type="jar" path="repo:/drivers/informix/ifxjdbc.jar" bundle="!drivers.informix"/>
-                    <file type="jar" path="repo:/drivers/informix/ifxlang.jar" bundle="!drivers.informix"/>
-                    <file type="license" path="repo:/drivers/informix/LICENSE.txt" bundle="!drivers.informix"/>
+                    <file type="jar" path="maven:/com.ibm.informix:jdbc:RELEASE[4.50.4.1]" bundle="!drivers.informix"/>
 
                     <file type="jar" path="drivers/informix" bundle="drivers.informix"/>
                     <file type="license" path="drivers/informix/LICENSE.txt" bundle="drivers.informix"/>
@@ -907,7 +905,7 @@
                         icon="icons/cubrid_icon.png"
                         iconBig="icons/cubrid_icon_big.png"
                         class="cubrid.jdbc.driver.CUBRIDDriver"
-                        sampleURL="jdbc:CUBRID:{host}:{port}:{server}:{database}::"
+                        sampleURL="jdbc:CUBRID:{host}:{port}:{database}:::"
                         defaultPort="33000"
                         description="CUBRID JDBC driver"
                         webURL="https://www.cubrid.org/"

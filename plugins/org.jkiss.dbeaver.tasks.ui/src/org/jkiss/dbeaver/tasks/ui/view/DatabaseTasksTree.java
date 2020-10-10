@@ -25,7 +25,6 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
-import org.eclipse.ui.dialogs.FilteredTree;
 import org.eclipse.ui.dialogs.PatternFilter;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
@@ -41,6 +40,7 @@ import org.jkiss.dbeaver.tasks.ui.internal.TaskUIMessages;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.ViewerColumnController;
+import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.CommonUtils;
 
@@ -71,16 +71,14 @@ public class DatabaseTasksTree {
         colorErrorForeground = UIUtils.getContrastColor(colorError);
         composite.addDisposeListener(e -> colorErrorForeground.dispose());
 
-        FilteredTree filteredTree = new FilteredTree(composite,
+        taskViewer = DialogUtils.createFilteredTree(composite,
             SWT.MULTI | SWT.FULL_SELECTION | (selector ? SWT.BORDER | SWT.CHECK : SWT.NONE),
-            new NamedObjectPatternFilter(), true);
-        filteredTree.setInitialText(TaskUIMessages.db_tasks_tree_text_tasks_type);
-        taskViewer = filteredTree.getViewer();
+            new NamedObjectPatternFilter(), TaskUIMessages.db_tasks_tree_text_tasks_type);
         Tree taskTree = taskViewer.getTree();
         taskTree.setHeaderVisible(true);
         taskTree.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        taskColumnController = new ViewerColumnController(TaskUIMessages.db_tasks_tree_column_controller_tasks, filteredTree.getViewer());
+        taskColumnController = new ViewerColumnController(TaskUIMessages.db_tasks_tree_column_controller_tasks, taskViewer);
         taskColumnController.addColumn(TaskUIMessages.db_tasks_tree_column_controller_add_name, TaskUIMessages.db_tasks_tree_column_controller_add_descr_name, SWT.LEFT, true, true, new TaskLabelProvider() {
             @Override
             protected String getCellText(Object element) {
@@ -308,8 +306,8 @@ public class DatabaseTasksTree {
 
     public void refresh() {
         refreshTasks();
-        regroupTasks();
-        taskViewer.refresh(true);
+        regroupTasks(false);
+        //taskViewer.refresh(true);
         if (refreshScheduledTasks()) {
             taskViewer.refresh(true);
         }
@@ -319,10 +317,10 @@ public class DatabaseTasksTree {
         refreshTasks();
         refreshScheduledTasks();
 
-        regroupTasks();
+        regroupTasks(true);
     }
 
-    public void regroupTasks() {
+    public void regroupTasks(boolean expandAll) {
         taskViewer.getTree().setRedraw(false);
         try {
             List<Object> rootObjects = new ArrayList<>();
@@ -341,7 +339,9 @@ public class DatabaseTasksTree {
             }
 
             taskViewer.setInput(rootObjects);
-            taskViewer.expandAll();
+            if (expandAll) {
+                taskViewer.expandAll();
+            }
             taskColumnController.repackColumns();
         } finally {
             taskViewer.getTree().setRedraw(true);
