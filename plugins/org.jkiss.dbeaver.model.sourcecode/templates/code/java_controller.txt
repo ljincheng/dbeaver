@@ -1,0 +1,124 @@
+package <@{controller.packageName}@>;
+
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+import <@{jsonView.name}@>;
+import <@{assertUtils.name}@>;
+import <@{businessException.name}@>;
+import <@{baseController.name}@>;
+import <@{pageDo.name}@>;
+import <@{entity.name}@>; 
+import <@{service.name}@>; 
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+@Controller
+@RequestMapping("/<@{setting.groupName}@>/<@{tableCodeParam}@>")
+public class <@{controller.simpleName}@> extends <@{baseController.simpleName}@>{
+
+	private static Logger logger= LoggerFactory.getLogger(<@{controller.simpleName}@>.class);
+
+	@Autowired
+	private <@{service.simpleName}@> <@{service.paramName}@>;
+	
+	@GetMapping("/list")
+	public ModelAndView list(){
+		ModelAndView view=new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/list");
+		return view;
+	}
+
+	@PostMapping("/list")
+	@RequiresPermissions("<@{setting.groupName}@>:<@{tableCodeParam}@>:list")
+	public ModelAndView listTable(HttpServletRequest request,@RequestParam(required = false,defaultValue ="1")Long pageIndex,@RequestParam(required = false,defaultValue ="20")Integer pageSize,String startDate,String endDate){
+	ModelAndView view=new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/list_table");
+		 Map<String,Object> selectItem = getRequestToParamMap(request); 
+		 view.addObject("pagedata",<@{service.paramName}@>.query<@{tableCodeName}@>ListPage(pageIndex,pageSize,selectItem));
+		 return view;
+	}
+
+	@GetMapping(value="/add")
+	public ModelAndView add(HttpServletRequest request){
+		ModelAndView view=new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/add");
+		return view;
+	}
+
+	@PostMapping(value="/add")
+	@RequiresPermissions("<@{setting.groupName}@>:<@{tableCodeParam}@>:add")
+	public ModelAndView add_POST(HttpServletRequest request,<@{entity.simpleName}@> <@{entity.paramName}@>){
+		ModelAndView view=new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/add");
+		try{
+			Integer dbRes= <@{service.paramName}@>.insert<@{tableCodeName}@>(<@{entity.paramName}@>);
+			<@{assertUtils.simpleName}@>.isPositiveNumber(dbRes,"操作失败");
+		}catch (BusinessException e) {
+			setPromptException(view, e);
+		}catch (Exception ex) {
+			logger.error("编辑异常",ex);
+			setPromptException(view, ex);
+		}
+		return view;
+	}
+
+	@GetMapping(value="/view")
+	@RequiresPermissions("<@{setting.groupName}@>:<@{tableCodeParam}@>:view")
+	public ModelAndView view(HttpServletRequest request,<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		ModelAndView view =new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/view");
+		<@{entity.simpleName}@> <@{entity.paramName}@>= <@{service.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+		view.addObject("<@{entity.paramName}@>", <@{entity.paramName}@>);
+		return view;
+	}
+
+	@GetMapping(value="/edit")
+	public ModelAndView edit(HttpServletRequest request,<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		ModelAndView view =new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/edit");
+		<@{entity.simpleName}@> <@{entity.paramName}@>= <@{service.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+		view.addObject("<@{entity.paramName}@>", <@{entity.paramName}@>);
+		return view;
+	}
+
+	@PostMapping(value="/edit/{<@{primaryColumn.paramName}@>}")
+	@RequiresPermissions("<@{setting.groupName}@>:<@{tableCodeParam}@>:edit")
+	public ModelAndView edit_POST(HttpServletRequest request,@PathVariable("<@{primaryColumn.paramName}@>") <@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>, <@{entity.simpleName}@> <@{entity.paramName}@>){
+		ModelAndView view =new ModelAndView("/<@{setting.groupName}@>/<@{tableCodeParam}@>/edit");
+		try{
+			<@{entity.paramName}@>.set<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+			Integer dbRes= <@{service.paramName}@>.update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
+			view.addObject("<@{entity.paramName}@>", <@{entity.paramName}@>);
+			<@{assertUtils.simpleName}@>.isPositiveNumber(dbRes,"操作失败");
+		}catch (BusinessException e) {
+			setPromptException(view, e);
+		}catch (Exception e) {
+			logger.error("编辑异常",e);
+			setPromptException(view, e);
+		}
+		return view;
+	}
+
+	@PostMapping(value="/delete")
+	@RequiresPermissions("<@{setting.groupName}@>:<@{tableCodeParam}@>:delete")
+	public JsonView<String> delete(HttpServletRequest request, <@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		<@{jsonView.simpleName}@><String> view=new <@{jsonView.simpleName}@><String>();
+		try{
+			<@{assertUtils.simpleName}@>.notNull(<@{primaryColumn.paramName}@>, "参数无效");
+			Integer result=<@{service.paramName}@>.delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+			<@{assertUtils.simpleName}@>.isPositiveNumber(result,"操作失败");
+			setPromptMessage(view, view.CODE_SUCCESS, "操作成功");
+		}catch (BusinessException e) {
+			setPromptException(view, e);
+		}catch (Exception ex) {
+			logger.error("删除异常",ex);
+			setPromptException(view, ex);
+		}
+		return view;
+	}
+
+}

@@ -1,0 +1,58 @@
+package <@{dao.packageName}@>;
+
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Map;
+
+import <@{entity.name}@>;
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+@Repository("<@{dao.paramName}@>")
+public interface <@{dao.simpleName}@> {
+
+	/**
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	public Integer insert(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	
+	/**
+	 * 获取列表
+	 * @param selectItem
+	 * @return
+	 */
+	public List<<@{entity.simpleName}@>> queryList(Map<String,Object> selectItem);
+	
+	/**
+	 * 获取分页列表
+	 * @param selectItem
+	 * @return
+	 */
+	public List<<@{entity.simpleName}@>> queryListPage(Map<String,Object> selectItem);
+	
+	/**
+	 * 根据<@{primaryColumn.paramName}@>修改
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	public Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	
+	/**
+	 * 根据<@{primaryColumn.paramName}@>删除
+	 * @param <@{primaryColumn.paramName}@>
+	 * @return
+	 */
+	public Integer deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	
+	/**
+	 * 根据<@{primaryColumn.paramName}@>查找
+	 * @param <@{primaryColumn.paramName}@>
+	 * @return
+	 */
+	public <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+
+
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:secure="http://www.pollix.at/thymeleaf/shiro">
+<head >
+    <meta charset="UTF-8">
+    <title></title>
+<th:block th:replace="fragments/headTag2 ::style "></th:block></head>
+<body>
+<div class="page-inner">
+ <div class="card">
+<div class="card-header">
+                <form id="form_1" name="form" onsubmit="return queryStart()"  method="post"  class="form-inline">
+                    <input type="hidden" name="pageIndex" value="1" id="pageIndex">
+                    <input type="hidden" name="pageSize" value="20" >
+                    
+                    <@each:{searchForms} item:"item"@>
+                    <div class="form-group">
+    <label th:text="#{<@{setting.groupName}@>.<@{tableCodeParam}@>.<@{item.paramName}@>}"><@{item.desciption}@></label>
+    <input type="text" class="form-control" name="<@{item.paramName}@>" >
+</div>
+<@endEach@>
+                    <div class="form-group">
+                        <input type="submit" class="btn btn-primary" id="queryBtn" value="查询" th:value="#{i18n.query}" />
+                        <input type="button" secure:hasPermission="test:sysUser:add" class="btn btn-primary" id="addBtn" th:value="#{i18n.add('')}" />
+                    </div>
+
+                </form>
+
+            </div>
+<div class="card-body table-responsive" id="datalist"></div></div><th:block th:replace="fragments/headTag2 ::script "></th:block>
+<script type="text/javascript" th:inline="javascript">
+    $(function(){
+        $("#queryBtn").click(queryStart);
+		 $("#addBtn").click(function () {
+            openWindow({
+                title:/*[[#{i18n.add('')}]]*/"",
+                url:"add",
+                complete:function (resData){
+                    loadData();
+                }
+            });
+        });        queryStart();
+    });
+    function loadData()
+    {
+        loadTableData({id:"datalist",url:"list",data:$("#form_1").serialize()});
+    }
+    function queryStart()
+    {
+        toPage(1);
+        return false;
+    }
+
+    function toPage(pageIndex)
+    {
+        $("#pageIndex").val(pageIndex);
+        loadData();
+    }
+</script>
+</body>
+</html>

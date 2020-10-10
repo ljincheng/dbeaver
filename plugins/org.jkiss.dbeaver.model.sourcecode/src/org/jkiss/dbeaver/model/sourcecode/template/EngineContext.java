@@ -4,7 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
+import org.jkiss.dbeaver.model.sourcecode.utils.TextUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
+
+import cn.booktable.template.IEngineContext;
 
 public class EngineContext implements IEngineContext{
 	
@@ -22,6 +25,7 @@ public class EngineContext implements IEngineContext{
 		Map<String,String> systemMap=new HashMap<String, String>();
 		systemMap.put("lf", GeneralUtils.getDefaultLineSeparator());
 		setVariable("system", systemMap);
+		setVariable("text", new TextUtils());
 	} 
  
 
@@ -55,8 +59,7 @@ public class EngineContext implements IEngineContext{
 		}
 	}
 	
-
-	@Override
+ 
 	public String getTemplateFile(String tplFile)
 	{
 		String html=cacheTemplateFileMap.get(tplFile);

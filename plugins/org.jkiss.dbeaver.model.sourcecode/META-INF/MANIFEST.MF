@@ -41,7 +41,8 @@ Require-Bundle:  org.eclipse.core.runtime,
  org.jkiss.dbeaver.ui.navigator
 Bundle-Localization: OSGI-INF/l10n/bundle
 Automatic-Module-Name: org.jkiss.dbeaver.model.sourcecode
-Bundle-ClassPath: lib/ognl-3.2.16-SNAPSHOT.jar,
+Bundle-ClassPath: lib/template-1.0.0.jar,
+ lib/ognl-3.2.16-SNAPSHOT.jar,
  lib/javassist-3.24.1-GA.jar,
  lib/easymock-2.5.2.jar,
  .

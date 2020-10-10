@@ -1,0 +1,59 @@
+package <@{componentImpl.packageName}@>;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import <@{pageDo.name}@>;
+import <@{entity.name}@>; 
+import <@{component.name}@>;
+import <@{dao.name}@>;
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+@Component("<@{component.paramName}@>")
+public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@> {
+
+	@Autowired 
+	private <@{dao.simpleName}@> <@{dao.paramName}@>;
+
+	@Override
+	public Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+		return <@{dao.paramName}@>.insert(<@{entity.paramName}@>);
+	}
+
+	@Override
+	public List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem){
+		return <@{dao.paramName}@>.queryList(selectItem);
+	}
+
+	@Override
+	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem){
+		if(selectItem==null){
+			selectItem=new HashMap<String,Object>();
+		}
+		<@{pageDo.simpleName}@><<@{entity.simpleName}@>> pageBean=new <@{pageDo.simpleName}@><<@{entity.simpleName}@>>(pageIndex, pageSize);
+		selectItem.put("page", pageBean);
+		pageBean.setPage(<@{dao.paramName}@>.queryListPage(selectItem));
+	 	return pageBean;
+	}
+
+	@Override
+	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+		return <@{dao.paramName}@>.updateBy<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
+	}
+
+	@Override
+	public Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		return <@{dao.paramName}@>.deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+	}
+
+	@Override
+	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		return <@{dao.paramName}@>.findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+	}
+
+}

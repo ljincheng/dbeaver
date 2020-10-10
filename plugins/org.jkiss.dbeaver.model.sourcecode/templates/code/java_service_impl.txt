@@ -1,0 +1,53 @@
+package <@{serviceImpl.packageName}@>;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import <@{pageDo.name}@>;
+import <@{entity.name}@>; 
+import <@{service.name}@>;
+import <@{component.name}@>;
+
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+@Service("<@{service.paramName}@>")
+public class <@{serviceImpl.simpleName}@> implements <@{service.simpleName}@> {
+
+	@Autowired 
+	private <@{component.simpleName}@> <@{component.paramName}@>;
+
+	@Override
+	public Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+		return <@{component.paramName}@>.insert<@{tableCodeName}@>(<@{entity.paramName}@>);
+	}
+
+	@Override
+	public List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem){
+		return <@{component.paramName}@>.query<@{tableCodeName}@>List(selectItem);
+	}
+
+	@Override
+	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem){
+		return <@{component.paramName}@>.query<@{tableCodeName}@>ListPage(pageIndex,pageSize,selectItem);
+	}
+
+	@Override
+	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+		return <@{component.paramName}@>.update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
+	}
+
+	@Override
+	public Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		return <@{component.paramName}@>.delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+	}
+
+	@Override
+	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+		return <@{component.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+	}
+
+}

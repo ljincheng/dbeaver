@@ -21,6 +21,7 @@ public class UIMessages  extends NLS {
 	public static String dbeaver_generate_sourcecode_save;
 	public static String dbeaver_generate_sourcecode_msg_selectOutPutFolder;
 	public static String dbeaver_generate_sourcecode_msg_selectOutPutFolder_detailTip;
+	public static String dbeaver_generate_sourcecode_msg_confirmReplaceExistFile;
 	public static String dbeaver_generate_sourcecode_error;
 	public static String dbeaver_generate_sourcecode_generatorSourceCodeError;
 	public static String dbeaver_generate_sourcecode_pageClassFullName;
@@ -35,5 +36,6 @@ public class UIMessages  extends NLS {
 	public static String dbeaver_generate_sourcecode_preferences_generalFileRule;
 	public static String dbeaver_generate_sourcecode_preferences_author;
 	public static String dbeaver_generate_sourcecode_preferences_templateParamName;
+	
 
 }

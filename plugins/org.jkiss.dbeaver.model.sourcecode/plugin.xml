@@ -59,6 +59,9 @@
          <generator id="tableSourceCode_html_add" class="org.jkiss.dbeaver.model.sourcecode.html.GeneratorSourceCodeHtmlThymeleafAdd" label="Html Add(Thymeleaf)" description="Get source code" order="1013">
             <objectType name="org.jkiss.dbeaver.model.DBPScriptObject"/>
         </generator>
+          <generator id="tableSourceCode_lang_message" class="org.jkiss.dbeaver.model.sourcecode.entity.GeneratorSourceCodeLangMessage" label="Message" description="Get source code" order="1014">
+            <objectType name="org.jkiss.dbeaver.model.DBPScriptObject"/>
+        </generator>
     </extension>
     
     

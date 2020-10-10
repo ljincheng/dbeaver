@@ -13,7 +13,7 @@
 <div class="form-panel">
     <form id="form_1" name="form" method="post" class="form-horizontal">
 
-        @@${addForm}@@
+        <@{addForm}@>
 
         <div class="form-group">
             <div class="col-sm-offset-2  col-md-10 text-center">
@@ -40,15 +40,4 @@
 </script>
 </div></body>
 </html>
-(hello=@@${hello}@@)
-(table.name=@@${table.name}@@)
-(tableName=@@${tableName}@@)
-(tableCodeName=@@tableCodeName@@)
-(tableCodeParam=@@tableCodeParam@@)
-(entity.packageName=@@entity.packageName@@)
-(entity.name=@@entity.name@@)
-(entity.simpleName=@@entity.simpleName@@)
-(entity.paramName=@@entity.paramName@@)
-(helloword=@@helloword@@)
-   
-ok
+ 

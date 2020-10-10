@@ -87,22 +87,22 @@ public abstract class SourceCodeGenerator<OBJECT> extends DBRRunnableWithResult<
 		this.sourceCodeSetting = sourceCodeSetting;
 	}
 
-	@Override
-    public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException
-    {
-        StringBuilder code = new StringBuilder(100);
-        try {
-            for (OBJECT object : objects) {
-            	generateCode(monitor, code, object);
-            }
-        } catch (DBException e) {
-            throw new InvocationTargetException(e);
-        }
-        result = code.toString();
-    }
+//	@Override
+//    public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException
+//    {
+//        StringBuilder code = new StringBuilder(100);
+//        try {
+//            for (OBJECT object : objects) {
+//            	generateCode(monitor, code, object);
+//            }
+//        } catch (DBException e) {
+//            throw new InvocationTargetException(e);
+//        }
+//        result = code.toString();
+//    }
 
-    protected abstract void generateCode(DBRProgressMonitor monitor, StringBuilder code, OBJECT object)
-        throws DBException;
+//    protected abstract void generateCode(DBRProgressMonitor monitor, StringBuilder code, OBJECT object)
+//        throws DBException;
     
 //    public abstract String getFileRule();
     

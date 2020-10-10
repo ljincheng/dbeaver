@@ -2,29 +2,24 @@ package org.jkiss.dbeaver.model.sourcecode;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.DBPScriptObject;
-import org.jkiss.dbeaver.model.DBPScriptObjectExt;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.sourcecode.core.JavaTemplateContext;
 import org.jkiss.dbeaver.model.sourcecode.registry.SourceCodeGenerator;
-import org.jkiss.dbeaver.model.sql.SQLConstants;
-import org.jkiss.dbeaver.model.sql.generator.SQLGenerator;
+import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.struct.DBStructUtils;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTable;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
-import org.jkiss.dbeaver.utils.GeneralUtils;
-import org.jkiss.utils.CommonUtils;
 
 public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScriptObject> {
 	
-	private GeneratorSourceCodeExport codeExport;
+//	private GeneratorSourceCodeExport codeExport;
 
     @Override
     public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
@@ -39,7 +34,7 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
             }
         }
         if (!allTables) {
-            super.run(monitor);
+//            super.run(monitor);
             return;
         }
 
@@ -70,10 +65,11 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
         	for (DBSTable table : goodTableList) { 
         		StringBuilder code=new StringBuilder(100);
         		generateOneTableSourceCode(code,monitor, table, options);
-	        	codeExport=new GeneratorSourceCodeExport(getRootPath());
-	        	String fileName=saveFileName(monitor,table);
-        		boolean genResult=codeExport.saveFile(fileName, code.toString());
+//	        	codeExport=new GeneratorSourceCodeExport(getRootPath());
+//	        	String fileName=saveFileName(monitor,table);
+//        		boolean genResult=codeExport.saveFile(fileName, code.toString());
 //	        	boolean genResult=codeExport.exportHtml(javaFileName(table,"/add.html"), code.toString(),table.getDataSource().getName());
+        		boolean genResult=writeCode(monitor,table,code);
 	        	if(!genResult)
 	        	{
 	        		if(!DBWorkbench.getPlatformUI().confirmAction("错误", "生成出现错误，是否继续"))
@@ -89,9 +85,7 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
         	for (DBSTable table : cycleTableList) { 
         		StringBuilder code=new StringBuilder(100);
         		generateOneTableSourceCode(code,monitor, table, options);
-	        	codeExport=new GeneratorSourceCodeExport(getRootPath());
-	        	String fileName=saveFileName(monitor,table);
-        		boolean genResult=codeExport.saveFile(fileName, code.toString());
+        		boolean genResult=writeCode(monitor,table,code);
 //	        	boolean genResult=codeExport.exportHtml(javaFileName(table,"/add.html"), code.toString(),table.getDataSource().getName());
 	        	if(!genResult)
 	        	{
@@ -109,9 +103,9 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
         		StringBuilder code=new StringBuilder(100);
         		generateOneTableSourceCode(code,monitor, table, options);
         		
-        		codeExport=new GeneratorSourceCodeExport(getRootPath());
-        		String fileName=saveFileName(monitor,table);
-        		boolean genResult=codeExport.saveFile(fileName, code.toString());
+//        		codeExport=new GeneratorSourceCodeExport(getRootPath());
+        		boolean genResult=writeCode(monitor,table,code);
+//        		boolean genResult=codeExport.saveFile(fileName, code.toString());
         		//boolean genResult=codeExport.exportHtml(javaFileName(table,"/add.html"), code.toString(),table.getDataSource().getName());
         		if(!genResult)
         		{
@@ -141,11 +135,26 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
         monitor.done();
     }
     
-    protected abstract String saveFileName(DBRProgressMonitor monitor,DBSTable table);
+    protected abstract boolean writeCode(DBRProgressMonitor monitor,DBSTable table,StringBuilder code);
 		
+    protected abstract String getTemplateFile();
 	 
     
-    public abstract void  generateOneTableSourceCode(StringBuilder sql,DBRProgressMonitor monitor,DBSTable table, Map<String, Object> options) throws DBException;
+    public  void  generateOneTableSourceCode(StringBuilder sql,DBRProgressMonitor monitor,DBSTable table, Map<String, Object> options) throws DBException{
+    	
+		String templateFile = getTemplateFile();
+		try {
+			if (templateFile != null && templateFile.length() > 0) {
+				String tplHtml = CodeHelper.loadResource(getTemplateFile());
+				JavaTemplateContext mContext = new JavaTemplateContext(table, this.sourceCodeSetting, monitor);
+				String result =cn.booktable.template.TemplateEngine.process(tplHtml, mContext);
+				//String result = TemplateEngine.process(tplHtml, mContext);
+				sql.append(result);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
    
      
    

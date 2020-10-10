@@ -1,28 +1,27 @@
-package @@${entity.packageName}@@;
+package <@{entity.packageName}@>;
+
 import org.apache.ibatis.type.Alias;
 import java.io.Serializable;
-import java.util.Date;
 
+<@each:{columnsPackages} item:"item"@>import <@{item}@>;<@{system.lf}@><@endEach@>
 /**
- * @@${tableDesciption}@@
- * @author @@${setting.author}@@
- * @version v1.0
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
  */
-@Alias("@@${entity.paramName}@@")
-public class @@${entity.simpleName}@@ implements Serializable {
+@Alias("<@{entity.paramName}@>")
+public class <@{entity.simpleName}@> implements Serializable {
 
-private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = 1L;
  
- @@#each{list:columns item:item text:"private ${item.javaType} ${item.lowerCamelCaseName};//${item.desciption}${system.lf}"}@@
+<@each:{columns} item:"item"@>
+		private <@{item.javaType}@> <@{item.paramName}@>;//<@{item.desciption}@><@{system.lf}@><@endEach@>
  
- @@#each{list:columns item:item text:"
-	 public void set${item.UpperCamelCaseName}(${item.javaType} ${item.lowerCamelCaseName}){
-	 	this.${item.lowerCamelCaseName}=${item.lowerCamelCaseName}; 
-	 };${system.lf}
-	 public ${item.javaType} get${item.UpperCamelCaseName}(){
-	 	return this.${item.lowerCamelCaseName}; 
-	 };${system.lf}
-	 "}@@
-	 
- 
+ <@each:{columns} item:"item"@>
+		public void set<@{item.codeName}@>(<@{item.javaType}@> <@{item.paramName}@>){
+	 		this.<@{item.paramName}@>=<@{item.paramName}@>; 
+	 	};<@{system.lf}@>
+		public <@{item.javaType}@> get<@{item.codeName}@>(){
+	 		return this.<@{item.paramName}@>; 
+		};<@{system.lf}@>
+<@endEach@>
 }

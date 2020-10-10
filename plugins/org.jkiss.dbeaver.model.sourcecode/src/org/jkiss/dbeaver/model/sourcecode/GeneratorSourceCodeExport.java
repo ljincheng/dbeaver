@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 
+import org.eclipse.osgi.util.NLS;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.sourcecode.internal.UIMessages;
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
@@ -48,7 +49,7 @@ public class GeneratorSourceCodeExport {
 	}
 	
 
-	public boolean saveFile(String filePath,String content)
+	public boolean saveFile(String filePath,String fileName,String content)
 	{
 		if(CodeHelper.isEmpty(outputFolder))
 		{
@@ -64,16 +65,23 @@ public class GeneratorSourceCodeExport {
 			}else {
 				rootPath=outputFolder.replaceAll("/", File.separator);
 			}
-			String systemFilePath=filePath.replace("/", File.separator);
-			String fileDir=systemFilePath.substring(0, filePath.lastIndexOf(File.separator));
+			String fileDir=filePath.replace("/", File.separator);
+			//String fileDir=systemFilePath.substring(0, filePath.lastIndexOf(File.separator));
 			String systemFileDir=rootPath+ fileDir;
-			String systemFile=rootPath+ systemFilePath;
+			String systemFile=rootPath+ fileDir+File.separator+fileName;
 			File codeFileDir=new File(systemFileDir);
 			if(!codeFileDir.exists())
 			{
 				codeFileDir.mkdirs();
 			}
 			File codeFile=new File(systemFile);
+			if(codeFile.exists())
+			{
+				if(!DBWorkbench.getPlatformUI().confirmAction("", NLS.bind(UIMessages.dbeaver_generate_sourcecode_msg_confirmReplaceExistFile,fileName)))
+				{ 
+					return false;
+				}
+			}
 			BufferedWriter bw = new BufferedWriter(new FileWriter(codeFile));
 			bw.write(content);
 			bw.close();
@@ -86,68 +94,6 @@ public class GeneratorSourceCodeExport {
 		
 	}
 	
-	public boolean exportMybatis(String filePath,String content,String database)
-	{
-			if(!CodeHelper.isEmpty(content))
-			{
-				String mybatisFilePath=rootFolderName+"/"+database+"/mapper/"+filePath;
-				return saveFile(mybatisFilePath,content);
-			}
-			return false;
-	}
-	public boolean exportEntity(String filePath,String content,String database)
-	{
-			if(!CodeHelper.isEmpty(content))
-			{
-				String mybatisFilePath=rootFolderName+"/"+database+"/entity/"+filePath;
-				return saveFile(mybatisFilePath,content);
-			}
-			return false;
-	}
-	public boolean exportDao(String filePath,String content,String database)
-	{
-		if(!CodeHelper.isEmpty(content))
-		{
-			String mybatisFilePath=rootFolderName+"/"+database+"/dao/"+filePath;
-			return saveFile(mybatisFilePath,content);
-		}
-		return false;
-	}
-	public boolean exportComponent(String filePath,String content,String database)
-	{
-		if(!CodeHelper.isEmpty(content))
-		{
-			String mybatisFilePath=rootFolderName+"/"+database+"/component/"+filePath;
-			return saveFile(mybatisFilePath,content);
-		}
-		return false;
-	}
-	public boolean exportService(String filePath,String content,String database)
-	{
-		if(!CodeHelper.isEmpty(content))
-		{
-			String mybatisFilePath=rootFolderName+"/"+database+"/service/"+filePath;
-			return saveFile(mybatisFilePath,content);
-		}
-		return false;
-	}
-	public boolean exportController(String filePath,String content,String database)
-	{
-		if(!CodeHelper.isEmpty(content))
-		{
-			String mybatisFilePath=rootFolderName+"/"+database+"/controller/"+filePath;
-			return saveFile(mybatisFilePath,content);
-		}
-		return false;
-	}
-	public boolean exportHtml(String filePath,String content,String database)
-	{
-		if(!CodeHelper.isEmpty(content))
-		{
-			String mybatisFilePath=rootFolderName+"/"+database+"/html/"+filePath;
-			return saveFile(mybatisFilePath,content);
-		}
-		return false;
-	}
+	 
 
 }

@@ -1,0 +1,58 @@
+package <@{component.packageName}@>;
+import java.util.List;
+import java.util.Map;
+
+import <@{pageDo.name}@>;
+import <@{entity.name}@>; 
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+public interface <@{component.simpleName}@> {
+
+	/**
+	 * 添加
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	public Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+
+	/**
+	 * 获取列表
+	 * @param selectItem
+	 * @return
+	 */
+	public List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem);
+
+	/**
+	 * 获取分页列表
+	 * @param pageIndex 起始页
+	 * @param pageSize 每页记录数
+	 * @param selectItem 过滤条件
+	 * @return
+	 */
+	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem);
+
+	/**
+	 * 根据<@{primaryColumn.paramName}@>修改
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+
+	/**
+	 * 根据<@{primaryColumn.paramName}@>删除
+	 * @param <@{primaryColumn.paramName}@>
+	 * @return
+	 */
+	public Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+
+	/**
+	 * 根据<@{primaryColumn.paramName}@>查找
+	 * @param <@{primaryColumn.paramName}@>
+	 * @return
+	 */
+	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+
+}

@@ -1,0 +1,21 @@
+package <@{entity.packageName}@>;
+
+import org.apache.ibatis.type.Alias;
+import java.io.Serializable;
+import lombok.Data;
+
+<@each:{columnsPackages} item:"item"@>		import <@{item}@>;<@{system.lf}@><@endEach@>
+
+/**
+ * <@{tableDesciption}@>
+ * @author <@{setting.author}@>
+ */
+@Alias("<@{entity.paramName}@>")
+@Data
+public class <@{entity.simpleName}@> implements Serializable {
+
+private static final long serialVersionUID = 1L;
+ 
+<@each:{columns} item:"item" @>		private <@{item.javaType}@> <@{item.paramName}@>;//<@{item.desciption}@><@{system.lf}@><@endEach@>
+ 
+}
