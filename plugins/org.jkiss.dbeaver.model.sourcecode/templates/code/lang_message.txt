@@ -1,4 +1,4 @@
 
-<@each:{columns} item:"item"  @><@{setting.groupName}@>.<@{tableCodeParam}@>.<@{item.paramName}@> = <@{item.codeName}@> <@{system.lf}@><@endEach@>
+<@each:{columns} item:"item"  @><@{setting.groupName}@>.<@{tableCodeParam}@>.<@{item.paramName}@> = <@{item.codeName}@><@{system.lf}@><@endEach@>
 
-<@each:{columns} item:"item"@><@{setting.groupName}@>.<@{tableCodeParam}@>.<@{item.paramName}@> = <@{text.utf8ToUnicode('{item.desciption}')}@> <@{system.lf}@><@endEach@>
+<@each:{columns} item:"item"@><@{setting.groupName}@>.<@{tableCodeParam}@>.<@{item.paramName}@> = <@{text.utf8ToUnicode('{item.desciption}')}@><@{system.lf}@><@endEach@>

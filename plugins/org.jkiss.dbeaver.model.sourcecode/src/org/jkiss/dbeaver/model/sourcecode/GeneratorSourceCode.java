@@ -17,7 +17,7 @@ import org.jkiss.dbeaver.model.struct.DBStructUtils;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTable;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 
-public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScriptObject> {
+public abstract class GeneratorSourceCode  extends SourceCodeGenerator<Object> {
 	
 //	private GeneratorSourceCodeExport codeExport;
 
@@ -25,7 +25,8 @@ public abstract class GeneratorSourceCode  extends SourceCodeGenerator<DBPScript
     public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
         boolean allTables = true;
         List<DBSTable> tableList = new ArrayList<>();
-        for (DBPScriptObject object : objects) {
+        
+        for (Object object : objects) {
             if (!(object instanceof DBSTable)) {
                 allTables = false;
                 break;
