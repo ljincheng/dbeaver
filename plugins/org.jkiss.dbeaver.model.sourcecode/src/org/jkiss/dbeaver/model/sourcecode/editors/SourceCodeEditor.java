@@ -41,13 +41,13 @@ public class SourceCodeEditor extends EditorPart
 	@Override
 	public void doSave(IProgressMonitor monitor) {
 		// TODO Auto-generated method stub
-		
+		System.out.print("SourceCodeEditor 执行保存");
 	}
 
 	@Override
 	public void doSaveAs() {
 		// TODO Auto-generated method stub
-		
+		System.out.print("SourceCodeEditor 执行保存AS");
 	}
 
 	
@@ -72,7 +72,7 @@ public class SourceCodeEditor extends EditorPart
 	@Override
 	public boolean isSaveAsAllowed() {
 		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override

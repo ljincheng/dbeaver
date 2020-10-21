@@ -1,15 +1,20 @@
 package org.jkiss.dbeaver.model.sourcecode.editors;
 
 import org.eclipse.ui.IEditorSite;
+import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.commands.ICommandImageService;
 import org.eclipse.ui.texteditor.DefaultRangeIndicator;
+import org.eclipse.ui.texteditor.ITextEditorActionConstants;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.editors.StringEditorInput;
 import org.jkiss.dbeaver.ui.editors.SubEditorSite;
 import org.jkiss.dbeaver.ui.editors.text.BaseTextEditor;
 import org.jkiss.dbeaver.utils.GeneralUtils;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.text.source.projection.ProjectionSupport;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.FillLayout;
@@ -23,16 +28,28 @@ public class JavaEditor extends BaseTextEditor {
 	  private IEditorSite subSite;
 	 
 	 public JavaEditor(final IWorkbenchPartSite parentSite){
-		 super();
+		 this(parentSite,true);
+	 }
+	 public JavaEditor(final IWorkbenchPartSite parentSite,boolean readOnly){
+		 super(); 
 		 this.subSite = new SubEditorSite(parentSite);
-		 this.codeInput= new StringEditorInput("", "", true, GeneralUtils.getDefaultFileEncoding());
-		 
+		 this.codeInput= new StringEditorInput("Source Code View", "", readOnly, GeneralUtils.getDefaultFileEncoding());
+		
+		 if(!readOnly)
+		 {
+			 this.codeInput.setReadOnly(false);
+		 }
 	 }
-	 
-	 
-	 public String getCode() {
-	        return codeInput.getBuffer().toString();
+
+	public String getCode() {
+		 String newContent = getDocument().get();
+		 return newContent;
+	        //return codeInput.getBuffer().toString();
 	 }
+	
+	protected String getCodeInputText() {
+		return codeInput.getBuffer().toString();
+	}
 	 
 	 public void setCode(String code)
 	 {
@@ -74,10 +91,10 @@ public class JavaEditor extends BaseTextEditor {
 	
 	 
 	
-	 protected void updateCode()
+	 public void updateCode()
 	    {
 	        try {
-	            this.codeInput.setText(getCode());
+	            this.codeInput.setText(getCodeInputText());
 	            if (this.getSite() != null) {
 	                setInput(codeInput);
 	            } else {
@@ -88,5 +105,38 @@ public class JavaEditor extends BaseTextEditor {
 	            DBWorkbench.getPlatformUI().showError("", null, e);
 	        }
 	    }
-
+	 
+	 	@Override
+	    protected void editorContextMenuAboutToShow(IMenuManager menu) {
+	        super.editorContextMenuAboutToShow(menu);
+//	        addAction(menu, ITextEditorActionConstants.GROUP_EDIT, ITextEditorActionConstants.SHIFT_RIGHT);
+//	        addAction(menu, ITextEditorActionConstants.GROUP_EDIT, ITextEditorActionConstants.SHIFT_LEFT);
+	  
+	      if(saveMenuAction!=null && this.isEditable())
+	      {
+	    	 
+	    	  IAction  saveAction= getAction(ITextEditorActionConstants.SAVE);
+	    	  if(saveAction!=null )
+	    	  {
+	    		  if(!saveAction.equals(saveMenuAction)) {
+	    		  setAction(ITextEditorActionConstants.SAVE, saveMenuAction);
+	    		  }
+	    	  }else {
+	    		 menu.add(saveAction);
+	    	  }
+	      }
+	       
+	    }
+	 	private IAction saveMenuAction;
+	 	public void addSaveMenuAction(IAction action)
+	 	{
+	 		ICommandImageService imgService= this.getSite().getService(ICommandImageService.class);
+	 		saveMenuAction=action; //addAction(this.action, ITextEditorActionConstants.SAVE);
+	 		action.setImageDescriptor(imgService.getImageDescriptor(IWorkbenchCommandConstants.FILE_SAVE, ICommandImageService.TYPE_DEFAULT));
+	 		
+	 	}
+	 	
+	 	
+	 
+	   
 }

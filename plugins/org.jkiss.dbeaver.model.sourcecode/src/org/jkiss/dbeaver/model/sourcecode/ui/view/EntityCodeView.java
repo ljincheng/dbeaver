@@ -211,7 +211,7 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
          this.panelFolder.addDisposeListener(e -> panelsMenuManager.dispose()); 
 	       if(this.context!=null)
 	       {
-	         this.context.createPanelTabs(this.panelFolder);
+	         this.context.createPanelTabs(this.site.getPart(),this.panelFolder);
 	       }
 	}
 	

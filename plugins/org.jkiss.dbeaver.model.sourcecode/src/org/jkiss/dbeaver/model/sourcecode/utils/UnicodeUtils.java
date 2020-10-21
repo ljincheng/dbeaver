@@ -95,6 +95,6 @@ public final class UnicodeUtils {
 	}
 
 	public static void main(String[] args) {
-		System.out.println(encode("元数据"));
+		System.out.println(encode("日志文件位置"));
 	}
 }

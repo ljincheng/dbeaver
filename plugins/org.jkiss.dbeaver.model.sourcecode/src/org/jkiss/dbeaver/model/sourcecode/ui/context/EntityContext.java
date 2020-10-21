@@ -5,6 +5,7 @@ import java.util.List;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.ui.IWorkbenchPart;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
 import org.jkiss.dbeaver.model.sourcecode.ui.event.ViewDataRunnableEvent; 
 
@@ -19,16 +20,11 @@ public interface EntityContext extends  DBRRunnableWithProgress{
 	List<TabItemContext> panelTabs();
 	
 	
-	void createPanelTabs(CTabFolder panelFolder);
+	void createPanelTabs(IWorkbenchPart part,CTabFolder panelFolder);
 	
 	
-	/**
-	 * 创建属性面板内容控件
-	 * @param context
-	 * @param parent
-	 * @return
-	 */
-	Control createTabContents(TabItemContext context,  Composite parent);
+	 
+//	Control createTabContents(TabItemContext context,  Composite parent);
 	
 	
 	void setViewDataRunnableEvent(ViewDataRunnableEvent event);
