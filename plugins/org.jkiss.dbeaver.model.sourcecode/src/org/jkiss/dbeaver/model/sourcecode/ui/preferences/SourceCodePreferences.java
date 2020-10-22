@@ -70,15 +70,15 @@ public final class SourceCodePreferences {
         PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_GROUPNAME, "test");
         
         // rule setting
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_ENTITY, "${package_name}.model.${group_name}.${table_name}Do");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_ENTITY_LOMBOKDATA, "${package_name}.model.${group_name}.${table_name}DTO");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_DAO, "${package_name}.dao.${group_name}.${table_name}Dao");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_ENTITY, "${packagePath}.model.${groupName}.${table_name}Do");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_ENTITY_LOMBOKDATA, "${packagePath}.model.${groupName}.${table_name}DTO");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_DAO, "${packagePath}.dao.${groupName}.${table_name}Dao");
 //        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_MYBATIS, "{package_name}/mapping/{group_name}/{table_name}Dao");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_COMPONENT, "${package_name}.component.${group_name}.${table_name}Component");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_COMPONENT_IMPL, "${package_name}.component.${group_name}.impl.${table_name}ComponentImpl");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_SERVICE, "${package_name}.service.${group_name}.${table_name}Service");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_SERVICE_IMPL, "${package_name}.service.${group_name}.impl.${table_name}Service");
-        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_CONTROLLER, "${package_name}.controller.${group_name}.${table_name}Controller");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_COMPONENT, "${packagePath}.component.${groupName}.${table_name}Component");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_COMPONENT_IMPL, "${packagePath}.component.${groupName}.impl.${table_name}ComponentImpl");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_SERVICE, "${packagePath}.service.${groupName}.${table_name}Service");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_SERVICE_IMPL, "${packagePath}.service.${groupName}.impl.${table_name}Service");
+        PrefUtils.setDefaultPreferenceValue(store, SourceCodePreferences.SOURCECODE_RULE_CONTROLLER, "${packagePath}.controller.${groupName}.${table_name}Controller");
         
  
     }

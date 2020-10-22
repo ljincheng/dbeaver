@@ -23,9 +23,6 @@ public interface EntityContext extends  DBRRunnableWithProgress{
 	void createPanelTabs(IWorkbenchPart part,CTabFolder panelFolder);
 	
 	
-	 
-//	Control createTabContents(TabItemContext context,  Composite parent);
-	
 	
 	void setViewDataRunnableEvent(ViewDataRunnableEvent event);
 

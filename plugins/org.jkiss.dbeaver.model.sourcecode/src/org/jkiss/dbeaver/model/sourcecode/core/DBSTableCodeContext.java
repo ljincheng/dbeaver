@@ -1,7 +1,11 @@
 package org.jkiss.dbeaver.model.sourcecode.core;
 
+import java.math.BigDecimal;
+import java.security.Timestamp;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +13,8 @@ import java.util.Map;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sourcecode.template.EngineContext;
+import org.jkiss.dbeaver.model.sourcecode.ui.context.FormContext;
+import org.jkiss.dbeaver.model.sourcecode.ui.context.FormItemContext;
 import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.sourcecode.utils.TextUtils;
 import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
@@ -17,9 +23,9 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSTableColumn;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndex;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndexColumn;
 import org.jkiss.utils.CommonUtils;
- 
 
-public final class JavaTemplateContext extends EngineContext{
+public class DBSTableCodeContext extends EngineContext{
+	
 	public static final String KEY_TABLE="table";
 	public static final String KEY_SETTING="setting";
 	public static final String KEY_TABLENAME="tableName";
@@ -49,59 +55,114 @@ public final class JavaTemplateContext extends EngineContext{
 	public static final String KEY_SEARCHFORMPACKAGES="searchFormsPackages";
 	public static final String KEY_MYBATISINSERTCOLUMNS="mybatisInsertColumns";
 	public static final String KEY_MYBATISINSERTCOLUMNSPACKAGES="mybatisInsertColumnsPackages";
-	
+	private DBSTable mTable;
 	private Map<String, Object> dataMap;
-	public JavaTemplateContext() {
-		super();
-		dataMap=new HashMap<String, Object>();
+	private List<CodeColumnAttribute> mColumns=new ArrayList<CodeColumnAttribute>();
+	
+	public DBSTableCodeContext(DBSTable table) {
+		this.mTable=table; 
 	}
 	
-	public JavaTemplateContext(DBSTable table,SourceCodeSetting setting,DBRProgressMonitor monitor)
+	public void run(DBRProgressMonitor monitor,List<FormItemContext> settings)
 	{
-		this();
-		initData(table,setting,monitor);
-	}
-	
-	private void initData(DBSTable table,SourceCodeSetting setting,DBRProgressMonitor monitor)
-	{
-		if(table==null || setting==null)
+		if(dataMap!=null)
 		{
-			return ;
+			dataMap.clear();
+			dataMap=null;
 		}
-		String tableName=table.getName();
-		
-		dataMap.put(KEY_TABLE, table);
-		dataMap.put(KEY_SETTING, setting);
-		dataMap.put(KEY_TABLENAME,tableName);
-		dataMap.put(KEY_TABLEDESCIPTION,CodeHelper.emptyString(table.getDescription(), false));
-		dataMap.put(KEY_TABLECODENAME,CodeHelper.toUpperCamelCase(tableName));
-		dataMap.put(KEY_TABLECODEPARAM,CodeHelper.toLowerCamelCase(tableName));
-		dataMap.put(KEY_ENTITY,fileRule2JavaClass(tableName,setting.getRuleEntity(),setting));
-		
-		dataMap.put(KEY_DAO,fileRule2JavaClass(tableName,setting.getRuleDao(),setting));
-		dataMap.put(KEY_COMPONENT,fileRule2JavaClass(tableName,setting.getRuleComponent(),setting));
-		dataMap.put(KEY_COMPONENTIMPL,fileRule2JavaClass(tableName,setting.getRuleComponentImpl(),setting));
-		dataMap.put(KEY_SERVICE,fileRule2JavaClass(tableName,setting.getRuleService(),setting));
-		dataMap.put(KEY_SERVICEIMPL,fileRule2JavaClass(tableName,setting.getRuleServiceImpl(),setting));
-		dataMap.put(KEY_CONTROLLER,fileRule2JavaClass(tableName,setting.getRuleController(),setting));
-		dataMap.put(KEY_PAGEDO,fileRule2JavaClass(tableName,setting.getClassPage(),setting));
-		dataMap.put(KEY_JSONVIEW,fileRule2JavaClass(tableName,setting.getClassJsonView(),setting));
-		dataMap.put(KEY_BUSINESSEXCEPTION,fileRule2JavaClass(tableName,setting.getClassBusinessException(),setting));
-		dataMap.put(KEY_ASSERTUTILS,fileRule2JavaClass(tableName,setting.getClassAssertUtils(),setting));
-		dataMap.put(KEY_BASECONTROLLER,fileRule2JavaClass(tableName,setting.getClassBaseController(),setting));
-		
-		  
-		
-		
-		// primaryKey
-		 SourceCodeTableColumn primaryKeyColumn=null;
-		 List<SourceCodeTableColumn> columns=new ArrayList<SourceCodeTableColumn>();
-		 List<SourceCodeTableColumn> tableListCols=new ArrayList<SourceCodeTableColumn>();
-		 List<SourceCodeTableColumn> inputForms=new ArrayList<SourceCodeTableColumn>();
-		 List<SourceCodeTableColumn> mybatisInsertColumns=new ArrayList<SourceCodeTableColumn>();
-		 List<SourceCodeTableColumn> searchForms=new ArrayList<SourceCodeTableColumn>();
+		dataMap=new HashMap<String, Object>();
+		if(this.mTable!=null )
+		{
+			tableColumns(monitor);
+		}
+		pushColumnsAttribute(mColumns,settings);
+	}
+	
+	public List<CodeColumnAttribute> getColumns(){
+		return this.mColumns;
+	}
+	
+	public void pushColumnsAttribute(List<CodeColumnAttribute> columns,List<FormItemContext> settings)
+	{
+		if(columns!=null)
+		{
+			Object primaryKeyColumnObj=dataMap.get(KEY_PRIMARYCOLUMN);
+			 CodeColumnAttribute primaryKeyColumn=null;
+			 if(primaryKeyColumnObj!=null) {
+				 primaryKeyColumn= (CodeColumnAttribute)primaryKeyColumnObj;
+			 }
+			 List<CodeColumnAttribute> mybatisInsertColumns=new ArrayList<CodeColumnAttribute>();
+			 List<CodeColumnAttribute> tableListCols=new ArrayList<CodeColumnAttribute>();
+			 List<CodeColumnAttribute> searchForms=new ArrayList<CodeColumnAttribute>();
+			 List<CodeColumnAttribute> inputForms=new ArrayList<CodeColumnAttribute>();
+			 
+			for(int i=0,k=columns.size();i<k;i++) {
+				CodeColumnAttribute column=columns.get(i);
+				if(primaryKeyColumn!=null && column.getColumnName().equals(primaryKeyColumn.getColumnName()))
+				{
+					primaryKeyColumn=column;
+				}
+				if(column.getSqlInsertSelected()!=null && column.getSqlInsertSelected()){
+					mybatisInsertColumns.add(column);
+				}
+				if(column.getHtmlTableListSelected()!=null && column.getHtmlTableListSelected()){
+					tableListCols.add(column);
+				}
+				if(column.getHtmlSearchSelected()!=null && column.getHtmlSearchSelected()){
+					searchForms.add(column);
+				}
+				if(column.getHtmlInputFormSelected()!=null && column.getHtmlInputFormSelected()) {
+					inputForms.add(column);
+				}
+			}
+			dataMap.put(KEY_PRIMARYCOLUMN,primaryKeyColumn);
+			dataMap.put(KEY_COLUMNS,columns);
+			dataMap.put(KEY_COLUMNPACKAGES, tableColumnImportJavaPackageList(columns));
+			dataMap.put(KEY_INPUTFORMS,inputForms);
+			dataMap.put(KEY_INPUTFORMPACKAGES,tableColumnImportJavaPackageList(inputForms));
+			dataMap.put(KEY_SEARCHFORMS,searchForms);
+			dataMap.put(KEY_SEARCHFORMPACKAGES,tableColumnImportJavaPackageList(searchForms));
+			dataMap.put(KEY_TABLELISTCOLS,tableListCols);
+			dataMap.put(KEY_TABLELISTCOLSPACKAGES,tableColumnImportJavaPackageList(tableListCols));
+			dataMap.put(KEY_MYBATISINSERTCOLUMNS,mybatisInsertColumns);
+			dataMap.put(KEY_MYBATISINSERTCOLUMNSPACKAGES,tableColumnImportJavaPackageList(mybatisInsertColumns));
+			String tableName=mTable.getName();
+			dataMap.put(KEY_TABLE, mTable);
+			dataMap.put(KEY_TABLENAME,tableName);
+			dataMap.put(KEY_TABLEDESCIPTION,CodeHelper.emptyString(mTable.getDescription(), false));
+			dataMap.put(KEY_TABLECODENAME,CodeHelper.toUpperCamelCase(tableName));
+			dataMap.put(KEY_TABLECODEPARAM,CodeHelper.toLowerCamelCase(tableName));
+			Map<String,String> settingsData=new HashMap<String, String>(); 
+			if(settings!=null)
+			{
+				for(int i=0,k=settings.size();i<k;i++)
+				{
+					FormItemContext formItem=settings.get(i);
+					settingsData.put(formItem.getId(), formItem.getValue());
+				}
+				for(int i=0,k=settings.size();i<k;i++)
+				{
+					FormItemContext formItem=settings.get(i); 
+					if("class".equals(formItem.getValueType()))
+					{
+						dataMap.put(formItem.getId(),fileRule2JavaClass(tableName,formItem.getValue(),settingsData));
+					}
+				}
+			}
+			dataMap.put(KEY_SETTING,settingsData); 
+			setVariables(dataMap);
+		}
+	}
+	
+	private void tableColumns(DBRProgressMonitor monitor)
+	{
+		 CodeColumnAttribute primaryKeyColumn=null;
+		 List<CodeColumnAttribute> tableListCols=new ArrayList<CodeColumnAttribute>();
+		 List<CodeColumnAttribute> inputForms=new ArrayList<CodeColumnAttribute>();
+		 List<CodeColumnAttribute> mybatisInsertColumns=new ArrayList<CodeColumnAttribute>();
+		 List<CodeColumnAttribute> searchForms=new ArrayList<CodeColumnAttribute>();
 		try {
-			 Collection<? extends DBSTableIndex> indexes = table.getIndexes(monitor);
+			 Collection<? extends DBSTableIndex> indexes = mTable.getIndexes(monitor);
 		     if (!CommonUtils.isEmpty(indexes)) {
 		         for (DBSTableIndex index : indexes) {
 		        	 if( index.isPrimary())
@@ -120,7 +181,7 @@ public final class JavaTemplateContext extends EngineContext{
 			            			 String mPrimaryKey_typeName=CodeHelper.columnType2JavaType(primaryColumn);
 			            			 String mPrimaryKey_paramName= primaryKey_lowerCamelCase;
 			            			 
-			            			 primaryKeyColumn=new SourceCodeTableColumn();
+			            			 primaryKeyColumn=new CodeColumnAttribute();
 			            			 primaryKeyColumn.setColumnName(primaryKey);
 			            			 primaryKeyColumn.setDesciption(primaryColumn.getDescription());
 			            			 primaryKeyColumn.setIsAutoGenerated(useGeneratedKeys);
@@ -129,6 +190,8 @@ public final class JavaTemplateContext extends EngineContext{
 			            			 primaryKeyColumn.setCodeName(primaryKey_upperCamelCase);
 			            			 primaryKeyColumn.setParamName(primaryKey_lowerCamelCase);
 			            			 primaryKeyColumn.setJavaType(mPrimaryKey_typeName);
+			            			 primaryKeyColumn.setJavaPackage(getJavaFullType(mPrimaryKey_typeName));
+			            			
 			            			 dataMap.put(KEY_PRIMARYCOLUMN,primaryKeyColumn);
 		        			 }
 		        		 }
@@ -139,9 +202,7 @@ public final class JavaTemplateContext extends EngineContext{
 		     }
 		
 		
-		
-		
-		 List<DBSEntityAttribute> attrs= (List<DBSEntityAttribute>)table.getAttributes(monitor);
+		 List<DBSEntityAttribute> attrs= (List<DBSEntityAttribute>)mTable.getAttributes(monitor);
 		 if(attrs!=null)
 		 {
 			 for(DBSEntityAttribute attr:attrs)
@@ -151,14 +212,14 @@ public final class JavaTemplateContext extends EngineContext{
 				 String codeName=CodeHelper.toLowerCamelCase(columnName);
 				 String codeName_upperCamelCase=CodeHelper.toUpperCamelCase(columnName);
 				  
-				  SourceCodeTableColumn codeColumn=new SourceCodeTableColumn();
+				 CodeColumnAttribute codeColumn=new CodeColumnAttribute();
 				  codeColumn.setIsRequired(attr.isRequired());
 				  codeColumn.setColumnName(columnName);
 				  codeColumn.setDesciption(attr.getDescription());
 				  codeColumn.setCodeName(codeName_upperCamelCase);
 				  codeColumn.setParamName(codeName);
 				  codeColumn.setJavaType(CodeHelper.columnType2JavaType(attr));
-				  codeColumn.setJavaPackage(CodeHelper.columnType2JavaPackageName(attr));
+				  codeColumn.setJavaPackage(getJavaFullType(codeColumn.getJavaType()));
 				  codeColumn.setDefaultValue(attr.getDefaultValue());
 				  
 				  boolean isPrimary=false;
@@ -170,28 +231,29 @@ public final class JavaTemplateContext extends EngineContext{
 				  }else {
 					 if(primaryKeyColumn!=null && columnName.equals(primaryKeyColumn.getColumnName())){
 						 codeColumn.setIsPrimary(true);
+            			 codeColumn.setIsAutoGenerated(primaryKeyColumn.getIsAutoGenerated());
 					 }else {
 						 codeColumn.setIsPrimary(false);
 					 }
 				  }
-				  columns.add(codeColumn);
 				  
 				  if(isHtmlTableColumn(codeColumn))
 				  {
-					  tableListCols.add(codeColumn);
+					 codeColumn.setHtmlTableListSelected(true);
 				  }
 				  if(isHtmlInputForms(codeColumn))
 				  {
-					  inputForms.add(codeColumn);
+					  codeColumn.setHtmlInputFormSelected(true);
 				  }
 				  if(isHtmlSearchForms(codeColumn))
 				  {
-					  searchForms.add(codeColumn);
+					  codeColumn.setHtmlSearchSelected(true);
 				  }
 				  if(isMybatisInsertColumn(codeColumn))
 				  {
-					  mybatisInsertColumns.add(codeColumn);
+					  codeColumn.setSqlInsertSelected(true);
 				  }
+				  mColumns.add(codeColumn);  
 				 
 			 }
 		 }
@@ -199,8 +261,8 @@ public final class JavaTemplateContext extends EngineContext{
 		}catch (DBException e) {
 			e.printStackTrace();
 		}
-		dataMap.put(KEY_COLUMNS,columns);
-		dataMap.put(KEY_COLUMNPACKAGES, tableColumnImportJavaPackageList(columns));
+		dataMap.put(KEY_COLUMNS,mColumns);
+		dataMap.put(KEY_COLUMNPACKAGES, tableColumnImportJavaPackageList(mColumns));
 		dataMap.put(KEY_INPUTFORMS,inputForms);
 		dataMap.put(KEY_INPUTFORMPACKAGES,tableColumnImportJavaPackageList(inputForms));
 		dataMap.put(KEY_SEARCHFORMS,searchForms);
@@ -209,17 +271,57 @@ public final class JavaTemplateContext extends EngineContext{
 		dataMap.put(KEY_TABLELISTCOLSPACKAGES,tableColumnImportJavaPackageList(tableListCols));
 		dataMap.put(KEY_MYBATISINSERTCOLUMNS,mybatisInsertColumns);
 		dataMap.put(KEY_MYBATISINSERTCOLUMNSPACKAGES,tableColumnImportJavaPackageList(mybatisInsertColumns));
-		setVariables(dataMap);
-		 
+//		
 	}
 	
+	private static SourceCodeJavaClass fileRule2JavaClass(String tableName,String rule,Map setting) {
+		
+		String fullName=fillRuleFullName(tableName,rule,setting);
+		SourceCodeJavaClass javaClass=new SourceCodeJavaClass();
+		javaClass.setName(fullName);
+		javaClass.setPackageName(CodeHelper.getPackageName(fullName));
+		javaClass.setSimpleName(CodeHelper.getClassSimpleName(fullName));
+		javaClass.setParamName(CodeHelper.toLowerCamelCase(javaClass.getSimpleName()));
+		return javaClass;
+	}
 	
-	private List<String> tableColumnImportJavaPackageList(List<SourceCodeTableColumn> tableColumns)
+	public static String fillRuleFullName(String tableName,String rule,Map params)
+	{
+		if(CodeHelper.isEmpty(rule))
+		{
+			return tableName;
+		}
+//		Map<String, Object> params=new HashMap<String, Object>();
+//		params.put("package_name", setting.getPackagePath());
+//		params.put("group_name", setting.getGroupName());
+		params.put("table_name",CodeHelper.toUpperCamelCase(tableName));
+		return CodeHelper.processTemplate(rule, params);
+	} 
+	
+	public static String getJavaFullType(String javaType)
+	{
+		if(CommonUtils.isNotEmpty(javaType))
+		{
+			if(javaType.equals("BigDecimal"))
+			{
+				return BigDecimal.class.getName();
+			}else if(javaType.equals("Date") || javaType.equals("DateTime")) {
+				return Date.class.getName();
+			}else if(javaType.equals("Timestamp")) {
+				return Timestamp.class.getName();
+			}else if(javaType.equals("Time")) {
+				return Time.class.getName();
+			} 
+			return null;
+		}
+		return null;
+	}
+	private List<String> tableColumnImportJavaPackageList(List<CodeColumnAttribute> tableColumns)
 	{
 		List<String> result=new ArrayList<String>();
 		Map<String, String> packageMap=new HashMap<String, String>();
         if (!CommonUtils.isEmpty(tableColumns)) {
-            for(SourceCodeTableColumn column:tableColumns)
+            for(CodeColumnAttribute column:tableColumns)
             {
             	String packageName=column.getJavaPackage();
             	if(packageName!=null && packageName.length()>0)
@@ -238,19 +340,8 @@ public final class JavaTemplateContext extends EngineContext{
         }
         return result;
 	}
-
-	private static SourceCodeJavaClass fileRule2JavaClass(String tableName,String rule,SourceCodeSetting setting) {
-		
-		String fullName=fillRuleFullName(tableName,rule,setting);
-		SourceCodeJavaClass javaClass=new SourceCodeJavaClass();
-		javaClass.setName(fullName);
-		javaClass.setPackageName(CodeHelper.getPackageName(fullName));
-		javaClass.setSimpleName(CodeHelper.getClassSimpleName(fullName));
-		javaClass.setParamName(CodeHelper.toLowerCamelCase(javaClass.getSimpleName()));
-		return javaClass;
-	}
 	
-	private static boolean isHtmlTableColumn(SourceCodeTableColumn column)
+	private static boolean isHtmlTableColumn(CodeColumnAttribute column)
 	{
 		if(column.getIsPrimary())
 		{
@@ -262,7 +353,7 @@ public final class JavaTemplateContext extends EngineContext{
 		}
 		return true;
 	}
-	private static boolean isHtmlInputForms(SourceCodeTableColumn column)
+	private static boolean isHtmlInputForms(CodeColumnAttribute column)
 	{
 		if(column.getIsPrimary())
 		{
@@ -274,7 +365,7 @@ public final class JavaTemplateContext extends EngineContext{
 		}
 		return true;
 	}
-	private static boolean isMybatisInsertColumn(SourceCodeTableColumn column)
+	private static boolean isMybatisInsertColumn(CodeColumnAttribute column)
 	{
 		if(column!=null && column.getIsPrimary()!=null &&  column.getIsPrimary()  && column.getIsAutoGenerated()!=null && column.getIsAutoGenerated())
 		{
@@ -282,7 +373,7 @@ public final class JavaTemplateContext extends EngineContext{
 		}
 		return true;
 	}
-	private static boolean isHtmlSearchForms(SourceCodeTableColumn column)
+	private static boolean isHtmlSearchForms(CodeColumnAttribute column)
 	{
 		if(column.getIsPrimary())
 		{
@@ -294,19 +385,5 @@ public final class JavaTemplateContext extends EngineContext{
 		}
 		return true;
 	}
-	
-	public static String fillRuleFullName(String tableName,String rule,SourceCodeSetting setting)
-	{
-		if(CodeHelper.isEmpty(rule))
-		{
-			return tableName;
-		}
-		Map<String, Object> params=new HashMap<String, Object>();
-		params.put("packagePath", setting.getPackagePath());
-		params.put("groupName", setting.getGroupName());
-		params.put("table_name",CodeHelper.toUpperCamelCase(tableName));
-		return CodeHelper.processTemplate(rule, params);
-	} 
-	
 
 }
