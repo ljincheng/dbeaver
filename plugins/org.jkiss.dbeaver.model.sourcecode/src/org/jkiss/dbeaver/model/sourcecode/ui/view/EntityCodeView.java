@@ -5,15 +5,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabFolder2Adapter;
-import org.eclipse.swt.custom.CTabFolder2Listener;
 import org.eclipse.swt.custom.CTabFolderEvent;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
@@ -24,13 +25,10 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.menus.CommandContributionItem;
@@ -40,20 +38,16 @@ import org.jkiss.dbeaver.model.sourcecode.editors.JavaEditor;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.EntityContext;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.TabItemContext;
 import org.jkiss.dbeaver.model.sourcecode.ui.event.ViewDataRunnableEvent;
-import org.jkiss.dbeaver.model.sourcecode.ui.presentation.PlainTextPresentation;
+import org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler;
 import org.jkiss.dbeaver.ui.ActionUtils;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.IHelpContextIds;
 import org.jkiss.dbeaver.ui.UIIcon;
 import org.jkiss.dbeaver.ui.UIStyles;
 import org.jkiss.dbeaver.ui.UIUtils;
-import org.jkiss.dbeaver.ui.controls.TabFolderReorder;
 import org.jkiss.dbeaver.ui.controls.VerticalButton;
 import org.jkiss.dbeaver.ui.controls.VerticalFolder;
-import org.jkiss.dbeaver.ui.controls.resultset.IResultSetPanel;
-import org.jkiss.dbeaver.ui.controls.resultset.handler.ResultSetHandlerMain;
 import org.jkiss.dbeaver.ui.controls.resultset.handler.ResultSetHandlerTogglePanel;
-import org.jkiss.dbeaver.ui.controls.resultset.internal.ResultSetMessages;
 import org.jkiss.dbeaver.ui.css.CSSUtils;
 import org.jkiss.dbeaver.ui.css.DBStyles;
 import org.jkiss.utils.CommonUtils;
@@ -65,6 +59,7 @@ import org.jkiss.utils.CommonUtils;
  */
 public class EntityCodeView extends Viewer implements SelectionListener,ViewDataRunnableEvent{
 	
+	public static final String CONTROL_ID = EntityCodeView.class.getName();
 	private EntityContext context;
 	private final IWorkbenchPartSite site;
 	private Color defaultBackground, defaultForeground;
@@ -79,6 +74,9 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 	private ToolBarManager panelToolBar;
 	private JavaEditor mJavaEditor;
 	
+	 private Composite statusBar;
+	  
+	
 	public EntityCodeView(@NotNull Composite parent, @NotNull IWorkbenchPartSite site,EntityContext context)
     {
 		super();
@@ -92,6 +90,7 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 
 		this.viewerPanel = UIUtils.createPlaceholder(mainPanel, 1);
 		this.viewerPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
+		this.viewerPanel.setData(CONTROL_ID, this);
 		CSSUtils.setCSSClass(this.viewerPanel, DBStyles.COLORED_BY_CONNECTION_TYPE);
 		UIUtils.setHelp(this.viewerPanel, IHelpContextIds.CTX_RESULT_SET_VIEWER);
 	    //this.viewerPanel.setRedraw(false);
@@ -112,6 +111,7 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 		init_panelSwitchFolder();
 		init_pannels();
 		init_codePannel();
+		init_statusBar();
 		refreshActions();
     }
 	
@@ -142,19 +142,10 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 			}
 		}
 		 
-		{
-			// 布局方向按键
-			UIUtils.createEmptyLabel(panelSwitchFolder, 1, 1).setLayoutData(new GridData(GridData.FILL_VERTICAL));
-			VerticalButton button= VerticalButton.create(panelSwitchFolder, SWT.RIGHT | SWT.CHECK, site,ResultSetHandlerMain.CMD_TOGGLE_LAYOUT, false);
-			button.addSelectionListener(new SelectionAdapter() {
-				@Override
-				public void widgetSelected(SelectionEvent e) {
-					refreshActions();
-				}
-			});
-
-		}
+	 
 	}
+	
+	 
 	
 	public void init_pannels()
 	{
@@ -227,6 +218,56 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 			 	mJavaEditor.setCode(this.context.generateCode());
 		}
 	}
+	
+	 class NewFragmentAction extends Action {
+		 
+	        public NewFragmentAction() {
+	           // super("test",UIIcon.ACCEPT);
+	          //  setImageDescriptor(PDEPluginImages.DESC_NEWFRAGPRJ_TOOL);
+	        }
+	 
+	        @Override
+	        public void run() {
+	           // handleNewFragment();
+	        }
+	    }
+	 
+	 private void init_statusBar()
+	    {
+	        Composite statusComposite = UIUtils.createPlaceholder(viewerPanel, 3);
+	        statusComposite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+
+	        statusBar = new Composite(statusComposite, SWT.NONE);
+	        statusBar.setBackgroundMode(SWT.INHERIT_FORCE);
+	        statusBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+	        CSSUtils.setCSSClass(statusBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	        RowLayout toolbarsLayout = new RowLayout(SWT.HORIZONTAL);
+	        toolbarsLayout.marginTop = 0;
+	        toolbarsLayout.marginBottom = 0;
+	        toolbarsLayout.center = true;
+	        toolbarsLayout.wrap = true;
+	        toolbarsLayout.pack = true;
+	        //toolbarsLayout.fill = true;
+	        statusBar.setLayout(toolbarsLayout);
+//	        statusBar.setData(CONTROL_ID, this);
+	        {
+	        	 ToolBarManager editToolBarManager = new ToolBarManager(SWT.FLAT | SWT.HORIZONTAL | SWT.RIGHT);
+	        	 editToolBarManager.add(new Separator());
+	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_REFRESH,"Refresh",null,"Refresh",false));
+	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_COPY,"Copy",null,"Copy source code",false));
+	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_SAVE,"Save",null,"Save source code",false));
+	        	 
+	    			
+	    			 ToolBar editorToolBar = editToolBarManager.createControl(statusBar);
+	 	            CSSUtils.setCSSClass(editorToolBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+
+
+	        }
+	         
+	         
+	         
+	    }
+
 	
 //	public void runCode() {
 //		if(this.context!=null && mJavaEditor!=null)
@@ -346,8 +387,10 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 		}
 		return false;
 	}
-  
-
+	
+	public String getSourceCode() {
+		return mJavaEditor.getCode();
+	}
 	
 
 }

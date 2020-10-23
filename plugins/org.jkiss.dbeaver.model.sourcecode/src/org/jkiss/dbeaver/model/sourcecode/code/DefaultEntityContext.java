@@ -259,10 +259,7 @@ public class DefaultEntityContext implements EntityContext{
 						
 						int index=(int)tabelColumn;
 						mTemplateEdit.setCode(mTemplateContext.setActivityTemplate(index).getTemplate());
-						if(mViewDataRunableEvent!=null)
-						{
-							mViewDataRunableEvent.refreshActions();
-						}
+						refreshActions();
 					}
 					
 				}
@@ -347,10 +344,7 @@ public class DefaultEntityContext implements EntityContext{
                 	CodeColumnAttribute codeColumn=(CodeColumnAttribute)tableColumn;
                 	codeColumn.setJavaType(javaType);
                 	codeColumn.setJavaPackage(DBSTableCodeContext.getJavaFullType(javaType));
-                	if(mViewDataRunableEvent!=null)
-                	{
-                		mViewDataRunableEvent.refreshActions();
-                	}
+                	refreshActions();
                 }
 
             }
@@ -395,6 +389,14 @@ public class DefaultEntityContext implements EntityContext{
 				}
 			}
 	    }
+	 
+	 private boolean refreshActions() {
+		 if(this.mViewDataRunableEvent!=null)
+		 {
+			return this.mViewDataRunableEvent.refreshActions();
+		 }
+		 return false;
+	 }
 
 }
 
