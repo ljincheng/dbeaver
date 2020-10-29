@@ -1,17 +1,27 @@
 package org.jkiss.dbeaver.model.sourcecode.core;
 
+
 public class CodeTemplate {
 
 	private String id;
 	private String name;
 	private String desc;
 	private String template; 
-
+	private String exportPath; 
+	
 	public CodeTemplate(String id, String name, String desc) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.desc = desc;
+	}
+	
+	public CodeTemplate(String id, String name, String desc,String exportPath) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.desc = desc;
+		this.exportPath=exportPath;
 	}
 
 	public String getId() {
@@ -45,4 +55,17 @@ public class CodeTemplate {
 	public void setTemplate(String template) {
 		this.template = template;
 	}
+
+	public String getExportPath() {
+		return exportPath;
+	}
+
+	public void setExportPath(String exportPath) {
+		this.exportPath = exportPath;
+	}
+
+	 
+	
+	
+	
 }

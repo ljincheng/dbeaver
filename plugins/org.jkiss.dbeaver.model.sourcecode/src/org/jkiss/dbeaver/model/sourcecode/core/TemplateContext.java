@@ -1,54 +1,100 @@
 package org.jkiss.dbeaver.model.sourcecode.core;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.jkiss.dbeaver.model.sourcecode.ui.event.UIEventNotifier;
+import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
 import org.jkiss.dbeaver.model.sourcecode.utils.TemplateUtils;
 import org.jkiss.utils.CommonUtils;
 
 import cn.booktable.template.IContext;
 
-public class TemplateContext {
+public class TemplateContext extends AbstractContentBroadcas{
 
-	List<CodeTemplate> codeTemplates=null;
+	List<CodeTemplate> mCodeTemplates=null;
 	private CodeTemplate activityTemplate;
+	private List<UIEventNotifier> mNotifierList;
+	 
 	
 	public TemplateContext() {
 		super();
+		mNotifierList=new ArrayList<UIEventNotifier>();
 		loadTemplates();
 	}
 	
 	
+	public boolean addNotifier(UIEventNotifier notifier)
+	{
+		return this.mNotifierList.add(notifier);
+	}
+	public boolean removeNotifier(UIEventNotifier notifier)
+	{
+		return this.mNotifierList.remove(notifier);
+	}
+	
 	public void loadTemplates() {
-		if(codeTemplates==null)
+		if(mCodeTemplates==null)
 		{
-			codeTemplates=new ArrayList<CodeTemplate>();
-			codeTemplates.add(new CodeTemplate("java_entity", "Entity(get/set)", "实体:Entity(get/set)"));
-			codeTemplates.add(new CodeTemplate("java_lombokdata", "Entity(lombok)", "实体:Entity(lombok)"));
-			codeTemplates.add(new CodeTemplate("java_dao", "Dao/Mapper", "Dao/Mapper"));
-			codeTemplates.add(new CodeTemplate("mybatis", "Mybatis", "Mybatis XML文件"));
-			codeTemplates.add(new CodeTemplate("lang_message", "Message", "Message 语言文件"));
-			codeTemplates.add(new CodeTemplate("java_component", "Component", "Component"));
-			codeTemplates.add(new CodeTemplate("java_component_impl", "ComponentImpl", "Component实现类"));
-			codeTemplates.add(new CodeTemplate("java_service", "Service", "Service"));
-			codeTemplates.add(new CodeTemplate("java_service_impl", "ServiceImpl", "Service实现类"));
-			codeTemplates.add(new CodeTemplate("java_controller", "Controller", "Controller类"));
-			codeTemplates.add(new CodeTemplate("html_thymeleaf_list", "Html-list(Thymeleaf)", "html(thymeleaf前端) list"));
-			codeTemplates.add(new CodeTemplate("html_thymeleaf_list_table", "Html-list-table(Thymeleaf)", "html(thymeleaf前端) list_table"));
-			codeTemplates.add(new CodeTemplate("html_thymeleaf_add", "Html-add(Thymeleaf)", "html(thymeleaf前端) add"));
+			mCodeTemplates=TemplateUtils.loadCodeTemplateList();
 		}
 	}
 	
 	public List<CodeTemplate> getTemplates(){
-		return this.codeTemplates;
+		return this.mCodeTemplates;
 	}
+	
+	public boolean addTemplate(CodeTemplate template) {
+		if(template==null || CommonUtils.isEmpty(template.getId()))
+		{
+			return false;
+		}
+		for(int i=0,k=mCodeTemplates.size();i<k;i++) {
+			CodeTemplate codeTemplate=mCodeTemplates.get(i);
+			if(codeTemplate.getId().equals(template.getId())) {
+				return false;
+			}
+		}
+		boolean result=this.mCodeTemplates.add(template);
+		if(result) {
+			this.saveCodeTemplateList();
+			send(ContentListen.TYPE_DATA_CHANGE, ContentListen.SUBTYPE_DATA_CHANGE_ADD, template);
+		}
+		return result;
+	}
+	
+	
+	public boolean deleteTemplate(CodeTemplate template) {
+		boolean result=this.mCodeTemplates.remove(template);
+		if(result) {
+			this.saveCodeTemplateList();
+			send(ContentListen.TYPE_DATA_CHANGE, ContentListen.SUBTYPE_DATA_CHANGE_DELETE, template);
+		}
+		return result;
+	}
+	
+	public boolean deleteTemplateAll(Collection<CodeTemplate> templates) {
+		boolean result=this.mCodeTemplates.removeAll(templates);
+		if(result) {
+			this.saveCodeTemplateList();
+			send(ContentListen.TYPE_DATA_CHANGE, ContentListen.SUBTYPE_DATA_CHANGE_DELETE_MUL, templates);
+		}
+		return result;
+	}
+	
 	
 	public void fillFromCacheTemplate(CodeTemplate codeTemplate) {
 		if(codeTemplate ==null || CommonUtils.isEmpty(codeTemplate.getId())) {
 			return ;
 		}
-		String template= TemplateUtils.readCacheTemplate(codeTemplate.getId());
+		String template= TemplateUtils.readTemplate(codeTemplate.getId());
 		codeTemplate.setTemplate(template); 
 	}
 	
@@ -58,22 +104,26 @@ public class TemplateContext {
 		if(codeTemplate ==null ||  CommonUtils.isEmpty(codeTemplate.getId()) || CommonUtils.isEmpty(codeTemplate.getTemplate())) {
 			return ;
 		}
-		TemplateUtils.saveCacheTemplate(codeTemplate.getId(), codeTemplate.getTemplate());
+		TemplateUtils.saveTemplate(codeTemplate.getId(), codeTemplate.getTemplate());
+	}
+	
+	public void saveCodeTemplateList() {
+		TemplateUtils.saveTemplateSettingList(this.mCodeTemplates);
 	}
 	
 	
 	public CodeTemplate getActivityTemplate() {
 		if(this.activityTemplate==null) {
-			activityTemplate=codeTemplates.get(0);
+			activityTemplate=mCodeTemplates.get(0);
 		}
 		return activityTemplate;
 	}
 	
 	public CodeTemplate setActivityTemplate(int index)
 	{
-		if(index<codeTemplates.size())
+		if(index<mCodeTemplates.size())
 		{
-			activityTemplate=codeTemplates.get(index);
+			activityTemplate=mCodeTemplates.get(index);
 		}
 		if(CommonUtils.isEmpty( activityTemplate.getTemplate())) {
 			fillFromCacheTemplate(activityTemplate);
@@ -81,14 +131,27 @@ public class TemplateContext {
 		return activityTemplate;
 	}
 	
+	public CodeTemplate setActivityTemplate(CodeTemplate codeTemplate)
+	{
+		 
+		this.activityTemplate=codeTemplate;
+		 
+		if(CommonUtils.isEmpty( activityTemplate.getTemplate())) {
+			fillFromCacheTemplate(activityTemplate);
+		}
+		return activityTemplate;
+	}
+	
+	
+	
 	 
 	
 	public CodeTemplate get(int index) {
-		return codeTemplates.get(index);
+		return mCodeTemplates.get(index);
 	}
 	
 	public int size() {
-		return codeTemplates.size();
+		return mCodeTemplates.size();
 	}
 	
 	public  String convertActivityTemplate(IContext context) {
@@ -97,6 +160,39 @@ public class TemplateContext {
 		{
 			fillFromCacheTemplate(codeTemplate);
 		} 
+		return convertTemplate(codeTemplate,context);
+	}
+	
+	public  String convertTemplate(CodeTemplate codeTemplate,IContext context) {
 		return cn.booktable.template.TemplateEngine.process(codeTemplate.getTemplate(),context);
+	}
+	 
+	
+	public String exportFilePath(CodeTemplate codeTemplate,IContext context) { 
+		String exportPath=codeTemplate.getExportPath();
+		Map<String,String> root=new HashMap<String, String>();
+		root.putAll((Map)context.getRoot().get(DBSTableCodeContext.KEY_SETTING));
+		root.put("table_name", (String)context.getRoot().get(DBSTableCodeContext.KEY_TABLENAME));
+		String exportFile=CodeHelper.processTemplate(exportPath, (Map)context.getRoot().get(DBSTableCodeContext.KEY_SETTING));
+		return exportFile;
+	}
+	
+	public boolean  exportFile(CodeTemplate codeTemplate,IContext context) {
+	
+		boolean result=true;
+		try {
+			String template=convertTemplate(codeTemplate,context);
+			String exportPath=exportFilePath(codeTemplate, context);
+			File exportFile=new File(exportPath);
+			File parentDir= exportFile.getParentFile();
+			if(!parentDir.exists() && !parentDir.mkdirs()) {
+				return false;
+			}
+			Files.write(exportFile.toPath(), template.getBytes(), StandardOpenOption.CREATE);
+		}catch (IOException e) {
+			e.printStackTrace();
+			result=false;
+		}
+		return result;
 	}
 }

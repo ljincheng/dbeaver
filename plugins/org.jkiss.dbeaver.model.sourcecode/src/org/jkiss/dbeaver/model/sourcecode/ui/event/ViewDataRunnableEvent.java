@@ -5,4 +5,6 @@ public interface ViewDataRunnableEvent {
 
 	boolean refreshActions();
 	
+	int exportActions();
+	
 }

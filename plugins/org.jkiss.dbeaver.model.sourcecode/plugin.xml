@@ -115,23 +115,45 @@
         <key commandId="org.jkiss.dbeaver.sourcecode.refreshCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="F5"/>
         <key commandId="org.jkiss.dbeaver.sourcecode.copyCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+C"/>
         <key commandId="org.jkiss.dbeaver.sourcecode.saveCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+S"/>
+        <key commandId="org.jkiss.dbeaver.sourcecode.newAdd" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+N"/>
+        <key commandId="org.jkiss.dbeaver.sourcecode.template.save" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+S"/>
       </extension>
      <extension point="org.eclipse.ui.commandImages">
      	<image commandId="org.jkiss.dbeaver.sourcecode.saveCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/save.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.copyCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/row_copy.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.copyCode" icon="platform:/plugin/org.jkiss.dbeaver.ui.app.standalone/icons/eclipse/copy.png"/>
      	<image commandId="org.jkiss.dbeaver.sourcecode.refreshCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.exportCode" icon="platform:/plugin/org.jkiss.dbeaver.ui.app.standalone/icons/eclipse/export.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.newAdd" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/add.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.delete" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/delete.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.template.save" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.png"/>
      </extension>
      
       <extension point="org.eclipse.ui.commands">
 	       <category id="org.jkiss.dbeaver.sourcecode.category" name="sourceCode"> </category>
 	       <command  id="org.jkiss.dbeaver.sourcecode.saveCode"  name="saveCode" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
 	       <command  id="org.jkiss.dbeaver.sourcecode.copyCode"  name="copyCode" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
+	       <command  id="org.jkiss.dbeaver.sourcecode.exportCode"  name="exportCode" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
+	       <command  id="org.jkiss.dbeaver.sourcecode.newAdd"  name="newAdd" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
+	       <command  id="org.jkiss.dbeaver.sourcecode.delete"  name="newAdd" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
 	       <command  id="org.jkiss.dbeaver.sourcecode.refreshCode"  name="refreshCode" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
+	       <command  id="org.jkiss.dbeaver.sourcecode.template.save"  name="saveTemplate" categoryId="org.jkiss.dbeaver.sourcecode.category"></command>
       </extension>
       <extension   point="org.eclipse.ui.handlers"> 
 	      <handler commandId="org.jkiss.dbeaver.sourcecode.saveCode" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
 	      <handler commandId="org.jkiss.dbeaver.sourcecode.copyCode" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
+	      <handler commandId="org.jkiss.dbeaver.sourcecode.exportCode" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
+	      <handler commandId="org.jkiss.dbeaver.sourcecode.newAdd" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
+	      <handler commandId="org.jkiss.dbeaver.sourcecode.delete" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
 	      <handler commandId="org.jkiss.dbeaver.sourcecode.refreshCode" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
+	      <handler commandId="org.jkiss.dbeaver.sourcecode.template.save" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
       </extension>
+      
+       <extension point="org.eclipse.ui.menus">
+        <!-- All Context menus -->
+         <menuContribution allPopups="false" locationURI="popup:org.eclipse.ui.popup.any?before=generate">
+            <command commandId="org.jkiss.dbeaver.sourcecode.template.save" label="Template save"/>
+		 </menuContribution>
+         
+        </extension>
  
 </plugin>

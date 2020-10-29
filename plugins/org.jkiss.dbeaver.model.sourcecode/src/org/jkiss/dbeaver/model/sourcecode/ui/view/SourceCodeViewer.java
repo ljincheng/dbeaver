@@ -11,7 +11,6 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabFolder2Adapter;
@@ -37,6 +36,9 @@ import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.model.sourcecode.editors.JavaEditor;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.EntityContext;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.TabItemContext;
+import org.jkiss.dbeaver.model.sourcecode.ui.event.AbstractViewerNotifierContext;
+import org.jkiss.dbeaver.model.sourcecode.ui.event.UIEventNotifier;
+import org.jkiss.dbeaver.model.sourcecode.ui.event.UINotifier;
 import org.jkiss.dbeaver.model.sourcecode.ui.event.ViewDataRunnableEvent;
 import org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler;
 import org.jkiss.dbeaver.ui.ActionUtils;
@@ -52,45 +54,52 @@ import org.jkiss.dbeaver.ui.css.CSSUtils;
 import org.jkiss.dbeaver.ui.css.DBStyles;
 import org.jkiss.utils.CommonUtils;
 
-/**
- * 单个Entity的视图
- * @author ljc
- *
- */
-public class EntityCodeView extends Viewer implements SelectionListener,ViewDataRunnableEvent{
-	
-	public static final String CONTROL_ID = EntityCodeView.class.getName();
-	private EntityContext context;
+public final class SourceCodeViewer extends AbstractViewerNotifierContext implements SelectionListener{
+
+	public static final String CONTROL_ID = "org.jkiss.dbeaver.model.sourcecode.ui.view";
+//	private EntityContext context;
 	private final IWorkbenchPartSite site;
 	private Color defaultBackground, defaultForeground;
 	
-	private final Composite mainPanel;
-	private final Composite viewerPanel; 
+	private  Composite mainPanel;
+	private  Composite viewerPanel; 
 	private SashForm viewerSash;
 	
 	private  VerticalFolder panelSwitchFolder;
 	private  Composite presentationPanel;
 	private CTabFolder panelFolder;
 	private ToolBarManager panelToolBar;
-	private JavaEditor mJavaEditor;
+//	private JavaEditor mJavaEditor;
 	
 	 private Composite statusBar;
 	  
 	
-	public EntityCodeView(@NotNull Composite parent, @NotNull IWorkbenchPartSite site,EntityContext context)
+	public SourceCodeViewer( @NotNull IWorkbenchPartSite site)
     {
 		super();
-		this.site=site;
-		this.context=context;
-		this.context.setViewDataRunnableEvent(this);
-		
+		this.site=site; 
+    }
+	
+	public void createPartControl(@NotNull Composite parent) {
+		init_view(parent);
+		send(UIEventNotifier.TYPE_VIEW_CREATE, new UINotifier(1, this, this.panelFolder,site), null);//pannel
+		send(UIEventNotifier.TYPE_VIEW_CREATE, new UINotifier(2, this, this.panelSwitchFolder,site), null);//switchpanel
+		send(UIEventNotifier.TYPE_VIEW_CREATE, new UINotifier(3, this, this.presentationPanel,site), null);//codeEditor
+		if(panelFolder.getChildren().length>0)
+		{
+			panelFolder.setSelection(0);
+		}
+	}
+	
+	private void init_view(Composite parent) {
 		this.defaultBackground = UIStyles.getDefaultTextBackground();
 		this.defaultForeground = UIStyles.getDefaultTextForeground();
 		this.mainPanel = UIUtils.createPlaceholder(parent, 2);
+		this.mainPanel.setData(CONTROL_ID, this);
 
 		this.viewerPanel = UIUtils.createPlaceholder(mainPanel, 1);
 		this.viewerPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
-		this.viewerPanel.setData(CONTROL_ID, this);
+//		this.viewerPanel.setData(CONTROL_ID, this);
 		CSSUtils.setCSSClass(this.viewerPanel, DBStyles.COLORED_BY_CONNECTION_TYPE);
 		UIUtils.setHelp(this.viewerPanel, IHelpContextIds.CTX_RESULT_SET_VIEWER);
 	    //this.viewerPanel.setRedraw(false);
@@ -112,17 +121,16 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 		init_pannels();
 		init_codePannel();
 		init_statusBar();
-		refreshActions();
-    }
+//		refreshActions();
+	}
 	
 	//设置面板选项组标签
 	public void init_panelSwitchFolder() {
-		if(context!=null && context.panelTabs()!=null)
-		{
-			List<TabItemContext> tabItems=context.panelTabs();
-			for(int i=0,k=tabItems.size();i<k;i++)
-			{
-				TabItemContext tabItem=tabItems.get(i); 
+		 
+				TabItemContext tabItem=new TabItemContext();
+				tabItem.setId("setting");
+				tabItem.setName("Settings");
+				tabItem.setTip("Settings");
 				VerticalButton panelsButton = new VerticalButton(panelSwitchFolder, SWT.RIGHT | SWT.CHECK);
 				panelsButton.setText(tabItem.getName());
 				panelsButton.setData(tabItem.getId());
@@ -139,9 +147,7 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 					panelsButton.setToolTipText(toolTip);
 				}
 				panelsButton.setChecked(isPanelsVisible());
-			}
-		}
-		 
+	 
 	 
 	}
 	
@@ -200,23 +206,23 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
          Menu panelsMenu = panelsMenuManager.createContextMenu(this.panelFolder);
          this.panelFolder.setMenu(panelsMenu);
          this.panelFolder.addDisposeListener(e -> panelsMenuManager.dispose()); 
-	       if(this.context!=null)
-	       {
-	         this.context.createPanelTabs(this.site.getPart(),this.panelFolder);
-	       }
+//	       if(this.context!=null)
+//	       {
+//	         this.context.createPanelTabs(this.site.getPart(),this.panelFolder);
+//	       }
 	}
 	
 	 
 		 
 	
 	public void init_codePannel() {
-		if(this.context!=null)
-		{
+//		if(this.context!=null)
+//		{
 			 
-			 	mJavaEditor=new JavaEditor(site);//测试下代码视图放在主体部分效果
-			 	mJavaEditor.createPartControl(presentationPanel);
-			 	mJavaEditor.setCode(this.context.generateCode());
-		}
+//			 	mJavaEditor=new JavaEditor(site);//测试下代码视图放在主体部分效果
+//			 	mJavaEditor.createPartControl(presentationPanel);
+//			 	mJavaEditor.setCode(this.context.generateCode());
+//		}
 	}
 	
 	 class NewFragmentAction extends Action {
@@ -253,9 +259,9 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 	        {
 	        	 ToolBarManager editToolBarManager = new ToolBarManager(SWT.FLAT | SWT.HORIZONTAL | SWT.RIGHT);
 	        	 editToolBarManager.add(new Separator());
-	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_REFRESH,"Refresh",null,"Refresh",false));
-	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_COPY,"Copy",null,"Copy source code",false));
-	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_SAVE,"Save",null,"Save source code",false));
+	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(this.site, EntityCodeViewHandler.CODE_REFRESH));
+	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_COPY));
+//	        	 editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_SAVE,"Save",null,"Save source code",false));
 	        	 
 	    			
 	    			 ToolBar editorToolBar = editToolBarManager.createControl(statusBar);
@@ -279,16 +285,16 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 	
 	 private List<IContributionItem> fillPanelsMenu() {
 		 List<IContributionItem> items = new ArrayList<>();
-		List<TabItemContext> tabItems=this.context.panelTabs();
-		for(int i=0,k=tabItems.size();i<k;i++) {
-			TabItemContext tabItem = tabItems.get(i);
-			CommandContributionItemParameter params = new CommandContributionItemParameter(site, tabItem.getId(),
-					ResultSetHandlerTogglePanel.CMD_TOGGLE_PANEL, CommandContributionItem.STYLE_CHECK);
-			Map<String, String> parameters = new HashMap<>();
-			parameters.put(ResultSetHandlerTogglePanel.PARAM_PANEL_ID, tabItem.getId());
-			params.parameters = parameters;
-			items.add(new CommandContributionItem(params));
-		 }
+//		List<TabItemContext> tabItems=this.context.panelTabs();
+//		for(int i=0,k=tabItems.size();i<k;i++) {
+//			TabItemContext tabItem = tabItems.get(i);
+//			CommandContributionItemParameter params = new CommandContributionItemParameter(site, tabItem.getId(),
+//					ResultSetHandlerTogglePanel.CMD_TOGGLE_PANEL, CommandContributionItem.STYLE_CHECK);
+//			Map<String, String> parameters = new HashMap<>();
+//			parameters.put(ResultSetHandlerTogglePanel.PARAM_PANEL_ID, tabItem.getId());
+//			params.parameters = parameters;
+//			items.add(new CommandContributionItem(params));
+//		 }
 //		 items.add(ActionUtils.makeCommandContribution(site, ResultSetHandlerMain.CMD_TOGGLE_MAXIMIZE));
 //       items.add(ActionUtils.makeCommandContribution(site, ResultSetHandlerMain.CMD_TOGGLE_PANELS));
 //       items.add(ActionUtils.makeCommandContribution(site, ResultSetHandlerMain.CMD_ACTIVATE_PANELS));
@@ -377,20 +383,30 @@ public class EntityCodeView extends Viewer implements SelectionListener,ViewData
 		
 	}
 
-	@Override
-	public boolean refreshActions() {
-		if(this.context!=null && mJavaEditor!=null)
-		{
-			UIUtils.runInUI(context);
-			mJavaEditor.setCode(context.generateCode());
-			return true;
-		}
-		return false;
+	public void actionRefresh() {
+//		if(this.context!=null && mJavaEditor!=null)
+//		{
+//			UIUtils.runInUI(context);
+//			mJavaEditor.setCode(context.generateCode());
+//			return true;
+//		}
+		send(UIEventNotifier.TYPE_VIEW_REFRESH, new UINotifier(UIEventNotifier.TYPE_VIEW_REFRESH,this,null,this.site), null);
+		 
 	}
 	
-	public String getSourceCode() {
-		return mJavaEditor.getCode();
-	}
 	
+	
+	public void actionExport() {
+//		if(this.context!=null) {
+//			return this.context.exportSourceCode(this.site.getPart());
+//		}
+//		send(UIEventNotifier.TYPE_VIEW_ACTION, new UINotifier(0, null, this.mJavaEditor), this);
+		send(UIEventNotifier.TYPE_VIEW_ACTION, new UINotifier(UIEventNotifier.TYPE_VIEW_ACTION_CATEGORY_CODE_EXPORT, this, null,this.site), null);
+	}
 
+	public void actionCopy() {
+//		return mJavaEditor.getCode();
+		send(UIEventNotifier.TYPE_VIEW_ACTION, new UINotifier(UIEventNotifier.TYPE_VIEW_ACTION_CATEGORY_CODE_COPY, this, null,this.site), null);
+	 
+	}
 }

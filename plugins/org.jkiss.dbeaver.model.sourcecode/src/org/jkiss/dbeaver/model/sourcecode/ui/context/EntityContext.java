@@ -25,5 +25,7 @@ public interface EntityContext extends  DBRRunnableWithProgress{
 	
 	
 	void setViewDataRunnableEvent(ViewDataRunnableEvent event);
+	
+	int exportSourceCode(IWorkbenchPart part);
 
 }

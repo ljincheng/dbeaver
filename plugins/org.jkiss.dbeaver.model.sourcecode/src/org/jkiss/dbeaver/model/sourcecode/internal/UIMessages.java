@@ -18,6 +18,7 @@ public class UIMessages  extends NLS {
 	public static String dbeaver_generate_sourcecode_name;
 	public static String dbeaver_generate_sourcecode_value;
 	public static String dbeaver_generate_sourcecode_param;
+	public static String dbeaver_generate_sourcecode_savePosition;
 	public static String dbeaver_generate_sourcecode_template;
 	public static String dbeaver_generate_sourcecode_entity_object;
 	public static String dbeaver_generate_sourcecode_object_types;

@@ -1,5 +1,6 @@
 package org.jkiss.dbeaver.model.sourcecode.core;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.security.Timestamp;
 import java.sql.Time;
@@ -10,8 +11,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
 import org.jkiss.dbeaver.model.sourcecode.template.EngineContext;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.FormContext;
 import org.jkiss.dbeaver.model.sourcecode.ui.context.FormItemContext;
@@ -59,11 +62,15 @@ public class DBSTableCodeContext extends EngineContext{
 	private Map<String, Object> dataMap;
 	private List<CodeColumnAttribute> mColumns=new ArrayList<CodeColumnAttribute>();
 	
-	public DBSTableCodeContext(DBSTable table) {
-		this.mTable=table; 
+	public DBSTableCodeContext() {
+		super();
 	}
+//	public DBSTableCodeContext(DBSTable table) {
+//		super();
+//		this.mTable=table; 
+//	}
 	
-	public void run(DBRProgressMonitor monitor,List<FormItemContext> settings)
+	public void run(DBRProgressMonitor monitor,DBSTable table,List<FormItemContext> settings)
 	{
 		if(dataMap!=null)
 		{
@@ -71,13 +78,31 @@ public class DBSTableCodeContext extends EngineContext{
 			dataMap=null;
 		}
 		dataMap=new HashMap<String, Object>();
+		if(table!=null) {
+			this.mTable=table;
+			if(this.mTable!=null )
+			{
+					tableColumns(monitor);
+			}
+			pushColumnsAttribute(mColumns,settings);
+		}
+	} 
+	 
+	public void refersh(List<FormItemContext> settings)
+	{
 		if(this.mTable!=null )
 		{
-			tableColumns(monitor);
+			if(dataMap!=null)
+			{
+				dataMap.clear();
+				dataMap=null;
+			}
+			dataMap=new HashMap<String, Object>();
+			pushColumnsAttribute(mColumns,settings);
 		}
-		pushColumnsAttribute(mColumns,settings);
+		
 	}
-	
+
 	public List<CodeColumnAttribute> getColumns(){
 		return this.mColumns;
 	}
@@ -162,6 +187,7 @@ public class DBSTableCodeContext extends EngineContext{
 		 List<CodeColumnAttribute> mybatisInsertColumns=new ArrayList<CodeColumnAttribute>();
 		 List<CodeColumnAttribute> searchForms=new ArrayList<CodeColumnAttribute>();
 		try {
+		
 			 Collection<? extends DBSTableIndex> indexes = mTable.getIndexes(monitor);
 		     if (!CommonUtils.isEmpty(indexes)) {
 		         for (DBSTableIndex index : indexes) {

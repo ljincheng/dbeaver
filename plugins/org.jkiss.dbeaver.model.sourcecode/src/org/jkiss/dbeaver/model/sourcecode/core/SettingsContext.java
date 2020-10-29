@@ -1,16 +1,11 @@
-package org.jkiss.dbeaver.model.sourcecode.code;
+package org.jkiss.dbeaver.model.sourcecode.core;
 
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
-import org.jkiss.dbeaver.model.sourcecode.core.SourceCodeSetting;
 import org.jkiss.dbeaver.model.sourcecode.ui.preferences.SourceCodePreferences;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 
-public class SourceCodeSettingContext {
+public class SettingsContext {
 
-	public SourceCodeSettingContext() {
-		super();
-	}
-	
 	public static SourceCodeSetting loadStoreContext() {
 		DBPPreferenceStore store= DBWorkbench.getPlatform().getPreferenceStore();
 		SourceCodeSetting setting=new SourceCodeSetting();
@@ -30,6 +25,7 @@ public class SourceCodeSettingContext {
 		setting.setRuleService(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE));
 		setting.setRuleServiceImpl(store.getString(SourceCodePreferences.SOURCECODE_RULE_SERVICE_IMPL));
 		setting.setRuleController(store.getString(SourceCodePreferences.SOURCECODE_RULE_CONTROLLER));
+		setting.setAuthor(store.getString(SourceCodePreferences.SOURCECODE_AUTHOR));
 		return setting;
 	}
 }

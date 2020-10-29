@@ -8,15 +8,20 @@ import org.eclipse.ui.commands.ICommandImageService;
 import org.eclipse.ui.texteditor.DefaultRangeIndicator;
 import org.eclipse.ui.texteditor.ITextEditorActionConstants;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
+import org.jkiss.dbeaver.ui.ActionUtils;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.editors.StringEditorInput;
 import org.jkiss.dbeaver.ui.editors.SubEditorSite;
 import org.jkiss.dbeaver.ui.editors.text.BaseTextEditor;
 import org.jkiss.dbeaver.utils.GeneralUtils;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.jface.text.source.projection.ProjectionSupport;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
@@ -39,6 +44,19 @@ public class JavaEditor extends BaseTextEditor {
 		 {
 			 this.codeInput.setReadOnly(false);
 		 }
+		 
+		 SourceViewer viewer = getViewer();
+	        if (viewer != null) {
+	            StyledText textWidget = viewer.getTextWidget();
+	            if (textWidget != null) {
+	                textWidget.addModifyListener(this::onTextChange);
+	            }
+	        }
+	 }
+	 
+	 private void onTextChange(ModifyEvent e) {
+		 
+		 System.out.println("onTextChange Event:!!!!!");
 	 }
 
 	public String getCode() {
@@ -111,7 +129,8 @@ public class JavaEditor extends BaseTextEditor {
 	        super.editorContextMenuAboutToShow(menu);
 //	        addAction(menu, ITextEditorActionConstants.GROUP_EDIT, ITextEditorActionConstants.SHIFT_RIGHT);
 //	        addAction(menu, ITextEditorActionConstants.GROUP_EDIT, ITextEditorActionConstants.SHIFT_LEFT);
-	  
+	        //addAction(menu, ITextEditorActionConstants.GROUP_SAVE, "sourcecode.template.save");
+//	        menu.add(ActionUtils.makeCommandContribution(getSite(), "sourcecode.template.save"));
 	      if(saveMenuAction!=null && this.isEditable())
 	      {
 	    	 
@@ -123,6 +142,8 @@ public class JavaEditor extends BaseTextEditor {
 	    		  }
 	    	  }else {
 	    		 menu.add(saveAction);
+	    		 
+	    		 
 	    	  }
 	      }
 	       
@@ -136,7 +157,7 @@ public class JavaEditor extends BaseTextEditor {
 	 		
 	 	}
 	 	
-	 	
+	  
 	 
 	   
 }
