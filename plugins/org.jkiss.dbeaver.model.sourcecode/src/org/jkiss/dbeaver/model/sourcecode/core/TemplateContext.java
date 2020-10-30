@@ -172,7 +172,10 @@ public class TemplateContext extends AbstractContentBroadcas{
 		String exportPath=codeTemplate.getExportPath();
 		Map<String,String> root=new HashMap<String, String>();
 		root.putAll((Map)context.getRoot().get(DBSTableCodeContext.KEY_SETTING));
-		root.put("table_name", (String)context.getRoot().get(DBSTableCodeContext.KEY_TABLENAME));
+		String tableName= (String)context.getRoot().get(DBSTableCodeContext.KEY_TABLENAME);
+		root.put("table_name", CodeHelper.toUpperCamelCase(tableName));
+		root.put("tableName", tableName);
+		
 		String exportFile=CodeHelper.processTemplate(exportPath, (Map)context.getRoot().get(DBSTableCodeContext.KEY_SETTING));
 		return exportFile;
 	}

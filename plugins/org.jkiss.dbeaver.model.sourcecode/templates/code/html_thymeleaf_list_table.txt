@@ -18,11 +18,10 @@
             
              <td>
                 <div class="dropdown">
-                    <a class="btn-link dropdown-toggle" data-toggle="dropdown" ><th:block th:text="#{i18n.actions}" /> <span
-                            class="caret"></span></a>
+                    <a class="btn-link dropdown-toggle" data-toggle="dropdown" ><th:block th:text="#{i18n.actions}" /></a>
                     <ul class="dropdown-menu pull-right dropdown-menu-right" role="menu">
                         <li class="dropdown-item" shiro:hasPermission="shop:category:edit"><a class="btn-link"  data-toggle="modal" th:href="@{add(id=${modelObj.id })}" th:text="#{i18n.edit}">修改</a></li>
-                        <li class="dropdown-item" shiro:hasPermission="shop:category:delete" ><a class="btn-link" th:onclick="deleteData('[[${modelObj.id}]]',[[${modelObj.status}]])" th:text="#{i18n.delete}" >删除</a></li>
+                        <li class="dropdown-item" shiro:hasPermission="shop:category:delete" ><a class="btn-link"  th:text="#{i18n.delete}" >删除</a></li>
                     </ul>
                 </div>
             </td>
@@ -32,12 +31,11 @@
     </table>
 
 
-    <nav aria-label="Page navigation"><ul class="pager" id="pager">
-    </ul></nav>
+    <nav aria-label="Page navigation"><ul class="pager pagination"></ul></nav>
     <script type="text/javascript" th:inline="javascript">
         <!--
         $(function(){
-            jqPager({id:"pager",firstBt:/*[[#{sys.page.first}]]*/"首页",preBt:/*[[#{sys.page.previous}]]*/"上一页",nextBt:/*[[#{sys.page.next}]]*/"下一页",lastBt:/*[[#{sys.page.last}]]*/"末页",totalPages:[[${pagedata.totalPage}]],pageIndex:[[${pagedata.pageIndex}]],change:toPage});
+            jqPager({firstBt:/*[[#{sys.page.first}]]*/"首页",preBt:/*[[#{sys.page.previous}]]*/"上一页",nextBt:/*[[#{sys.page.next}]]*/"下一页",lastBt:/*[[#{sys.page.last}]]*/"末页",totalPages:[[${pagedata.totalPage}]],pageIndex:[[${pagedata.pageIndex}]],change:toPage});
         });
         //-->
     </script>

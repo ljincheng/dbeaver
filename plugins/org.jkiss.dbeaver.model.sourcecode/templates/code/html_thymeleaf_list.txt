@@ -18,15 +18,17 @@
     <input type="text" class="form-control" name="<@{item.paramName}@>" >
 </div>
 <@endEach@>
-                    <div class="form-group">
+                    <div >
                         <input type="submit" class="btn btn-primary" id="queryBtn" value="查询" th:value="#{i18n.query}" />
-                        <input type="button" secure:hasPermission="test:sysUser:add" class="btn btn-primary" id="addBtn" th:value="#{i18n.add('')}" />
+                        <input type="button" secure:hasPermission="<@{setting.groupName}@>:<@{tableName}@>:add" class="btn btn-primary" id="addBtn" th:value="#{i18n.add('')}" />
                     </div>
 
                 </form>
 
             </div>
-<div class="card-body table-responsive" id="datalist"></div></div><th:block th:replace="fragments/headTag2 ::script "></th:block>
+<div class="card-body table-responsive" id="datalist"></div>
+</div></div>
+<th:block th:replace="fragments/headTag2 ::script "></th:block>
 <script type="text/javascript" th:inline="javascript">
     $(function(){
         $("#queryBtn").click(queryStart);
@@ -40,6 +42,31 @@
             });
         });        queryStart();
     });
+    function editFun(url){
+     openWindow({
+                title:/*[[#{i18n.add('')}]]*/"",
+                url:url,
+                complete:function (resData){
+                    loadData();
+                }
+            });
+    }
+     function deleteFun(data)
+    {
+         confirmLayer({title:/*[[#{i18n.confirm.delete.title}]]*/"确定要删除？",
+            msg:/*[[#{i18n.confirm.delete.unrevert}]]*/"删除后数据无法恢复!",
+            noTitle:/*[[#{i18n.cancel}]]*/"取消",
+            yesTitle:/*[[#{i18n.yes}]]*/"确定",yesFn:function(){
+                loadJsonData({url:"delete",data:data,complete:function(resultData){
+                        if(resultData.code)
+                        {
+                            queryStart();
+                        }
+                        alertLayer(resultData.msg);
+                    }});
+            }});
+        return false;
+    }
     function loadData()
     {
         loadTableData({id:"datalist",url:"list",data:$("#form_1").serialize()});

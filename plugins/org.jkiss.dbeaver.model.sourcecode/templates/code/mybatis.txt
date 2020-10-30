@@ -13,12 +13,12 @@
 
 	<select id="queryList" parameterType="map" resultType="<@{entity.paramName}@>">
 	SELECT * FROM  <@{tableName}@>  WHERE 1=1 
-	<@each:{columns} item:"item" separator:"		" @><if test="<@{item.paramName}@>!= null "> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
+	<@each:{columns} item:"item" separator:"		" @><if test="<@{item.paramName}@> != null<@if:"{item.javaType} ==String"@> and <@{item.paramName}@> !='' <@endIf@>"> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
 	</select>
 
 	<select id="queryListPage" parameterType="map" resultType="<@{entity.paramName}@>">
 	SELECT * FROM  <@{tableName}@> WHERE 1=1 
-	<@each:{columns} item:"item" separator:"		"  @><if test="<@{item.paramName}@>!= null "> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
+	<@each:{columns} item:"item" separator:"		"  @><if test="<@{item.paramName}@> != null<@if:"{item.javaType} ==String"@> and <@{item.paramName}@> !='' <@endIf@>"> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
 	</select>
 	
 	<@if:"{primaryColumn}!=null"@>

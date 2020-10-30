@@ -37,7 +37,7 @@ public class TemplateUtils {
 	private static final String TEMPLATE_DIR = "templates/code/";
 	private static final String TEMPLATE_EXT = ".txt";
 	private static final String TEMPLATE_CACHE_EXT = ".template";
-	private static final String PROPERTIES_CACHE_EXT = ".properties";
+	public static final String PROPERTIES_CACHE_EXT = ".properties";
 	private static final String WORKSPACE_DIR = ".sourcecode";
 	private static final String METADATA_FOLDER = "metadata";
 	private static final String TEMPLATE_FOLDER = "template";
@@ -147,28 +147,31 @@ public class TemplateUtils {
 		return cn.booktable.template.TemplateEngine.process(template, context);
 	}
 
-	public Map<String, Object> readProperties(String propertFile) {
-		Map<String, Object> result = null;
+	public static <T> List<T> readProperties(String propertFile) {
+		List<T> result = null;
 		synchronized (metadataSync) {
-			File settingsFile = new File(getTemplateFolder(true), propertFile + PROPERTIES_CACHE_EXT);
+			File settingsFile = new File(getMetadataFolder(true), propertFile + PROPERTIES_CACHE_EXT);
 			if (settingsFile.exists() && settingsFile.length() > 0) {
 				// Parse metadata
 				try (Reader settingsReader = new InputStreamReader(new FileInputStream(settingsFile),
 						StandardCharsets.UTF_8)) {
-					result = JSONUtils.parseMap(METADATA_GSON, settingsReader);
+//					result = JSONUtils.parseMap(METADATA_GSON, settingsReader);
+					Gson gson = new Gson();
+					Type empMapType =	new com.google.gson.reflect.TypeToken<ArrayList<T>>() {}.getType();
+					result= gson.fromJson(settingsReader, empMapType);
 				} catch (Throwable e) {
 					log.error("Error reading code metadata from " + settingsFile.getAbsolutePath(), e);
 				}
 			}
 			if (result == null) {
-				result = new LinkedHashMap<>();
+				result = new ArrayList<T>();
 			}
 		}
 		return result;
 	}
 
-	public void saveProperties(String propertFile, Map<String, Object> properties) {
-		File settingsFile = new File(getTemplateFolder(true), propertFile + PROPERTIES_CACHE_EXT);
+	public static void saveProperties(String propertFile,Object properties) {
+		File settingsFile = new File(getMetadataFolder(true), propertFile + PROPERTIES_CACHE_EXT);
 		String settingsString = METADATA_GSON.toJson(properties);
 		try (Writer settingsWriter = new OutputStreamWriter(new FileOutputStream(settingsFile),
 				StandardCharsets.UTF_8)) {

@@ -1,6 +1,5 @@
 package org.jkiss.dbeaver.model.sourcecode.ui.dialog;
 
-
 import java.util.List;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -12,25 +11,24 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.jkiss.dbeaver.model.DBPImage;
-import org.jkiss.dbeaver.model.sourcecode.core.CodeTemplate;
-import org.jkiss.dbeaver.model.sourcecode.core.TemplateContext;
+import org.jkiss.dbeaver.model.sourcecode.core.SettingsContext;
 import org.jkiss.dbeaver.model.sourcecode.internal.UIMessages;
+import org.jkiss.dbeaver.model.sourcecode.ui.context.FormConstants;
+import org.jkiss.dbeaver.model.sourcecode.ui.context.FormItemContext;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.BaseDialog;
-import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.utils.CommonUtils;
 
-public class TemplateEditDialog extends BaseDialog{
+public class SettingEditDialog  extends BaseDialog{
 
-	private TemplateContext mTemplateContext;
+	private SettingsContext mSettingsContext;
 	private Text mTextID;
-	private Text mTextDesc;
-	private Text mTextExportPath;
+	private Text mTextValue; 
 	private Label mTextErrorTip;
 	
-	public TemplateEditDialog(Shell parentShell, String title, DBPImage icon,TemplateContext context) {
+	public SettingEditDialog(Shell parentShell, String title, DBPImage icon,SettingsContext context) {
 		super(parentShell, title, icon);
-		 this.mTemplateContext=context;
+		 this.mSettingsContext=context;
 	}
 
 	@Override
@@ -44,10 +42,9 @@ public class TemplateEditDialog extends BaseDialog{
 	private String exportPath; 
 		 */
 		Group settings = UIUtils.createControlGroup(composite, UIMessages.dbeaver_generate_sourcecode_settings, 2, GridData.FILL_HORIZONTAL, SWT.DEFAULT);
-		mTextID=UIUtils.createLabelText(settings,UIMessages.dbeaver_generate_sourcecode_name, "TPL-1000");
-		mTextDesc=UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_description, "我的新加模板1000");
-		mTextExportPath=DialogUtils.createOutputFolderChooser(settings,UIMessages.dbeaver_generate_sourcecode_savePosition,"/workspace/temp/code/src/", e->{
-        });
+		mTextID=UIUtils.createLabelText(settings,UIMessages.dbeaver_generate_sourcecode_name, "");
+		mTextValue=UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_value, "");
+       
 		mTextErrorTip=UIUtils.createLabel(settings, "");
 		return composite;
 	}
@@ -59,24 +56,24 @@ public class TemplateEditDialog extends BaseDialog{
 		String tplId=mTextID.getText();
 		if(CommonUtils.isEmpty(tplId))
 		{
-			mTextErrorTip.setText("模板名称不能为空");
+			mTextErrorTip.setText("名称不能为空");
 			return ;
 		}
         if (buttonId == IDialogConstants.OK_ID) {
-        	List<CodeTemplate> templateList=this.mTemplateContext.getTemplates();
+        	List<FormItemContext> templateList=this.mSettingsContext.getItems();
         	if(templateList!=null){
         		for(int i=0,k=templateList.size();i<k;i++) {
-        			CodeTemplate codeTemplate=templateList.get(i);
+        			FormItemContext codeTemplate=templateList.get(i);
         			if(codeTemplate.getId().equals(tplId)) {
-        				mTextErrorTip.setText("模板名称已存在，不能重复使用");
+        				mTextErrorTip.setText("名称已存在，不能重复使用");
         				return ;
         			}
         		}
         			
         	}
-        	CodeTemplate newTemplate=new CodeTemplate(tplId, tplId, mTextDesc.getText());
-        	newTemplate.setExportPath(mTextExportPath.getText());
-        	this.mTemplateContext.addTemplate(newTemplate);
+        	FormItemContext newTemplate=new FormItemContext(tplId, tplId,mTextValue.getText(), FormConstants.FORM_TEXT,FormConstants.FORM_VALUETYPE_TEXT);
+        	 
+        	this.mSettingsContext.addItem(newTemplate);
         	super.buttonPressed(IDialogConstants.CANCEL_ID);
         }else {
         	super.buttonPressed(IDialogConstants.CANCEL_ID);
@@ -84,8 +81,4 @@ public class TemplateEditDialog extends BaseDialog{
     }
 	        	
 	        
-	
-	
-
-	
 }

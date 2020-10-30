@@ -327,10 +327,52 @@ public class CodeHelper {
 	  */
 	 public static String processTemplate(String template, Map<String, Object> params){
 		    StringBuffer sb = new StringBuffer();
-		    Matcher m = Pattern.compile("\\$\\{\\w+\\}").matcher(template);
+		    Matcher m = Pattern.compile("\\$\\{[\\w,\\(,\\)]+\\}").matcher(template);
 		    while (m.find()) {
 		        String param = m.group();
-		        Object value = params.get(param.substring(2, param.length() - 1));
+		        String keyStr=param.substring(2, param.length() - 1);
+		        Object value=null;
+		        if(keyStr.startsWith("lower(") && keyStr.endsWith(")"))
+		        {
+		        	String key=keyStr.substring(6,keyStr.length()-1).trim();
+		        	value=params.get(key);
+		        	if(value!=null)
+		        	{
+		        		value=((String)value).toLowerCase();
+		        	}
+		        }else if(keyStr.startsWith("lcamel(") && keyStr.endsWith(")")) {
+		        	String key=keyStr.substring(7,keyStr.length()-1).trim();
+		        	value=params.get(key);
+		        	if(value!=null)
+		        	{
+		        		value=CodeHelper.toLowerCamelCase((String)value);
+		        	}
+		        }else if(keyStr.startsWith("upper(") && keyStr.endsWith(")"))
+			        {
+			        	String key=keyStr.substring(6,keyStr.length()-1).trim();
+			        	value=params.get(key);
+			        	if(value!=null)
+			        	{
+			        		value=((String)value).toUpperCase();
+			        	}
+			        }else if(keyStr.startsWith("upcamel(") && keyStr.endsWith(")")) {
+			        	String key=keyStr.substring(8,keyStr.length()-1).trim();
+			        	value=params.get(key);
+			        	if(value!=null)
+			        	{
+			        		value=CodeHelper.toUpperCamelCase((String)value);
+			        	}
+			        }else if(keyStr.startsWith("trim(") && keyStr.endsWith(")")) {
+			        	String key=keyStr.substring(5,keyStr.length()-1).trim();
+			        	value=params.get(key);
+			        	if(value!=null)
+			        	{
+			        		value=((String)value).trim();
+			        	}
+			        }else {
+			        	value = params.get(keyStr);
+			        }
+		       
 		        m.appendReplacement(sb, value==null ? "" : value.toString());
 		    }
 		    m.appendTail(sb);
