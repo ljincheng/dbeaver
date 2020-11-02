@@ -51,7 +51,7 @@ public abstract class PostgreAttribute<OWNER extends DBSEntity & PostgreObject> 
 {
     private static final Log log = Log.getLog(PostgreAttribute.class);
 
-    @NotNull
+    @Nullable
     private PostgreDataType dataType;
     private String comment;
     private long charLength;
@@ -152,7 +152,6 @@ public abstract class PostgreAttribute<OWNER extends DBSEntity & PostgreObject> 
             } else if (typeId == PostgreOid.INT8) {
                 typeId = PostgreOid.BIGSERIAL;
             }
-            defValue = null;
         }
         setDefaultValue(defValue);
         dataType = getTable().getDatabase().getDataType(monitor, typeId);

@@ -2394,6 +2394,14 @@ public class SQLEditor extends SQLEditorBase implements
             }
         }
 
+        // Cancel running jobs (if any) and close results tabs
+        for (QueryProcessor queryProcessor : queryProcessors) {
+            queryProcessor.cancelJob();
+            // FIXME: it is a hack (to avoid asking "Save script?" because editor is marked as dirty while queries are running)
+            // FIXME: make it better
+            queryProcessor.curJobRunning.set(0);
+        }
+
         // End transaction
         if (executionContext != null) {
             UIServiceConnections serviceConnections = DBWorkbench.getService(UIServiceConnections.class);
@@ -2407,13 +2415,6 @@ public class SQLEditor extends SQLEditorBase implements
             return ISaveablePart2.NO;
         }
 
-        // Cancel running jobs (if any) and close results tabs
-        for (QueryProcessor queryProcessor : queryProcessors) {
-            queryProcessor.cancelJob();
-            // FIXME: it is a hack (to avoid asking "Save script?" because editor is marked as dirty while queries are running)
-            // FIXME: make it better
-            queryProcessor.curJobRunning.set(0);
-        }
         updateDirtyFlag();
 
         if (getActivePreferenceStore().getBoolean(SQLPreferenceConstants.AUTO_SAVE_ON_CLOSE)) {
@@ -3148,6 +3149,13 @@ public class SQLEditor extends SQLEditorBase implements
                                         }
                                     }
                                 }
+                                if (countValue instanceof Map && ((Map<?, ?>) countValue).size() == 1) {
+                                    // For document-based DBs
+                                    Object singleValue = ((Map<?, ?>) countValue).values().iterator().next();
+                                    if (singleValue instanceof Number) {
+                                        countValue = singleValue;
+                                    }
+                                }
                                 if (countValue instanceof Number) {
                                     return ((Number) countValue).longValue();
                                 } else {
@@ -3408,6 +3416,9 @@ public class SQLEditor extends SQLEditorBase implements
                 queryProcessor.curJobRunning.decrementAndGet();
                 if (getTotalQueryRunning() <= 0) {
                     UIUtils.asyncExec(() -> {
+                        if (isDisposed()) {
+                            return;
+                        }
                         setTitleImage(editorImage);
                         updateDirtyFlag();
                     });
@@ -3417,6 +3428,9 @@ public class SQLEditor extends SQLEditorBase implements
                     return;
                 }
                 UIUtils.runUIJob("Process SQL query result", monitor -> {
+                    if (isDisposed()) {
+                        return;
+                    }
                     // Finish query
                     processQueryResult(monitor, result, statistics);
                     // Update dirty flag
@@ -3437,6 +3451,11 @@ public class SQLEditor extends SQLEditorBase implements
             }
             SQLQuery query = result.getStatement();
             Throwable error = result.getError();
+            ISelectionProvider selectionProvider = getSelectionProvider();
+            if (selectionProvider == null) {
+                // Disposed?
+                return;
+            }
             if (error != null) {
                 setStatus(GeneralUtils.getFirstMessage(error), DBPMessageType.ERROR);
                 if (!scrollCursorToError(monitor, query, error)) {
@@ -3444,14 +3463,14 @@ public class SQLEditor extends SQLEditorBase implements
                     int errorQueryLength = query.getLength();
                     if (errorQueryOffset >= 0 && errorQueryLength > 0) {
                         if (scriptMode) {
-                            getSelectionProvider().setSelection(new TextSelection(errorQueryOffset, errorQueryLength));
+                            selectionProvider.setSelection(new TextSelection(errorQueryOffset, errorQueryLength));
                         } else {
-                            getSelectionProvider().setSelection(originalSelection);
+                            selectionProvider.setSelection(originalSelection);
                         }
                     }
                 }
             } else if (!scriptMode && getActivePreferenceStore().getBoolean(SQLPreferenceConstants.RESET_CURSOR_ON_EXECUTE)) {
-                getSelectionProvider().setSelection(originalSelection);
+                selectionProvider.setSelection(originalSelection);
             }
             // Get results window (it is possible that it was closed till that moment
             {

@@ -30,6 +30,7 @@ import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
 import org.jkiss.dbeaver.model.app.DBPPlatform;
 import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.app.DBPWorkspace;
+import org.jkiss.dbeaver.model.auth.DBAAuthCredentialsProvider;
 import org.jkiss.dbeaver.model.connection.DBPAuthModelDescriptor;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.connection.DBPDataSourceProviderRegistry;
@@ -68,7 +69,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
     private final DBPPlatform platform;
     private final DBPProject project;
 
-    private final Map<File, DataSourceOrigin> origins = new LinkedHashMap<>();
+    private final Map<File, DataSourceStorage> storages = new LinkedHashMap<>();
     private final Map<String, DataSourceDescriptor> dataSources = new LinkedHashMap<>();
     private final List<DBPEventListener> dataSourceListeners = new ArrayList<>();
     private final List<DataSourceFolder> dataSourceFolders = new ArrayList<>();
@@ -79,6 +80,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
     private final DBVModel.ModelChangeListener modelChangeListener = new DBVModel.ModelChangeListener();
     private volatile ConfigSaver configSaver;
+    private DBAAuthCredentialsProvider authCredentialsProvider;
 
     public DataSourceRegistry(DBPPlatform platform, DBPProject project) {
         this.platform = platform;
@@ -136,11 +138,11 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         }
     }
 
-    DataSourceOrigin getDefaultOrigin() {
-        synchronized (origins) {
-            for (DataSourceOrigin origin : origins.values()) {
-                if (origin.isDefault()) {
-                    return origin;
+    DataSourceStorage getDefaultStorage() {
+        synchronized (storages) {
+            for (DataSourceStorage storage : storages.values()) {
+                if (storage.isDefault()) {
+                    return storage;
                 }
             }
             File defFile = getModernConfigFile();
@@ -150,9 +152,9 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
                     defFile = legacyFile;
                 }
             }
-            DataSourceOrigin origin = new DataSourceOrigin(defFile, true);
-            origins.put(defFile, origin);
-            return origin;
+            DataSourceStorage storage = new DataSourceStorage(defFile, true);
+            storages.put(defFile, storage);
+            return storage;
         }
     }
 
@@ -238,7 +240,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
     @NotNull
     @Override
     public DBPDataSourceContainer createDataSource(DBPDataSourceContainer source) {
-        DataSourceDescriptor newDS = new DataSourceDescriptor((DataSourceDescriptor) source);
+        DataSourceDescriptor newDS = new DataSourceDescriptor((DataSourceDescriptor) source, this);
         newDS.setId(DataSourceDescriptor.generateNewId(source.getDriver()));
         return newDS;
     }
@@ -567,6 +569,16 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         return platform.getApplication().getSecureStorage().getSecurePreferences().node("datasources");
     }
 
+    @Nullable
+    @Override
+    public DBAAuthCredentialsProvider getAuthCredentialsProvider() {
+        return authCredentialsProvider;
+    }
+
+    public void setAuthCredentialsProvider(DBAAuthCredentialsProvider authCredentialsProvider) {
+        this.authCredentialsProvider = authCredentialsProvider;
+    }
+
     /**
      * @return true if there is at least one project which was initialized.
      */
@@ -599,7 +611,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
     }
 
     private void loadDataSources(boolean refresh) {
-        if (!project.isOpen()) {
+        if (!project.isOpen() || project.isInMemory()) {
             return;
         }
         // Clear filters before reload
@@ -635,7 +647,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
                     }
                 }
             }
-            if (!origins.isEmpty()) {
+            if (!storages.isEmpty()) {
                 // Save config immediately in the new format
                 flushConfig();
             }
@@ -668,7 +680,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
             List<DataSourceDescriptor> removedDataSource = new ArrayList<>();
             for (DataSourceDescriptor ds : dataSources.values()) {
                 if (!parseResults.addedDataSources.contains(ds) && !parseResults.updatedDataSources.contains(ds) &&
-                    !ds.isProvided() && !ds.getOrigin().isDynamic() && !ds.isDetached())
+                    !ds.isProvided() && !ds.isExternallyProvided() && !ds.isDetached())
                 {
                     removedDataSource.add(ds);
                 }
@@ -683,15 +695,15 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
 
     private void loadDataSources(@NotNull File fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults) {
         boolean extraConfig = !fromFile.getName().equalsIgnoreCase(modern ? MODERN_CONFIG_FILE_NAME : LEGACY_CONFIG_FILE_NAME);
-        DataSourceOrigin origin;
-        synchronized (origins) {
-            origin = origins.get(fromFile);
-            if (origin == null) {
-                origin = new DataSourceOrigin(fromFile, !extraConfig);
-                origins.put(fromFile, origin);
+        DataSourceStorage storage;
+        synchronized (storages) {
+            storage = storages.get(fromFile);
+            if (storage == null) {
+                storage = new DataSourceStorage(fromFile, !extraConfig);
+                storages.put(fromFile, storage);
             }
         }
-        loadDataSources(fromFile, refresh, modern, parseResults, origin);
+        loadDataSources(fromFile, refresh, modern, parseResults, storage);
     }
 
     private void loadDataSources(@NotNull File fromFile, boolean refresh, boolean modern, @NotNull ParseResults parseResults, @NotNull DBPDataSourceConfigurationStorage configurationStorage) {
@@ -717,12 +729,12 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         final DBRProgressMonitor monitor = new VoidProgressMonitor();
         saveInProgress = true;
         try {
-            for (DataSourceOrigin origin : origins.values()) {
-                List<DataSourceDescriptor> localDataSources = getDataSources(origin);
+            for (DataSourceStorage storage : storages.values()) {
+                List<DataSourceDescriptor> localDataSources = getDataSources(storage);
 
-                File configFile = origin.getSourceFile();
+                File configFile = storage.getSourceFile();
 
-                if (origin.isDefault()) {
+                if (storage.isDefault()) {
                     if (project.isModernProject()) {
                         configFile = getModernConfigFile();
                     } else {
@@ -757,7 +769,7 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
                         project.getMetadataFolder(true);
                         serializer.saveDataSources(
                             monitor,
-                            origin,
+                            storage,
                             localDataSources,
                             configFile);
                     }
@@ -775,11 +787,11 @@ public class DataSourceRegistry implements DBPDataSourceRegistry {
         }
     }
 
-    private List<DataSourceDescriptor> getDataSources(DataSourceOrigin origin) {
+    private List<DataSourceDescriptor> getDataSources(DataSourceStorage storage) {
         List<DataSourceDescriptor> result = new ArrayList<>();
         synchronized (dataSources) {
             for (DataSourceDescriptor ds : dataSources.values()) {
-                if (ds.getOrigin() == origin) {
+                if (ds.getStorage() == storage) {
                     result.add(ds);
                 }
             }

@@ -73,6 +73,7 @@ import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.virtual.*;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.runtime.DBeaverNotifications;
+import org.jkiss.dbeaver.runtime.jobs.DataSourceJob;
 import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.controls.TabFolderReorder;
 import org.jkiss.dbeaver.ui.controls.ToolbarSeparatorContribution;
@@ -1637,10 +1638,13 @@ public class ResultSetViewer extends Viewer
             resultSetSize.addModifyListener(e -> {
                 DBSDataContainer dataContainer = getDataContainer();
                 int fetchSize = CommonUtils.toInt(resultSetSize.getText());
-                if (fetchSize > 0 && dataContainer != null && dataContainer.getDataSource() != null) {
+                if (fetchSize > 0 && fetchSize < ResultSetPreferences.MIN_SEGMENT_SIZE) {
+                    fetchSize = ResultSetPreferences.MIN_SEGMENT_SIZE;
+                }
+                if (dataContainer != null && dataContainer.getDataSource() != null) {
                     DBPPreferenceStore store = dataContainer.getDataSource().getContainer().getPreferenceStore();
                     int oldFetchSize = store.getInt(ModelPreferences.RESULT_SET_MAX_ROWS);
-                    if (oldFetchSize > 0 && oldFetchSize != fetchSize) {
+                    if (oldFetchSize != fetchSize) {
                         store.setValue(ModelPreferences.RESULT_SET_MAX_ROWS, fetchSize);
                         PrefUtils.savePreferenceStore(store);
                     }
@@ -2233,6 +2237,10 @@ public class ResultSetViewer extends Viewer
             if (dpj.isActiveTask()) {
                 dpj.cancel();
             }
+        }
+        DataSourceJob updateJob = model.getUpdateJob();
+        if (updateJob != null) {
+            updateJob.cancel();
         }
     }
 
@@ -3579,7 +3587,7 @@ public class ResultSetViewer extends Viewer
         } else {
             size = getPreferenceStore().getInt(ModelPreferences.RESULT_SET_MAX_ROWS);
         }
-        if (size < ResultSetPreferences.MIN_SEGMENT_SIZE) {
+        if (size > 0 && size < ResultSetPreferences.MIN_SEGMENT_SIZE) {
             size = ResultSetPreferences.MIN_SEGMENT_SIZE;
         }
         return size;
@@ -4473,7 +4481,7 @@ public class ResultSetViewer extends Viewer
             // Set explicit target container
             dataReceiver.setTargetDataContainer(dataContainer);
 
-            model.setUpdateInProgress(true);
+            model.setUpdateInProgress(this);
             model.setStatistics(null);
             model.releaseAllData();
             if (filtersPanel != null) {
@@ -4492,7 +4500,7 @@ public class ResultSetViewer extends Viewer
                     if (control1.isDisposed()) {
                         return;
                     }
-                    model.setUpdateInProgress(false);
+                    model.setUpdateInProgress(null);
 
                     // update history. Do it first otherwise we are in the incorrect state (getDatacontainer() may return wrong value)
                     if (saveHistory && error == null) {
