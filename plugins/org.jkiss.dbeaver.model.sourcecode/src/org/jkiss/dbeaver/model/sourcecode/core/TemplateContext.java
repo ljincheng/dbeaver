@@ -191,6 +191,9 @@ public class TemplateContext extends AbstractContentBroadcas{
 			if(!parentDir.exists() && !parentDir.mkdirs()) {
 				return false;
 			}
+			if(exportFile.exists()) {
+				exportFile.delete();
+			}
 			Files.write(exportFile.toPath(), template.getBytes(), StandardOpenOption.CREATE);
 		}catch (IOException e) {
 			e.printStackTrace();
