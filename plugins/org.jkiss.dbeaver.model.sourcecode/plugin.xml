@@ -113,7 +113,6 @@
 	
       <extension point="org.eclipse.ui.bindings">
         <key commandId="org.jkiss.dbeaver.sourcecode.refreshCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="F5"/>
-        <key commandId="org.jkiss.dbeaver.sourcecode.copyCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+C"/>
         <key commandId="org.jkiss.dbeaver.sourcecode.saveCode" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+S"/>
         <key commandId="org.jkiss.dbeaver.sourcecode.newAdd" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+N"/>
         <key commandId="org.jkiss.dbeaver.sourcecode.template.save" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+S"/>
