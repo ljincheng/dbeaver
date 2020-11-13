@@ -30,10 +30,16 @@ public class HiveSQLDialect extends GenericSQLDialect {
 
     public void initDriverSettings(JDBCDataSource dataSource, JDBCDatabaseMetaData metaData) {
         super.initDriverSettings(dataSource, metaData);
+        removeSQLKeyword("DEFAULT");
     }
 
     @Override
     public String[][] getIdentifierQuoteStrings() {
         return DEFAULT_QUOTE_STRINGS;
+    }
+
+    @Override
+    public boolean supportsAlterTableConstraint() {
+        return false;
     }
 }

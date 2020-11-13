@@ -40,7 +40,7 @@ import java.util.Arrays;
 /**
  * Oracle SQL dialect
  */
-class OracleSQLDialect extends JDBCSQLDialect {
+public class OracleSQLDialect extends JDBCSQLDialect {
 
     public static final String[] EXEC_KEYWORDS = new String[]{ "call" };
 
@@ -61,6 +61,11 @@ class OracleSQLDialect extends JDBCSQLDialect {
 
     public static final String[] ORACLE_BLOCK_HEADERS = new String[]{
         "DECLARE",
+    };
+
+    public static final String[] ORACLE_INNER_BLOCK_PREFIXES = new String[]{
+        "AS",
+        "IS",
     };
 
     public static final String[] OTHER_TYPES_FUNCTIONS = {
@@ -348,6 +353,12 @@ class OracleSQLDialect extends JDBCSQLDialect {
     @Override
     public String[] getBlockHeaderStrings() {
         return ORACLE_BLOCK_HEADERS;
+    }
+
+    @Nullable
+    @Override
+    public String[] getInnerBlockPrefixes() {
+        return ORACLE_INNER_BLOCK_PREFIXES;
     }
 
     @NotNull

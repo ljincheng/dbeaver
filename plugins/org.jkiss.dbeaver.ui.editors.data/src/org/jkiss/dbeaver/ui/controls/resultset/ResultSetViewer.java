@@ -1111,6 +1111,7 @@ public class ResultSetViewer extends Viewer
                 if (setActive) {
                     panelFolder.setSelection(panelTab);
                     presentationSettings.activePanelId = id;
+                    panelTab.getControl().setFocus();
                 }
                 return true;
             } else {
@@ -2463,22 +2464,20 @@ public class ResultSetViewer extends Viewer
         final DBSDataContainer dataContainer = getDataContainer();
 
         // Fill general menu
-        if (row != null && dataContainer != null && model.hasData()) {
+        if (dataContainer != null) {
             manager.add(ActionUtils.makeCommandContribution(site, ResultSetHandlerMain.CMD_EXPORT));
             MenuManager openWithMenu = new MenuManager(ActionUtils.findCommandName(ResultSetHandlerOpenWith.CMD_OPEN_WITH));
             openWithMenu.setRemoveAllWhenShown(true);
             openWithMenu.addMenuListener(manager1 -> ResultSetHandlerOpenWith.fillOpenWithMenu(ResultSetViewer.this, manager1));
             manager.add(openWithMenu);
-        }
 
-        if (attr != null && row != null) {
             manager.add(new GroupMarker(NavigatorCommands.GROUP_TOOLS));
             manager.add(new GroupMarker(MENU_GROUP_EXPORT));
         }
 
         manager.add(new Separator(MENU_GROUP_ADDITIONS));
 
-        if (dataContainer != null && model.hasData()) {
+        if (dataContainer != null) {
             manager.add(new Separator());
             manager.add(ActionUtils.makeCommandContribution(site, IWorkbenchCommandConstants.FILE_REFRESH));
         }
@@ -3973,7 +3972,6 @@ public class ResultSetViewer extends Viewer
         if (updatePresentation) {
             redrawData(false, true);
             updateEditControls();
-            fireResultSetChange();
         }
 
         return curRow;
@@ -4011,7 +4009,6 @@ public class ResultSetViewer extends Viewer
         }
 
         updateEditControls();
-        fireResultSetChange();
     }
 
     //////////////////////////////////
@@ -4089,6 +4086,7 @@ public class ResultSetViewer extends Viewer
     }
 
     private void fireResultSetLoad() {
+        labelProviderDefault.applyThemeSettings();
         for (IResultSetListener listener : getListenersCopy()) {
             listener.handleResultSetLoad();
         }

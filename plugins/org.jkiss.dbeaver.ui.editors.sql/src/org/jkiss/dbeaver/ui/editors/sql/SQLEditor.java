@@ -1653,8 +1653,7 @@ public class SQLEditor extends SQLEditorBase implements
     }
 
     @Override
-    public void setFocus()
-    {
+    public void setFocus() {
         super.setFocus();
     }
 
@@ -1779,7 +1778,7 @@ public class SQLEditor extends SQLEditorBase implements
         };
         if (RuntimeUtils.runTask(queryObtainTask, "Retrieve plan query", 5000) && !CommonUtils.isEmpty(planQueryString[0])) {
             SQLQuery planQuery = new SQLQuery(getDataSource(), planQueryString[0]);
-            processQueries(Collections.singletonList(planQuery), false, true, false, true, null);
+            processQueries(Collections.singletonList(planQuery), false, true, false, true, null, null);
         }
     }
 
@@ -1849,13 +1848,13 @@ public class SQLEditor extends SQLEditorBase implements
             return false;
         }
         if (!CommonUtils.isEmpty(elements)) {
-            return processQueries(elements, script, newTab, false, true, queryListener);
+            return processQueries(elements, script, newTab, false, true, queryListener, null);
         } else {
             return false;
         }
     }
 
-    public void exportDataFromQuery()
+    public void exportDataFromQuery(@Nullable SQLScriptContext sqlScriptContext)
     {
         List<SQLScriptElement> elements;
         ITextSelection selection = (ITextSelection) getSelectionProvider().getSelection();
@@ -1867,7 +1866,7 @@ public class SQLEditor extends SQLEditorBase implements
         }
 
         if (!elements.isEmpty()) {
-            processQueries(elements, false, false, true, true, null);
+            processQueries(elements, false, false, true, true, null, sqlScriptContext);
         } else {
             DBWorkbench.getPlatformUI().showError(
                     "Extract data",
@@ -1875,7 +1874,7 @@ public class SQLEditor extends SQLEditorBase implements
         }
     }
 
-    private boolean processQueries(@NotNull final List<SQLScriptElement> queries, final boolean forceScript, boolean newTab, final boolean export, final boolean checkSession, @Nullable final SQLQueryListener queryListener)
+    private boolean processQueries(@NotNull final List<SQLScriptElement> queries, final boolean forceScript, boolean newTab, final boolean export, final boolean checkSession, @Nullable final SQLQueryListener queryListener, @Nullable final SQLScriptContext context)
     {
         if (queries.isEmpty()) {
             // Nothing to process
@@ -1895,7 +1894,7 @@ public class SQLEditor extends SQLEditorBase implements
                         return;
                     }
                     updateExecutionContext(() -> UIUtils.syncExec(() ->
-                        processQueries(queries, forceScript, finalNewTab, export, false, queryListener)));
+                        processQueries(queries, forceScript, finalNewTab, export, false, queryListener, context)));
                 };
                 if (!checkSession(connectListener)) {
                     return false;
@@ -1921,7 +1920,10 @@ public class SQLEditor extends SQLEditorBase implements
             return false;
         }
 
-        SQLScriptContext scriptContext = createScriptContext();
+        SQLScriptContext scriptContext = context;
+        if (scriptContext == null) {
+            scriptContext = createScriptContext();
+        }
 
         final boolean isSingleQuery = !forceScript && (queries.size() == 1);
         if (isSingleQuery && queries.get(0) instanceof SQLQuery) {
@@ -3804,14 +3806,18 @@ public class SQLEditor extends SQLEditorBase implements
                     }
                 }
             }
+
             outputWriter.flush();
+            if (!outputViewer.isHasNewOutput()) {
+                return;
+            }
+            outputViewer.resetNewOutput();
             UIUtils.asyncExec(() -> {
                 if (outputViewer!=null) {
                     if (outputViewer.getControl()!=null) {
-                        if (!outputViewer.isDisposed() && outputViewer.isHasNewOutput()) {
+                        if (!outputViewer.isDisposed()) {
                             outputViewer.scrollToEnd();
                             updateOutputViewerIcon(true);
-                            outputViewer.resetNewOutput();
                         }
                     }
                 }

@@ -39,6 +39,7 @@ import org.jkiss.dbeaver.model.text.parser.TPRule;
 import org.jkiss.dbeaver.model.text.parser.TPRuleProvider;
 import org.jkiss.utils.ArrayUtils;
 
+import java.sql.Types;
 import java.util.Arrays;
 import java.util.List;
 
@@ -779,12 +780,6 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
         return BLOCK_BOUND_KEYWORDS;
     }
 
-    @Nullable
-    @Override
-    public String[] getBlockHeaderStrings() {
-        return new String[] { "DECLARE" };
-    }
-
     @NotNull
     @Override
     public String getTypeCastClause(DBSAttributeBase attribute, String expression) {
@@ -798,7 +793,8 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
     @NotNull
     @Override
     public String escapeScriptValue(DBSAttributeBase attribute, @NotNull Object value, @NotNull String strValue) {
-        if (value.getClass().getName().equals(PostgreConstants.PG_OBJECT_CLASS) || PostgreConstants.TYPE_BIT.equals(attribute.getTypeName()) || PostgreConstants.TYPE_INTERVAL.equals(attribute.getTypeName())) {
+        if (value.getClass().getName().equals(PostgreConstants.PG_OBJECT_CLASS) || PostgreConstants.TYPE_BIT.equals(attribute.getTypeName()) || PostgreConstants.TYPE_INTERVAL.equals(attribute.getTypeName())
+        || attribute.getTypeID() == Types.OTHER) {
             // TODO: we need to add value handlers for all PG data types.
             // For now we use workaround: represent objects as strings
             return '\'' + escapeString(strValue) + '\'';

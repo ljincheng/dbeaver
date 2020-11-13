@@ -48,7 +48,9 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.HTMLTransfer;
 import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.ControlAdapter;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -69,6 +71,7 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.data.*;
+import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCSession;
 import org.jkiss.dbeaver.model.exec.DBExecUtils;
 import org.jkiss.dbeaver.model.impl.data.DBDValueError;
@@ -79,10 +82,7 @@ import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.runtime.properties.PropertyCollector;
-import org.jkiss.dbeaver.ui.ActionUtils;
-import org.jkiss.dbeaver.ui.DBeaverIcons;
-import org.jkiss.dbeaver.ui.UIIcon;
-import org.jkiss.dbeaver.ui.UIUtils;
+import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.controls.PropertyPageStandard;
 import org.jkiss.dbeaver.ui.controls.lightgrid.*;
 import org.jkiss.dbeaver.ui.controls.resultset.*;
@@ -97,9 +97,11 @@ import org.jkiss.dbeaver.ui.data.IValueEditorStandalone;
 import org.jkiss.dbeaver.ui.data.managers.BaseValueManager;
 import org.jkiss.dbeaver.ui.editors.TextEditorUtils;
 import org.jkiss.dbeaver.ui.properties.PropertySourceDelegate;
+import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
+import org.jkiss.utils.xml.XMLUtils;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -116,6 +118,8 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
     public static final String ATTR_OPTION_PINNED = "pinned";
 
     private static final Log log = Log.getLog(SpreadsheetPresentation.class);
+
+    private static final boolean SHOW_CHECKBOX_AS_IMAGE = false;
 
     private Spreadsheet spreadsheet;
 
@@ -360,9 +364,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         GridCell cell = controller.isRecordMode() ?
             new GridCell(curRow, this.curAttribute) :
             new GridCell(this.curAttribute, curRow);
-        UIUtils.asyncExec(() -> {
-            this.spreadsheet.setCursor(cell, false, true);
-        });
+        this.spreadsheet.setCursor(cell, false, true);
         //this.spreadsheet.showColumn(this.curAttribute);
     }
 
@@ -458,9 +460,17 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         }
     }
 
-    @Nullable
-    public String copySelectionToString(ResultSetCopySettings settings)
-    {
+    @NotNull
+    @Override
+    public Map<Transfer, Object> copySelection(ResultSetCopySettings settings) {
+        boolean copyHTML = settings.isCopyHTML();
+
+        StringBuilder tdt = new StringBuilder();
+        StringBuilder html = new StringBuilder();
+        byte[] binaryData = null;
+
+        Map<Transfer, Object> formats = new LinkedHashMap<>();
+
         String columnDelimiter = settings.getColumnDelimiter();
         if (columnDelimiter == null) {
             columnDelimiter = "\t";
@@ -476,19 +486,26 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         }
         List<Object> selectedColumns = spreadsheet.getColumnSelection();
         IGridLabelProvider labelProvider = spreadsheet.getLabelProvider();
-        StringBuilder tdt = new StringBuilder();
+        if (copyHTML) html.append("<table border=\"1\">");
         if (settings.isCopyHeader()) {
+            if (copyHTML) html.append("<thead>");
             if (settings.isCopyRowNumbers()) {
                 tdt.append("#");
+                if (copyHTML) html.append("<th>#</th>");
             }
             for (Object column : selectedColumns) {
                 if (tdt.length() > 0) {
                     tdt.append(columnDelimiter);
                 }
-                tdt.append(labelProvider.getText(column));
+                String columnText = labelProvider.getText(column);
+                tdt.append(columnText);
+                if (copyHTML) html.append("<th>").append(XMLUtils.escapeXml(columnText)).append("</th>");
             }
             tdt.append(rowDelimiter);
+            if (copyHTML) html.append("</thead>").append(rowDelimiter);
         }
+
+        if (copyHTML) html.append("<tbody>");
 
         List<GridCell> selectedCells = spreadsheet.getCellSelection();
         boolean quoteCells = settings.isQuoteCells() && selectedCells.size() > 1;
@@ -503,20 +520,28 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                     int prevColIndex = selectedColumns.indexOf(prevCell.col);
                     for (int i = prevColIndex; i < selectedColumns.size() - 1; i++) {
                         tdt.append(columnDelimiter);
+                        if (copyHTML) html.append("<td></td>");
                     }
                 }
                 if (prevCell != null) {
                     tdt.append(rowDelimiter);
+                    if (copyHTML) html.append("</tr>").append(rowDelimiter);
                 }
                 if (settings.isCopyRowNumbers()) {
-                    tdt.append(labelProvider.getText(cell.row)).append(columnDelimiter);
+                    String rowNumber = labelProvider.getText(cell.row);
+                    tdt.append(rowNumber).append(columnDelimiter);
+                    if (copyHTML) html.append("<td>").append(rowNumber).append("</td>");
                 }
+                if (copyHTML) html.append("<tr>");
             }
             if (prevCell != null && prevCell.col != cell.col) {
                 int prevColIndex = selectedColumns.indexOf(prevCell.col);
                 int curColIndex = selectedColumns.indexOf(cell.col);
                 for (int i = prevColIndex; i < curColIndex; i++) {
                     tdt.append(columnDelimiter);
+                    if (i != prevColIndex) {
+                        if (copyHTML) html.append("<td></td>");
+                    }
                 }
             }
 
@@ -524,6 +549,17 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
             DBDAttributeBinding column = (DBDAttributeBinding)(!recordMode ?  cell.col : cell.row);
             ResultSetRow row = (ResultSetRow) (!recordMode ?  cell.row : cell.col);
             Object value = controller.getModel().getCellValue(column, row);
+            if (binaryData == null && (column.getDataKind() == DBPDataKind.BINARY || column.getDataKind() == DBPDataKind.CONTENT)) {
+                if (value instanceof byte[]) {
+                    binaryData = (byte[]) value;
+                } else if (value instanceof DBDContent && !ContentUtils.isTextContent((DBDContent) value) && value instanceof DBDContentCached) {
+                    try {
+                        binaryData = ContentUtils.getContentBinaryValue(new VoidProgressMonitor(), (DBDContent) value);
+                    } catch (DBCException e) {
+                        log.debug("Error reading content binary value");
+                    }
+                }
+            }
             String cellText = column.getValueRenderer().getValueDisplayString(
                 column.getAttribute(),
                 value,
@@ -534,6 +570,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 }
             }
             tdt.append(cellText);
+            if (copyHTML) html.append("<td>").append(XMLUtils.escapeXml(cellText)).append("</td> ");
 
             if (settings.isCut()) {
                 IValueController valueController = new SpreadsheetValueController(
@@ -545,12 +582,24 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
 
             prevCell = cell;
         }
+        if (copyHTML) {
+            html.append("</tbody>").append(rowDelimiter);
+            html.append("</table>").append(rowDelimiter);
+        }
         if (settings.isCut()) {
             controller.redrawData(false, false);
             controller.updatePanelsContent(false);
         }
 
-        return tdt.toString();
+        formats.put(TextTransfer.getInstance(), tdt.toString());
+        if (copyHTML) {
+            formats.put(HTMLTransfer.getInstance(), html.toString());
+        }
+        if (binaryData != null) {
+            formats.put(SimpleByteArrayTransfer.getInstance(), binaryData);
+        }
+
+        return formats;
     }
 
     @Override
@@ -646,16 +695,34 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                         continue;
                     }
 
-                    Object newValue = ResultSetUtils.getAttributeValueFromClipboard(attr);
-                    if (newValue == null) {
-                        continue;
-                    }
-                    new SpreadsheetValueController(
+                    SpreadsheetValueController valueController = new SpreadsheetValueController(
                         controller,
                         attr,
                         row,
                         IValueController.EditType.NONE,
-                        null).updateValue(newValue, false);
+                        null);
+
+                    Object newValue = null;
+
+                    if (attr.getDataKind() == DBPDataKind.BINARY || attr.getDataKind() == DBPDataKind.CONTENT) {
+
+                        Clipboard clipboard = new Clipboard(Display.getCurrent());
+                        try (DBCSession session = DBUtils.openUtilSession(new VoidProgressMonitor(), attr, "Copy from clipboard")) {
+                            byte[] binaryContents = (byte[]) clipboard.getContents(SimpleByteArrayTransfer.getInstance());
+                            if (binaryContents != null) {
+                                newValue = valueController.getValueHandler().getValueFromObject(session, attr, binaryContents, false, false);
+                            }
+                        } finally {
+                            clipboard.dispose();
+                        }
+                    }
+                    if (newValue == null) {
+                        newValue = ResultSetUtils.getAttributeValueFromClipboard(attr);
+                        if (newValue == null) {
+                            continue;
+                        }
+                    }
+                    valueController.updateValue(newValue, false);
                 }
             }
             controller.redrawData(false, true);
@@ -1102,8 +1169,10 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
 
         Object value = controller.getModel().getCellValue(attr, row);
         if (isShowAsCheckbox(attr)) {
-            // Switch boolean value
-            toggleBooleanValue(attr, row, value);
+            if (!DBExecUtils.isAttributeReadOnly(attr)) {
+                // Switch boolean value
+                toggleBooleanValue(attr, row, value);
+            }
         } else if (DBUtils.isNullValue(value)) {
             UIUtils.showMessageBox(getSpreadsheet().getShell(), "Wrong link", "Can't navigate to NULL value", SWT.ICON_ERROR);
         } else if (!CommonUtils.isEmpty(attr.getReferrers())) {
@@ -1716,7 +1785,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 ResultSetRow row = (ResultSetRow) (recordMode ? colElement : rowElement);
                 Object value = controller.getModel().getCellValue(attr, row);
                 if (isShowAsCheckbox(attr)) {
-                    state |= STATE_LINK;
+                    state |= STATE_TOGGLE;
                 } else if (!CommonUtils.isEmpty(attr.getReferrers()) && !DBUtils.isNullValue(value)) {
                     state |= STATE_LINK;
                 } else {
@@ -1753,9 +1822,6 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         public Object getCellValue(Object colElement, Object rowElement, boolean formatString, boolean lockData)
         {
             DBDAttributeBinding attr = (DBDAttributeBinding)(rowElement instanceof DBDAttributeBinding ? rowElement : colElement);
-            if (isShowAsCheckbox(attr)) {
-                return "";
-            }
             ResultSetRow row = (ResultSetRow)(colElement instanceof ResultSetRow ? colElement : rowElement);
             int rowNum = row.getVisualNumber();
             Object value = controller.getModel().getCellValue(attr, row);
@@ -1773,6 +1839,19 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
             if (value instanceof DBDValueError) {
                 return ((DBDValueError) value).getErrorTitle();
             }
+
+            if (isShowAsCheckbox(attr)) {
+                if (value == null) {
+                    return String.valueOf(UIUtils.CHAR_BOOL_NULL);
+                }
+                if (value instanceof Number) {
+                    value = ((Number) value).byteValue() != 0;
+                }
+                if (value instanceof Boolean) {
+                    return UIUtils.getBooleanString((Boolean) value);
+                }
+            }
+
             if (formatString) {
                 if (recordMode) {
                     if (attr.getDataKind() == DBPDataKind.ARRAY && value instanceof DBDCollection) {
@@ -1798,22 +1877,24 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         @Override
         public DBPImage getCellImage(Object colElement, Object rowElement)
         {
-            DBDAttributeBinding attr = (DBDAttributeBinding)(rowElement instanceof DBDAttributeBinding ? rowElement : colElement);
-            if (isShowAsCheckbox(attr)) {
-                ResultSetRow row = (ResultSetRow)(colElement instanceof ResultSetRow ? colElement : rowElement);
-                Object cellValue = controller.getModel().getCellValue(attr, row);
-                if (cellValue instanceof Number) {
-                    cellValue = ((Number) cellValue).byteValue() != 0;
-                }
-                if (cellValue instanceof Boolean) {
-                    if ((Boolean)cellValue) {
-                        return UIIcon.CHECK_ON;
-                    } else {
-                        return UIIcon.CHECK_OFF;
+            if (SHOW_CHECKBOX_AS_IMAGE) {
+                DBDAttributeBinding attr = (DBDAttributeBinding) (rowElement instanceof DBDAttributeBinding ? rowElement : colElement);
+                if (isShowAsCheckbox(attr)) {
+                    ResultSetRow row = (ResultSetRow) (colElement instanceof ResultSetRow ? colElement : rowElement);
+                    Object cellValue = controller.getModel().getCellValue(attr, row);
+                    if (cellValue instanceof Number) {
+                        cellValue = ((Number) cellValue).byteValue() != 0;
                     }
-                }
-                if (DBUtils.isNullValue(cellValue)) {
-                    return UIIcon.CHECK_QUEST;
+                    if (cellValue instanceof Boolean) {
+                        if ((Boolean) cellValue) {
+                            return UIIcon.CHECK_ON;
+                        } else {
+                            return UIIcon.CHECK_OFF;
+                        }
+                    }
+                    if (DBUtils.isNullValue(cellValue)) {
+                        return UIIcon.CHECK_QUEST;
+                    }
                 }
             }
             return null;

@@ -40,6 +40,7 @@ import org.jkiss.dbeaver.model.struct.DBSEntityConstraintType;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.rdb.DBSForeignKeyDeferability;
 import org.jkiss.dbeaver.model.struct.rdb.DBSForeignKeyModifyRule;
+import org.jkiss.dbeaver.model.struct.rdb.DBSIndexType;
 import org.jkiss.utils.CommonUtils;
 
 import java.sql.DatabaseMetaData;
@@ -161,7 +162,7 @@ public abstract class GenericTableBase extends JDBCTable<GenericDataSource, Gene
     }
 
     @Override
-    public Collection<GenericTableIndex> getIndexes(DBRProgressMonitor monitor)
+    public Collection<? extends GenericTableIndex> getIndexes(DBRProgressMonitor monitor)
         throws DBException
     {
         if (getDataSource().getInfo().supportsIndexes()) {
@@ -278,7 +279,7 @@ public abstract class GenericTableBase extends JDBCTable<GenericDataSource, Gene
         try {
             // Try to get cardinality from some unique index
             // Cardinality
-            final Collection<GenericTableIndex> indexList = getIndexes(monitor);
+            final Collection<? extends GenericTableIndex> indexList = getIndexes(monitor);
             if (!CommonUtils.isEmpty(indexList)) {
                 for (GenericTableIndex index : indexList) {
                     if (index.isUnique()/* || index.getIndexType() == DBSIndexType.STATISTIC*/) {
@@ -474,5 +475,13 @@ public abstract class GenericTableBase extends JDBCTable<GenericDataSource, Gene
 
     public List<? extends GenericTrigger> getTriggerCache() {
         return triggers;
+    }
+
+    public boolean supportUniqueIndexes() {
+        return true;
+    }
+
+    public Collection<DBSIndexType> getTableIndexTypes() {
+        return Collections.singletonList(DBSIndexType.OTHER);
     }
 }
