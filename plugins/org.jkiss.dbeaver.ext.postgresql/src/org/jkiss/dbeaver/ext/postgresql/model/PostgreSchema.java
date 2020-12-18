@@ -91,7 +91,7 @@ public class PostgreSchema implements
     private final PostgreDataTypeCache dataTypeCache;
     protected volatile boolean hasStatistics;
 
-    private PostgreSchema(PostgreDatabase database, String name) {
+    PostgreSchema(PostgreDatabase database, String name) {
         this.database = database;
         this.name = name;
 
@@ -299,6 +299,12 @@ public class PostgreSchema implements
     public Collection<PostgreMaterializedView> getMaterializedViews(DBRProgressMonitor monitor)
         throws DBException {
         return getTableCache().getTypedObjects(monitor, this, PostgreMaterializedView.class);
+    }
+
+    @Association
+    public PostgreMaterializedView getMaterializedView(DBRProgressMonitor monitor, String name)
+            throws DBException {
+        return getTableCache().getObject(monitor, this, name, PostgreMaterializedView.class);
     }
 
     @Association

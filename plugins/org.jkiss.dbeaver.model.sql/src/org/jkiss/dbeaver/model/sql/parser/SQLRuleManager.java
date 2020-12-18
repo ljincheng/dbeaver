@@ -20,6 +20,7 @@ import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
+import org.jkiss.dbeaver.model.DBPKeywordType;
 import org.jkiss.dbeaver.model.sql.SQLConstants;
 import org.jkiss.dbeaver.model.sql.SQLDialect;
 import org.jkiss.dbeaver.model.sql.SQLSyntaxManager;
@@ -87,9 +88,9 @@ public class SQLRuleManager {
         // Add rule for single-line comments.
         for (String lineComment : dialect.getSingleLineComments()) {
             if (lineComment.startsWith("^")) {
-                rules.add(new LineCommentRule(lineComment, commentToken)); //$NON-NLS-1$
+                rules.add(new LineCommentRule(lineComment, commentToken, (char) 0, false, true));
             } else {
-                rules.add(new EndOfLineRule(lineComment, commentToken)); //$NON-NLS-1$
+                rules.add(new EndOfLineRule(lineComment, commentToken, (char) 0, false, true));
             }
         }
 
@@ -174,18 +175,23 @@ public class SQLRuleManager {
         }
 
         if (!minimalRules) {
-
-            // Add word rule for keywords, types, and constants.
-            SQLWordRule wordRule = new SQLWordRule(delimRule, otherToken);
+            // Add word rule for keywords, functions, types, and constants.
+            SQLWordRule wordRule = new SQLWordRule(delimRule, typeToken, otherToken);
             for (String reservedWord : dialect.getReservedWords()) {
-                wordRule.addWord(reservedWord, keywordToken);
+                DBPKeywordType keywordType = dialect.getKeywordType(reservedWord);
+                // Functions without parentheses has type 'DBPKeywordType.OTHER' (#8710)
+                if (keywordType == DBPKeywordType.FUNCTION || keywordType == DBPKeywordType.OTHER) {
+                    wordRule.addFunction(reservedWord);
+                } else {
+                    wordRule.addWord(reservedWord, keywordToken);
+                }
             }
             if (dataSource != null) {
-                for (String function : dialect.getFunctions(dataSource)) {
-                    wordRule.addWord(function, typeToken);
-                }
                 for (String type : dialect.getDataTypes(dataSource)) {
                     wordRule.addWord(type, typeToken);
+                }
+                for (String function : dialect.getFunctions(dataSource)) {
+                    wordRule.addFunction(function);
                 }
             }
             final String[] blockHeaderStrings = dialect.getBlockHeaderStrings();

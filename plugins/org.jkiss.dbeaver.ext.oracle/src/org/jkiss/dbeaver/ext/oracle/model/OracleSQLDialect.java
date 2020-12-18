@@ -61,6 +61,7 @@ public class OracleSQLDialect extends JDBCSQLDialect {
 
     public static final String[] ORACLE_BLOCK_HEADERS = new String[]{
         "DECLARE",
+        "PACKAGE"
     };
 
     public static final String[] ORACLE_INNER_BLOCK_PREFIXES = new String[]{
@@ -83,6 +84,8 @@ public class OracleSQLDialect extends JDBCSQLDialect {
         "PACKAGE",
         "FUNCTION",
         "TYPE",
+        "BODY",
+        "RECORD",
         "TRIGGER",
         "MATERIALIZED",
         "IF",
@@ -156,6 +159,7 @@ public class OracleSQLDialect extends JDBCSQLDialect {
                 "INSTR2",
                 "INSTR4",
                 "LENGTHB",
+                "LENGTH",
 
                 //Datetime Functions:
                 "ADD_MONTHS",
@@ -318,6 +322,7 @@ public class OracleSQLDialect extends JDBCSQLDialect {
                 "RATIO_TO_REPORT",
                 "STDDEV",
                 "VARIANCE",
+                "COALESCE",
 
                 //Object Reference Functions:
                 "MAKE_REF",
@@ -333,7 +338,8 @@ public class OracleSQLDialect extends JDBCSQLDialect {
                 // Other #4134
                 "EXTRACT",
                 "LISTAGG",
-                "OVER"
+                "OVER",
+                "RANK"
             ));
         removeSQLKeyword("SYSTEM");
 
@@ -369,7 +375,7 @@ public class OracleSQLDialect extends JDBCSQLDialect {
 
     @NotNull
     @Override
-    public MultiValueInsertMode getMultiValueInsertMode() {
+    public MultiValueInsertMode getDefaultMultiValueInsertMode() {
         return MultiValueInsertMode.INSERT_ALL;
     }
 

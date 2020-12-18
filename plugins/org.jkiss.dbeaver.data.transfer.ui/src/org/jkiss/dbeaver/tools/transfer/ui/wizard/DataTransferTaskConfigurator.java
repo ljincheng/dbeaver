@@ -32,6 +32,8 @@ import org.jkiss.dbeaver.model.DBPObject;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.data.DBDCollection;
+import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
+import org.jkiss.dbeaver.model.exec.DBCExecutionContextDefaults;
 import org.jkiss.dbeaver.model.exec.DBExecUtils;
 import org.jkiss.dbeaver.model.impl.DataSourceContextProvider;
 import org.jkiss.dbeaver.model.navigator.*;
@@ -175,15 +177,14 @@ public class DataTransferTaskConfigurator implements DBTTaskConfigurator {
                                 DTUIMessages.data_transfer_task_configurator_tables_title_choose_source,
                                 rootNode,
                                 rootNode,
-                                new Class[]{DBSObjectContainer.class, DBSDataContainer.class},
-                                new Class[]{DBSDataContainer.class, DBSSchema.class},
-                                new Class[]{DBSSchema.class});
+                                new Class[]{DBSObjectContainer.class},
+                                new Class[]{DBPDataSource.class, DBSCatalog.class, DBSSchema.class},
+                                null);
 
                         if (node != null) {
                             if (node instanceof DBNDataSource) {
-                                DBPDataSourceContainer container = ((DBNDataSource) node).getDataSourceContainer();
-                                dataSourceObject = container;
-                                dataSource = container.getDataSource();
+                                dataSourceObject = ((DBNDataSource) node).getDataSource();
+                                dataSource = ((DBNDataSource) node).getDataSource();
                             } else if (node instanceof DBNDatabaseItem) {
                                 dataSourceObject = ((DBNDatabaseItem) node).getObject();
                                 dataSource = dataSourceObject.getDataSource();
@@ -195,6 +196,7 @@ public class DataTransferTaskConfigurator implements DBTTaskConfigurator {
 
                         if (dataSource != null) {
                             DBPDataSourceContainer dataSourceContainer = DBUtils.getContainer(dataSource);
+
                             if (dataSourceContainer != null && !dataSourceContainer.isConnected()) {
                                 try {
                                     runnableContext.run(true, true, monitor -> {
@@ -212,30 +214,67 @@ public class DataTransferTaskConfigurator implements DBTTaskConfigurator {
                                     return;
                                 }
                             }
+
+                            String newInstanceName;
+                            String newObjectName;
+
+                            if (dataSourceObject instanceof DBSCatalog) {
+                                newInstanceName = dataSourceObject.getName();
+                                newObjectName = null;
+                            } else if (dataSourceObject instanceof DBSSchema) {
+                                DBSObject parentObject = dataSourceObject.getParentObject();
+                                newInstanceName = parentObject instanceof DBSCatalog ? parentObject.getName() : null;
+                                newObjectName = dataSourceObject.getName();
+                            } else {
+                                // Use default database and schema
+                                newInstanceName = null;
+                                newObjectName = null;
+                            }
+
                             DataSourceContextProvider contextProvider = new DataSourceContextProvider(dataSourceObject);
+                            DBCExecutionContext executionContext = contextProvider.getExecutionContext();
+
+                            String oldInstanceName = null;
+                            String oldObjectName = null;
+
+                            if (executionContext instanceof DBCExecutionContextDefaults) {
+                                DBCExecutionContextDefaults<?, ?> contextDefaults = ((DBCExecutionContextDefaults<?, ?>) executionContext);
+                                DBSCatalog defaultCatalog = contextDefaults.getDefaultCatalog();
+                                if (defaultCatalog != null) {
+                                    oldInstanceName = defaultCatalog.getName();
+                                }
+                                DBSSchema defaultSchema = contextDefaults.getDefaultSchema();
+                                if (defaultSchema != null) {
+                                    oldObjectName = defaultSchema.getName();
+                                }
+                            }
+
                             try {
-                                DBExecUtils.setExecutionContextDefaults(
-                                        new VoidProgressMonitor(),
-                                        dataSource,
-                                        contextProvider.getExecutionContext(),
-                                        dataSourceObject instanceof DBSSchema ? DBUtils.getObjectOwnerInstance(dataSourceObject).getName() : null,
-                                        null,
-                                        dataSourceObject.getName()
-                                );
+                                DBExecUtils.setExecutionContextDefaults(new VoidProgressMonitor(), dataSource, executionContext, newInstanceName, null, newObjectName);
                             } catch (DBException ex) {
                                 log.error("Error setting context defaults", ex);
                                 return;
                             }
+
                             UIServiceSQL serviceSQL = DBWorkbench.getService(UIServiceSQL.class);
                             if (serviceSQL != null) {
                                 String query = serviceSQL.openSQLEditor(contextProvider, DTUIMessages.data_transfer_task_configurator_sql_query_title, UIIcon.SQL_SCRIPT, "");
                                 if (query != null) {
                                     SQLScriptContext scriptContext = new SQLScriptContext(null, contextProvider, null, new PrintWriter(System.err, true), null);
                                     SQLQueryDataContainer container = new SQLQueryDataContainer(contextProvider, new SQLQuery(dataSource, query), scriptContext, log);
-                                    DataTransferPipe pipe = new DataTransferPipe(new DatabaseTransferProducer(container), null);
+                                    DatabaseTransferProducer producer = new DatabaseTransferProducer(container);
+                                    producer.setDefaultCatalog(newInstanceName);
+                                    producer.setDefaultSchema(newObjectName);
+                                    DataTransferPipe pipe = new DataTransferPipe(producer, null);
                                     addPipeToTable(pipe);
                                     updateSettings(propertyChangeListener);
                                 }
+                            }
+
+                            try {
+                                DBExecUtils.setExecutionContextDefaults(new VoidProgressMonitor(), dataSource, executionContext, oldInstanceName, null, oldObjectName);
+                            } catch (DBException ex) {
+                                log.error("Error setting context defaults", ex);
                             }
                         }
                     }

@@ -18,9 +18,6 @@ package org.jkiss.dbeaver.model;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.model.auth.DBASessionContext;
-import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
 import java.util.Map;
 
@@ -28,7 +25,7 @@ import java.util.Map;
  * Configuration origin.
  * It can be local configuration or some cloud provider.
  */
-public interface DBPDataSourceOrigin {
+public interface DBPDataSourceOrigin extends DBPObjectWithDetails<DBPDataSourceContainer> {
 
     /**
      * Origin type. Unique
@@ -52,12 +49,5 @@ public interface DBPDataSourceOrigin {
 
     @NotNull
     Map<String, Object> getConfiguration();
-
-    /**
-     * Get additional datasource information.
-     * Origins may provide extra information. Returns bean annotated with @Property.
-     */
-    @Nullable
-    DBPObject getDataSourceDetails(@NotNull DBRProgressMonitor monitor, @NotNull DBASessionContext sessionContext, @NotNull DBPDataSourceContainer dataSource) throws DBException;
 
 }

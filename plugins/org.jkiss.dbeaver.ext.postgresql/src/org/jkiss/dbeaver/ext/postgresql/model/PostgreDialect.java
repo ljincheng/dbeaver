@@ -72,7 +72,9 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
     private static final String[] OTHER_TYPES_FUNCTION = {
         "CURRENT_DATE",
         "CURRENT_TIME",
-        "CURRENT_TIMESTAMP"
+        "CURRENT_TIMESTAMP",
+        "CURRENT_ROLE",
+        "CURRENT_USER",
     };
 
     //region KeyWords
@@ -771,7 +773,7 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
 
     @NotNull
     @Override
-    public MultiValueInsertMode getMultiValueInsertMode() {
+    public MultiValueInsertMode getDefaultMultiValueInsertMode() {
         return MultiValueInsertMode.GROUP_ROWS;
     }
 

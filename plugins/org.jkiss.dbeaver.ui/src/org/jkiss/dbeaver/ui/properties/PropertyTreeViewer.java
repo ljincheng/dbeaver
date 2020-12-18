@@ -66,7 +66,6 @@ import java.util.*;
  * Driver properties control
  */
 public class PropertyTreeViewer extends TreeViewer {
-
     public static final String LINE_SEPARATOR = GeneralUtils.getDefaultLineSeparator();
 
     public enum ExpandMode {
@@ -401,7 +400,9 @@ public class PropertyTreeViewer extends TreeViewer {
             @Override
             public void widgetSelected(final SelectionEvent e)
             {
-                showEditor((TreeItem) e.item, (e.stateMask & SWT.BUTTON_MASK) != 0);
+                if (!GeneralUtils.isMacOS()) { // [#10279] [#10366] [#10361]
+                    showEditor((TreeItem) e.item, (e.stateMask & SWT.BUTTON_MASK) != 0);
+                }
             }
         });
         treeControl.addMouseListener(new MouseAdapter() {
@@ -411,6 +412,9 @@ public class PropertyTreeViewer extends TreeViewer {
                 TreeItem item = treeControl.getItem(new Point(e.x, e.y));
                 if (item != null) {
                     selectedColumn = UIUtils.getColumnAtPos(item, e.x, e.y);
+                    if (GeneralUtils.isMacOS()) { // [#10279] [#10366] [#10361]
+                        showEditor(item, true);
+                    }
                 } else {
                     selectedColumn = -1;
                     if (newPropertiesAllowed) {
@@ -777,12 +781,15 @@ public class PropertyTreeViewer extends TreeViewer {
     }
 
     public void saveEditorValues() {
-        if (curCellEditor != null && curCellEditor.isActivated()) {
+        if (GeneralUtils.isMacOS() && curCellEditor != null && curCellEditor.isActivated()) {
             try {
                 // This is a hack. On MacOS buttons don't get focus so when user closes dialog
                 // by clicking on Ok button CellEditor doesn't get FocusLost event and thus doesn't save its value.
                 // This is workaround. Calling protected method focusLost in okPressed saves the value.
-                // See https://github.com/dbeaver/dbeaver/issues/3553
+                // See:
+                // https://github.com/dbeaver/dbeaver/issues/3553
+                // https://github.com/dbeaver/dbeaver/issues/10366
+                // https://github.com/dbeaver/dbeaver/issues/10361
                 Method focusLost = CellEditor.class.getDeclaredMethod("focusLost");
                 focusLost.setAccessible(true);
                 focusLost.invoke(curCellEditor);

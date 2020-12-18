@@ -65,8 +65,15 @@ public class HANAMetaModel extends GenericMetaModel
     }
 
     @Override
+    public boolean isSchemasOptional() {
+        return false;
+    }
+
+    @Override
     public List<GenericSchema> loadSchemas(JDBCSession session, GenericDataSource dataSource, GenericCatalog catalog) throws DBException {
         List<GenericSchema> schemas = super.loadSchemas(session, dataSource, catalog);
+        // throws exception if password or license expired
+
         GenericSchema publicSchema = new GenericSchema(dataSource, catalog, PUBLIC_SCHEMA_NAME);
         int i;
         for (i = 0; i < schemas.size(); i++)
@@ -175,8 +182,9 @@ public class HANAMetaModel extends GenericMetaModel
             return Collections.emptyList();
         }
         try (JDBCSession session = DBUtils.openMetaSession(monitor, container, "Read triggers")) {
-            try (JDBCPreparedStatement dbStat = session.prepareStatement("SELECT TRIGGER_NAME FROM SYS.TRIGGERS WHERE SUBJECT_TABLE_NAME=?")) {
-                dbStat.setString(1, table.getName());
+            try (JDBCPreparedStatement dbStat = session.prepareStatement("SELECT TRIGGER_NAME FROM SYS.TRIGGERS WHERE SUBJECT_TABLE_SCHEMA=? AND SUBJECT_TABLE_NAME=?")) {
+                dbStat.setString(1, table.getSchema().getName());
+                dbStat.setString(2, table.getName());
                 List<GenericTrigger> result = new ArrayList<>();
                 try (JDBCResultSet dbResult = dbStat.executeQuery()) {
                     while (dbResult.next()) {
@@ -362,5 +370,5 @@ public class HANAMetaModel extends GenericMetaModel
             );
         }
     }
-    
+
 }

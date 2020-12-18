@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-        id="org.jkiss.dbeaver.appstore.feature"
-        label="%featureName"
-        version="7.2.5.qualifier"
-        provider-name="%providerName"
-        plugin="org.jkiss.dbeaver.ui.app.standalone">
+      id="org.jkiss.dbeaver.appstore.feature"
+      label="%featureName"
+      version="7.3.0.qualifier"
+      provider-name="%providerName"
+      plugin="org.jkiss.dbeaver.ui.app.standalone">
 
    <description>
       %description
@@ -40,10 +40,6 @@
 
    <includes
          id="org.jkiss.dbeaver.db.ui.feature"
-         version="0.0.0"/>
-
-   <includes
-         id="org.jkiss.dbeaver.sourcecode.feature"
          version="0.0.0"/>
 
    <requires>
