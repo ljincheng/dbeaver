@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
+<<<<<<< HEAD
       id="org.jkiss.dbeaver.appstore.feature"
       label="%featureName"
       version="7.3.0.qualifier"
       provider-name="%providerName"
       plugin="org.jkiss.dbeaver.ui.app.standalone">
+=======
+        id="org.jkiss.dbeaver.appstore.feature"
+        label="%featureName"
+        version="7.3.1.qualifier"
+        provider-name="%providerName"
+        plugin="org.jkiss.dbeaver.ui.app.standalone">
+>>>>>>> upstream/devel
 
    <description>
       %description

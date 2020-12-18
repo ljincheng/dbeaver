@@ -23,6 +23,7 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.data.DBDAttributeBinding;
 import org.jkiss.dbeaver.model.data.DBDAttributeBindingCustom;
+import org.jkiss.dbeaver.model.data.DBDInsertReplaceMethod;
 import org.jkiss.dbeaver.model.data.DBDValueHandler;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.exec.*;
@@ -31,6 +32,8 @@ import org.jkiss.dbeaver.model.impl.struct.AbstractAttribute;
 import org.jkiss.dbeaver.model.meta.DBSerializable;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
+import org.jkiss.dbeaver.model.sql.registry.SQLInsertReplaceMethodDescriptor;
+import org.jkiss.dbeaver.model.sql.registry.SQLInsertReplaceMethodRegistry;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.struct.rdb.DBSCatalog;
 import org.jkiss.dbeaver.model.struct.rdb.DBSManipulationType;
@@ -191,22 +194,22 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
                 if (columnMapping.targetAttr == null) {
                     throw new DBCException("Can't resolve target attribute for [" + columnMapping.sourceAttr.getName() + "]");
                 }
-            } else if (targetObject == null || !dynamicTarget || !(sourceObject instanceof DBSDocumentContainer)) {
+            } else if (sourceObject instanceof DBSDocumentContainer && dynamicTarget) {
+                try {
+                    DBSDocumentContainer docContainer = (DBSDocumentContainer) (targetObject instanceof DBSDocumentContainer ? targetObject : sourceObject);
+                    DBSEntityAttribute docAttribute = docContainer.getDocumentAttribute(session.getProgressMonitor());
+                    if (docAttribute != null) {
+                        columnMapping.targetAttr = new DatabaseMappingAttribute(containerMapping, columnMapping.sourceAttr);
+                        columnMapping.targetAttr.setTarget(docAttribute);
+                        columnMapping.targetAttr.setMappingType(DatabaseMappingType.existing);
+                    }
+                } catch (DBException e) {
+                    throw new DBCException("Error getting document attribute", e);
+                }
+            } else {
                 columnMapping.targetAttr = containerMapping.getAttributeMapping(columnMapping.sourceAttr);
                 if (columnMapping.targetAttr == null) {
                     throw new DBCException("Can't find target attribute [" + columnMapping.sourceAttr.getName() + "]");
-                }
-            } else {
-                if (targetObject instanceof DBSDocumentContainer) {
-                    try {
-                        DBSEntityAttribute docAttribute = ((DBSDocumentContainer) targetObject).getDocumentAttribute(session.getProgressMonitor());
-                        columnMapping.targetAttr = new DatabaseMappingAttribute(containerMapping, columnMapping.sourceAttr);
-                        columnMapping.targetAttr.setTarget(docAttribute);
-                    } catch (DBException e) {
-                        throw new DBCException("Error getting target document attribute", e);
-                    }
-                } else {
-                    throw new DBCException("Can not transfer data into dynamic database which doesn't support documents");
                 }
             }
             if (columnMapping.targetAttr.getMappingType() == DatabaseMappingType.skip) {
@@ -300,7 +303,20 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         boolean needCommit = force || ((rowsExported % settings.getCommitAfterRows()) == 0);
         Map<String, Object> options = new HashMap<>();
         boolean disableUsingBatches = settings.isDisableUsingBatches();
+        boolean onDuplicateKeyCaseOn = settings.getOnDuplicateKeyInsertMethodId() != null && !settings.getOnDuplicateKeyInsertMethodId().equals(DBSDataManipulator.INSERT_NONE_METHOD);
         options.put(DBSDataManipulator.OPTION_DISABLE_BATCHES, disableUsingBatches);
+        if (onDuplicateKeyCaseOn) {
+            String insertMethodId = settings.getOnDuplicateKeyInsertMethodId();
+            SQLInsertReplaceMethodDescriptor insertReplaceMethod = SQLInsertReplaceMethodRegistry.getInstance().getInsertMethod(insertMethodId);
+            if (insertReplaceMethod != null) {
+                try {
+                    DBDInsertReplaceMethod insertMethod = insertReplaceMethod.createInsertMethod();
+                    options.put(DBSDataManipulator.OPTION_INSERT_REPLACE_METHOD, insertMethod);
+                } catch (DBException e) {
+                    log.debug("Can't get insert replace method", e);
+                }
+            }
+        }
         if ((needCommit || disableUsingBatches) && executeBatch != null) {
             targetSession.getProgressMonitor().subTask("Insert rows (" + rowsExported + ")");
             boolean retryInsert;

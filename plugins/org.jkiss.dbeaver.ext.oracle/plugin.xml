@@ -84,7 +84,10 @@
                                     <items label="%tree.privilege.node.name" path="tablePrivs" property="tablePrivs" icon="#privilege">
                                     </items>
                                 </folder>
-
+                                <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDependency" label="%tree.dependents.node.name" icon="#link" navigable="false">
+                                    <items label="%tree.dependent.node.name" path="dependent" property="dependents" icon="#link">
+                                    </items>
+                                </folder>
                             </items>
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleView" label="%tree.views.node.name" icon="#folder_view" description="Views">
@@ -109,6 +112,10 @@
                                     <items label="%tree.privilege.node.name" path="tablePrivs" property="tablePrivs" icon="#privilege">
                                     </items>
                                 </folder>
+                                <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDependency" label="%tree.dependents.node.name" icon="#link" navigable="false">
+                                    <items label="%tree.dependent.node.name" path="dependent" property="dependents" icon="#link">
+                                    </items>
+                                </folder>
                             </items>
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleMaterializedView" label="%tree.materialized_views.node.name" icon="#folder_view" description="Materialized Views">
@@ -125,7 +132,7 @@
                                 </folder>
                             </items>
                         </folder>
-                        <folder label="%tree.indexes.node.name" icon="#indexes" description="%tree.indexes.node.tip">
+                        <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleTableIndex" label="%tree.indexes.node.name" icon="#indexes" description="%tree.indexes.node.tip">
                             <items icon="#index" label="%tree.index.node.name" path="index" property="indexes" virtual="true">
                                 <items icon="#column" label="%tree.index_columns.node.name" itemLabel="%tree.column.node.name" path="column" property="attributeReferences" inline="true" navigable="false" virtual="true">
                                 </items>
@@ -163,6 +170,10 @@
                                         </items>
                                     </items>
                                 </items>
+                                <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDependency" label="%tree.dependents.node.name" icon="#link" navigable="false">
+                                    <items label="%tree.dependent.node.name" path="dependent" property="dependents" icon="#link">
+                                    </items>
+                                </folder>
                             </items>
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleProcedureStandalone" label="%tree.procedures.node.name" icon="#procedures" description="Procedures">
@@ -208,7 +219,7 @@
                         </folder>
                     </items>
                 </folder>
-                <folder type="org.jkiss.dbeaver.model.struct.DBSObject" label="%tree.global_metadata.node.name" icon="#logical" description="Global metadata objects">
+                <folder label="%tree.global_metadata.node.name" icon="#logical" description="Global metadata objects">
                     <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDataType" label="%tree.types.node.name" icon="#data_types" description="Types">
                         <items label="%tree.data_type.node.name" path="type" property="localDataTypes" icon="#data_type"/>
                     </folder>
@@ -222,7 +233,7 @@
                         <items label="%tree.recycled_object.node.name" path="object" property="userRecycledObjects" icon="#recycle_bin"/>
                     </folder>
                 </folder>
-                <folder type="org.jkiss.dbeaver.model.struct.DBSObject" label="%tree.storage.node.name" icon="#storage" description="Storage management">
+                <folder label="%tree.storage.node.name" icon="#storage" description="Storage management">
                     <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleTablespace" label="%tree.tablespaces.node.name" icon="#tablespaces" description="Tablespaces">
                         <items label="%tree.tablespace.node.name" path="tablespace" property="tablespaces" icon="#tablespace">
                             <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDataFile" label="%tree.files.node.name" icon="#files" description="Data Files">
@@ -234,7 +245,7 @@
                         </items>
                     </folder>
                 </folder>
-                <folder type="org.jkiss.dbeaver.model.struct.DBSObject" label="%tree.security.node.name" icon="#security" description="Security management">
+                <folder label="%tree.security.node.name" icon="#security" description="Security management">
                     <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleUser" label="%tree.users.node.name" icon="#folder_user" description="Users">
                         <items label="%tree.user.node.name" path="users" property="users" icon="#user">
                             <folder type="org.jkiss.dbeaver.ext.oracle.model.OraclePrivRole" label="%tree.roles.node.name" icon="#folder_role" description="User roles" navigable="false">
@@ -277,7 +288,7 @@
                         </items>
                     </folder>
                 </folder>
-                <folder type="" label="%tree.administer.node.name" icon="#folder_admin" description="Maintenance/Settings">
+                <folder label="%tree.administer.node.name" icon="#folder_admin" description="Maintenance/Settings">
                     <treeContribution category="connectionEditor"/>
                 </folder>
 
@@ -402,8 +413,13 @@
         <initializer class="org.jkiss.dbeaver.ext.oracle.internal.OraclePreferencesInitializer"/>
     </extension>
 
+    <extension point="org.jkiss.dbeaver.sqlInsertMethod">
+        <method id="oracleInsertIgnore" class="org.jkiss.dbeaver.ext.oracle.model.OracleInsertReplaceMethodIgnore" label="INSERT IGNORE ROW INDEX" description="Insert ignore duplicate key value"/>
+    </extension>
+
     <extension point="org.jkiss.dbeaver.sqlDialect">
         <dialect id="oracle" parent="basic" class="org.jkiss.dbeaver.ext.oracle.model.OracleSQLDialect" label="Oracle" description="Oracle SQL dialect." icon="icons/oracle_icon.png">
+            <property name="insertMethods" value="oracleInsertIgnore"/>
         </dialect>
     </extension>
 

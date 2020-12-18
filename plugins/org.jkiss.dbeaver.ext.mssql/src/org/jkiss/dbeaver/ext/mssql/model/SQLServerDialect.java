@@ -57,7 +57,7 @@ public class SQLServerDialect extends JDBCSQLDialect {
     };
 
 
-    private static String[] EXEC_KEYWORDS =  { "CALL", "EXEC" };
+    private static String[] EXEC_KEYWORDS =  { "CALL", "EXEC", "EXECUTE" };
 
     private static String[] PLAIN_TYPE_NAMES = {
         SQLServerConstants.TYPE_GEOGRAPHY,
@@ -91,7 +91,7 @@ public class SQLServerDialect extends JDBCSQLDialect {
     private boolean isSqlServer;
 
     public SQLServerDialect() {
-        super("SQLServer");
+        super("SQLServer", "sqlserver");
     }
 
     public void initDriverSettings(JDBCDataSource dataSource, JDBCDatabaseMetaData metaData) {

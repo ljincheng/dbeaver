@@ -35,6 +35,7 @@ import org.jkiss.dbeaver.model.impl.jdbc.JDBCExecutionContext;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCRemoteInstance;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
+import org.jkiss.dbeaver.model.impl.net.SSLHandlerTrustStoreImpl;
 import org.jkiss.dbeaver.model.meta.Association;
 import org.jkiss.dbeaver.model.net.DBWHandlerConfiguration;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
@@ -145,14 +146,25 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
 //            DBACertificateStorage certificateStorage = getContainer().getPlatform().getCertificateStorage();
 //            String keyStorePath = certificateStorage.getKeyStorePath(getContainer(), "ssl").getAbsolutePath();
 
-            properties.setProperty("encrypt", "true");
+            properties.put("encrypt", "true");
+            properties.put("trustServerCertificate", sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_TRUST_SERVER_CERTIFICATE));
 
-            final String keystoreFileProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE);
+            final String keystoreFileProp;
+            final String keystorePasswordProp;
+
+            if (CommonUtils.isEmpty(sslConfig.getStringProperty(SSLHandlerTrustStoreImpl.PROP_SSL_METHOD))) {
+                // Backward compatibility
+                keystoreFileProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE);
+                keystorePasswordProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE_PASSWORD);
+            } else {
+                keystoreFileProp = sslConfig.getStringProperty(SSLHandlerTrustStoreImpl.PROP_SSL_KEYSTORE);
+                keystorePasswordProp = sslConfig.getPassword();
+            }
+
             if (!CommonUtils.isEmpty(keystoreFileProp)) {
                 properties.put("trustStore", keystoreFileProp);
             }
 
-            final String keystorePasswordProp = sslConfig.getStringProperty(SQLServerConstants.PROP_SSL_KEYSTORE_PASSWORD);
             if (!CommonUtils.isEmpty(keystorePasswordProp)) {
                 properties.put("trustStorePassword", keystorePasswordProp);
             }
@@ -241,7 +253,7 @@ public class SQLServerDataSource extends JDBCDataSource implements DBSInstanceCo
                 return dt;
             }
         }
-        if (systemTypeId != 243) { // 243 - ID of user defined types
+        if (systemTypeId != SQLServerConstants.TABLE_TYPE_SYSTEM_ID) { // 243 - ID of user defined table types
             log.debug("System data type " + systemTypeId + " not found");
         }
         SQLServerDataType sdt = new SQLServerDataType(this, String.valueOf(systemTypeId), systemTypeId, DBPDataKind.OBJECT, java.sql.Types.OTHER);
