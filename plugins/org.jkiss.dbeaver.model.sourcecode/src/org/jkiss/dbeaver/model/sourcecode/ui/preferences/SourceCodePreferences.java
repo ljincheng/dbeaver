@@ -1,14 +1,9 @@
 package org.jkiss.dbeaver.model.sourcecode.ui.preferences;
 
 import java.io.File;
-
-import org.eclipse.jface.preference.IPreferenceStore;
-import org.jkiss.dbeaver.ModelPreferences;
-import org.jkiss.dbeaver.bundle.ModelActivator;
 import org.jkiss.dbeaver.core.DBeaverActivator;
 import org.jkiss.dbeaver.model.impl.preferences.BundlePreferenceStore;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
-import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.preferences.PreferenceStoreDelegate;
 import org.jkiss.dbeaver.utils.PrefUtils;
 import org.jkiss.utils.CommonUtils;
