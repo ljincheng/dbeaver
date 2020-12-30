@@ -37,7 +37,6 @@
                 <module>org.jkiss.dbeaver.git.feature</module>
                 <module>org.jkiss.dbeaver.ext.office.feature</module>
                 <module>org.jkiss.dbeaver.ext.ui.svg.feature</module>
-                <module>org.jkiss.dbeaver.sourcecode.feature</module>
             </modules>
         </profile>
     </profiles>
