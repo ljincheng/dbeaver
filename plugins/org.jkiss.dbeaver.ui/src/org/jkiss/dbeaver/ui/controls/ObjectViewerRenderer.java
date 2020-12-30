@@ -28,8 +28,11 @@ import org.eclipse.swt.widgets.*;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.DBPNamedObject;
 import org.jkiss.dbeaver.model.DBPNamedValueObject;
+import org.jkiss.dbeaver.ui.BooleanRenderer;
+import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
+import org.jkiss.utils.CommonUtils;
 
 /**
  * ObjectListControl
@@ -172,25 +175,45 @@ public abstract class ObjectViewerRenderer {
     public void paintCell(Event event, Object element, Object cellValue, Widget item, Class<?> propDataType, int columnIndex, boolean editable, boolean selected) {
         {
             GC gc = event.gc;
-            if (false && (Boolean.class == propDataType || Boolean.TYPE == propDataType)) {
-                //boolean boolValue = CommonUtils.getBoolean(cellValue, false);
-                String strValue = UIUtils.getBooleanString((Boolean)cellValue);
-//                Image image = editable ?
-//                    (boolValue ? ImageUtils.getImageCheckboxEnabledOn() : ImageUtils.getImageCheckboxEnabledOff()) :
-//                    (boolValue ? ImageUtils.getImageCheckboxDisabledOn() : ImageUtils.getImageCheckboxDisabledOff());
-//                final Rectangle imageBounds = image.getBounds();
-                Point textExtent = gc.textExtent(strValue);
-
-                Rectangle columnBounds = isTree ? ((TreeItem)item).getBounds(columnIndex) : ((TableItem)item).getBounds(columnIndex);
-
-                //gc.setBackground(getControl().getBackground());
-                //gc.setT
-                if (getBooleanEditStyle() == ES_CENTERED) {
-                    //gc.drawImage(image, event.x + (columnBounds.width - imageBounds.width) / 2, event.y);
-                    gc.drawString(strValue, event.x + (columnBounds.width - textExtent.x) / 2, event.y);
+            if (Boolean.class == propDataType || Boolean.TYPE == propDataType) {
+                BooleanRenderer.Style booleanStyle = BooleanRenderer.getDefaultStyle();
+                Boolean value;
+                if (cellValue == null) {
+                    value = null;
+                } else if (cellValue instanceof Boolean) {
+                    value = (Boolean)cellValue;
                 } else {
-                    //gc.drawImage(image, event.x/* + 4*/, event.y + (columnBounds.height - imageBounds.height) / 2);
-                    gc.drawString(strValue, event.x + 4, event.y + (columnBounds.height - textExtent.y) / 2);
+                    value = CommonUtils.toBoolean(cellValue);
+                }
+                if (booleanStyle.isText()) {
+                    String cellText = item instanceof TreeItem ? ((TreeItem) item).getText(columnIndex) : "";
+                    if (cellText.isEmpty()) {
+                        // Paint only if item text is empty
+                        String strValue = booleanStyle.getText(value);
+                        Point textExtent = gc.textExtent(strValue);
+                        Rectangle columnBounds = isTree ? ((TreeItem) item).getBounds(columnIndex) : ((TableItem) item).getBounds(columnIndex);
+                        //gc.setBackground(getControl().getBackground());
+                        if ((booleanStyle == BooleanRenderer.Style.CHECKBOX || booleanStyle == BooleanRenderer.Style.TEXTBOX) && getBooleanEditStyle() == ES_CENTERED) {
+                            gc.drawString(strValue, event.x + (columnBounds.width - textExtent.x) / 2, event.y, true);
+                        } else {
+                            gc.drawString(strValue, event.x + 4, event.y + (columnBounds.height - textExtent.y) / 2, true);
+                        }
+                    }
+                } else {
+//                    Image image = editable ?
+//                        (boolValue ? ImageUtils.getImageCheckboxEnabledOn() : ImageUtils.getImageCheckboxEnabledOff()) :
+//                        (boolValue ? ImageUtils.getImageCheckboxDisabledOn() : ImageUtils.getImageCheckboxDisabledOff());
+                    Image image = DBeaverIcons.getImage(booleanStyle.getImage(value));
+                    final Rectangle imageBounds = image.getBounds();
+
+                    Rectangle columnBounds = isTree ? ((TreeItem)item).getBounds(columnIndex) : ((TableItem)item).getBounds(columnIndex);
+
+                    gc.setBackground(getControl().getBackground());
+                    if (getBooleanEditStyle() == ES_CENTERED) {
+                        gc.drawImage(image, event.x + (columnBounds.width - imageBounds.width) / 2, event.y);
+                    } else {
+                        gc.drawImage(image, event.x/* + 4*/, event.y + (columnBounds.height - imageBounds.height) / 2);
+                    }
                 }
 
                 event.doit = false;
