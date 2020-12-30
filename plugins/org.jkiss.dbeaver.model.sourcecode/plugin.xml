@@ -5,20 +5,7 @@
     
     <extension-point id="org.jkiss.dbeaver.sourceCodeGenerator" name="%extension-point.org.jkiss.dbeaver.sourceCodeGenerator.name" schema="schema/org.jkiss.dbeaver.sourceCodeGenerator.exsd"/>
     
-     <extension point="org.eclipse.ui.menus">
-        <!-- SQL editor menu -->
-        <menuContribution allPopups="false" locationURI="popup:org.eclipse.ui.popup.any?after=generate">
-            <menu label="%menu.database.sql.generate.sourcecode" icon="icons/code.png">
-                <visibleWhen>
-                    <with variable="activePart">
-                        <test property="org.jkiss.dbeaver.ui.editors.sql.util.canGenerate"/>
-                    </with>
-                </visibleWhen>
-                <dynamic id="org.jkiss.dbeaver.core.menu.sql.generate.sourcecode" class="org.jkiss.dbeaver.model.sourcecode.GeneratorSourceCodeContributor"/>
-            </menu>
-        </menuContribution>
-
-    </extension>
+    
 
     <!-- SQL Generators -->
     <extension point="org.jkiss.dbeaver.sourceCodeGenerator">
@@ -147,12 +134,5 @@
 	      <handler commandId="org.jkiss.dbeaver.sourcecode.template.save" class="org.jkiss.dbeaver.model.sourcecode.ui.handler.EntityCodeViewHandler"></handler>
       </extension>
       
-       <extension point="org.eclipse.ui.menus">
-        <!-- All Context menus -->
-         <menuContribution allPopups="false" locationURI="popup:org.eclipse.ui.popup.any?before=generate">
-            <command commandId="org.jkiss.dbeaver.sourcecode.template.save" label="Template save"/>
-		 </menuContribution>
-         
-        </extension>
- 
+      
 </plugin>
