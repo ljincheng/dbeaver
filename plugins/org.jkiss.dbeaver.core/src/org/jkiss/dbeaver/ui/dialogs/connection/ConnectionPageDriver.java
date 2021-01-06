@@ -23,19 +23,16 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.core.DBeaverActivator;
-import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.connection.DBPDriver;
 import org.jkiss.dbeaver.model.navigator.DBNBrowseSettings;
 import org.jkiss.dbeaver.registry.DataSourceNavigatorSettings;
 import org.jkiss.dbeaver.registry.DataSourceProviderDescriptor;
 import org.jkiss.dbeaver.registry.driver.DriverDescriptor;
-import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.IHelpContextIds;
 import org.jkiss.dbeaver.ui.UIIcon;
@@ -45,8 +42,6 @@ import org.jkiss.dbeaver.ui.dialogs.driver.DriverSelectViewer;
 import org.jkiss.dbeaver.ui.dialogs.driver.DriverTreeViewer;
 import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.CommonUtils;
-
-import java.util.List;
 
 /**
  * Driver selection page
@@ -58,9 +53,9 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
 
     private NewConnectionWizard wizard;
     private DBPDriver selectedDriver;
-    private DBPProject connectionProject;
     private DataSourceNavigatorSettings.Preset navigatorPreset;
     private DriverSelectViewer driverSelectViewer;
+    private ProjectSelectorPanel projectSelector;
 
     ConnectionPageDriver(NewConnectionWizard wizard)
     {
@@ -73,7 +68,6 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
         if (CommonUtils.isEmpty(defPreset)) {
             defPreset = DataSourceNavigatorSettings.PRESET_FULL.getId();
         }
-        connectionProject = NavigatorUtils.getSelectedProject();
 
         for (DataSourceNavigatorSettings.Preset p : DataSourceNavigatorSettings.PRESETS.values()) {
             if (p.getId().equals(defPreset)) {
@@ -90,13 +84,6 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
     public void createControl(Composite parent)
     {
         Composite placeholder = UIUtils.createComposite(parent, 1);
-
-        {
-            driverSelectViewer = new DriverSelectViewer(placeholder, this, wizard.getAvailableProvides(), true);
-            GridData gd = new GridData(GridData.FILL_BOTH);
-            gd.heightHint = 200;
-            driverSelectViewer.getControl().setLayoutData(gd);
-        }
 
         setControl(placeholder);
 
@@ -142,13 +129,14 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
             orderGroup.setLayout(new RowLayout());
             new Label(orderGroup, SWT.NONE).setImage(DBeaverIcons.getImage(UIIcon.SORT));
             new Label(orderGroup, SWT.NONE).setText("Sort by: ");
+            DriverSelectViewer.OrderBy defaultOrderBy = DriverSelectViewer.getDefaultOrderBy();
 
             for (DriverSelectViewer.OrderBy ob : DriverSelectViewer.OrderBy.values()) {
                 Button obScoreButton = new Button(orderGroup, SWT.RADIO);
                 obScoreButton.setText(ob.getLabel());
                 obScoreButton.setToolTipText(ob.getDescription());
                 obScoreButton.setData(ob);
-                if (ob == driverSelectViewer.getOrderBy()) {
+                if (ob == defaultOrderBy) {
                     obScoreButton.setSelection(true);
                 }
                 obScoreButton.addSelectionListener(new SelectionAdapter() {
@@ -166,46 +154,21 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
             new Label(controlsGroup, SWT.NONE).setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         }
 
-        final List<DBPProject> projects = DBWorkbench.getPlatform().getWorkspace().getProjects();
-        if (projects.size() == 1) {
-            if (connectionProject == null) {
-                connectionProject = projects.get(0);
-            }
-        } else if (projects.size() > 1) {
-
-            Composite projectGroup = UIUtils.createComposite(controlsGroup, 3);
-            projectGroup.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
-            new Label(projectGroup, SWT.NONE).setImage(DBeaverIcons.getImage(DBIcon.PROJECT));
-            UIUtils.createControlLabel(projectGroup, CoreMessages.dialog_connection_driver_project);
-
-            final Combo projectCombo = new Combo(projectGroup, SWT.DROP_DOWN | SWT.READ_ONLY);
-            projectCombo.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
-
-            for (DBPProject project : projects) {
-                projectCombo.add(project.getName());
-            }
-
-            if (connectionProject == null) {
-                projectCombo.select(0);
-                connectionProject = projects.get(0);
-            } else {
-                projectCombo.setText(connectionProject.getName());
-            }
-            projectCombo.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(SelectionEvent e) {
-                    connectionProject = projects.get(projectCombo.getSelectionIndex());
-                }
-            });
-
-            if (projects.size() < 2) {
-                //projectCombo.setEnabled(false);
-            }
-        } else {
+        projectSelector = new ProjectSelectorPanel(controlsGroup, NavigatorUtils.getSelectedProject());
+        if (projectSelector.getSelectedProject() == null) {
             setErrorMessage("You need to create a project first");
         }
 
+        {
+            driverSelectViewer = new DriverSelectViewer(placeholder, this, wizard.getAvailableProvides(), true);
+            GridData gd = new GridData(GridData.FILL_BOTH);
+            gd.heightHint = 200;
+            driverSelectViewer.getControl().setLayoutData(gd);
+        }
+
+
         UIUtils.setHelp(placeholder, IHelpContextIds.CTX_CON_WIZARD_DRIVER);
+        UIUtils.asyncExec(() -> driverSelectViewer.getControl().setFocus());
     }
 
     public DBPDriver getSelectedDriver()
@@ -218,7 +181,7 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
     }
 
     public DBPProject getConnectionProject() {
-        return connectionProject;
+        return projectSelector.getSelectedProject();
     }
 
     public DBNBrowseSettings getNavigatorSettings() {
@@ -226,9 +189,8 @@ class ConnectionPageDriver extends ActiveWizardPage implements ISelectionChanged
     }
 
     @Override
-    public boolean canFlipToNextPage()
-    {
-        return this.connectionProject != null && this.selectedDriver != null;
+    public boolean canFlipToNextPage() {
+        return this.projectSelector.getSelectedProject() != null && this.selectedDriver != null;
     }
 
     @Override
