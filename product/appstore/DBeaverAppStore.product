@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="DBeaver CE" uid="org.jkiss.dbeaver.core.appstore" id="org.jkiss.dbeaver.ui.app.standalone.appstore" application="org.jkiss.dbeaver.ui.app.standalone.appstore" version="7.3.2.qualifier" useFeatures="true" includeLaunchers="true">
+<product name="DBeaver CE" uid="org.jkiss.dbeaver.core.appstore" id="org.jkiss.dbeaver.ui.app.standalone.appstore" application="org.jkiss.dbeaver.ui.app.standalone.appstore" version="7.3.3.qualifier" useFeatures="true" includeLaunchers="true">
 
    <configIni use="default">
    </configIni>
 
    <launcherArgs>
       <programArgs></programArgs>
-      <vmArgs>-XX:+IgnoreUnrecognizedVMOptions --add-modules=ALL-SYSTEM -Xms64m -Xmx1024m
-      </vmArgs>
-      <vmArgsMac>-XstartOnFirstThread
-      </vmArgsMac>
+      <vmArgs>-XX:+IgnoreUnrecognizedVMOptions --add-modules=ALL-SYSTEM -Xms64m -Xmx1024m</vmArgs>
+      <vmArgsMac>-XstartOnFirstThread</vmArgsMac>
    </launcherArgs>
 
    <splash location="org.jkiss.dbeaver.ui.app.standalone"/>
