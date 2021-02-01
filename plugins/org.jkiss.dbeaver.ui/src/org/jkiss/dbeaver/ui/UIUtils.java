@@ -32,6 +32,7 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.window.IShellProvider;
+import org.eclipse.jface.wizard.IWizardContainer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.custom.CTabFolder;
@@ -1385,6 +1386,10 @@ public class UIUtils {
         return control.getShell().getData() instanceof org.eclipse.jface.dialogs.Dialog;
     }
 
+    public static boolean isInWizard(Control control) {
+        return control.getShell().getData() instanceof IWizardContainer;
+    }
+
     public static Link createLink(Composite parent, String text, SelectionListener listener) {
         Link link = new Link(parent, SWT.NONE);
         link.setText(text);
@@ -2019,5 +2024,13 @@ public class UIUtils {
             return CommonUtils.toString(text).trim();
         }
         return text;
+    }
+
+    public static void setControlVisible(Control control, boolean visible) {
+        control.setVisible(visible);
+        Object gd = control.getLayoutData();
+        if (gd instanceof GridData) {
+            ((GridData) gd).exclude = !visible;
+        }
     }
 }

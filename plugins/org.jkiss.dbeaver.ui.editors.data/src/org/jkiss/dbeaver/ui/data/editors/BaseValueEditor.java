@@ -22,9 +22,9 @@ import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.themes.ITheme;
 import org.jkiss.code.NotNull;
@@ -45,7 +45,6 @@ import org.jkiss.dbeaver.ui.editors.TextEditorUtils;
 * BaseValueEditor
 */
 public abstract class BaseValueEditor<T extends Control> implements IValueEditor {
-
     private static final String RESULTS_EDIT_CONTEXT_ID = "org.jkiss.dbeaver.ui.context.resultset.edit";
 
     private static final Log log = Log.getLog(BaseValueEditor.class);
@@ -158,25 +157,6 @@ public abstract class BaseValueEditor<T extends Control> implements IValueEditor
 
     private void addAutoSaveSupport(final Control inlineControl) {
         BaseValueEditor<?> editor = this;
-        int[] coordinates = new int[2];
-        inlineControl.addMouseListener(new MouseListener() { //[#10561]
-            @Override
-            public void mouseDoubleClick(MouseEvent e) {
-                //nothing
-            }
-
-            @Override
-            public void mouseDown(MouseEvent e) {
-                coordinates[0] = e.x;
-                coordinates[1] = e.y;
-            }
-
-            @Override
-            public void mouseUp(MouseEvent e) {
-                //nothing
-            }
-        });
-
         // Do not use focus listener in dialogs (because dialog has controls like Ok/Cancel buttons)
         inlineControl.addFocusListener(new FocusListener() {
             @Override
@@ -185,9 +165,16 @@ public abstract class BaseValueEditor<T extends Control> implements IValueEditor
 
             @Override
             public void focusLost(FocusEvent e) {
-                if (editor.control.getBounds().contains(coordinates[0], coordinates[1])) { //[#10561]
+                // It feels like on Linux editor's control is 'invisible' for GTK and mouse clicks
+                // 'go through' the control and reach underlying spreadsheet. Workaround:
+                // check that in reality we clicked on editor by checking that cursor is in control's
+                // bounds. See [dbeaver#10561].
+                Rectangle controlBounds = editor.control.getBounds();
+                Point relativeCursorLocation = editor.control.toControl(e.display.getCursorLocation());
+                if (controlBounds.contains(relativeCursorLocation)) {
                     return;
                 }
+
                 // Check new focus control in async mode
                 // (because right now focus is still on edit control)
                 if (!valueController.isReadOnly()) {
