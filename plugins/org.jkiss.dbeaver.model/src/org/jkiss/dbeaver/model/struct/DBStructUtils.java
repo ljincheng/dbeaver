@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.jkiss.dbeaver.model.edit.DBERegistry;
 import org.jkiss.dbeaver.model.impl.sql.edit.SQLObjectEditor;
 import org.jkiss.dbeaver.model.impl.sql.edit.struct.SQLTableManager;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.runtime.SubTaskProgressMonitor;
 import org.jkiss.dbeaver.model.sql.SQLConstants;
 import org.jkiss.dbeaver.model.sql.SQLDialect;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
@@ -155,6 +156,7 @@ public final class DBStructUtils {
     }
 
     public static <T extends DBSEntity> void sortTableList(DBRProgressMonitor monitor, Collection<T> input, List<T> simpleTables, List<T> cyclicTables, List<T> views) throws DBException {
+        monitor.beginTask("Sorting table list", input.size());
         List<T> realTables = new ArrayList<>();
         for (T entity : input) {
             if (entity instanceof DBSView || (entity instanceof DBSTable && ((DBSTable) entity).isView())) {
@@ -163,30 +165,42 @@ public final class DBStructUtils {
                 realTables.add(entity);
             }
         }
+        DBRProgressMonitor proxyMonitor = new SubTaskProgressMonitor(monitor);
 
         // 1. Get tables without FKs
         for (Iterator<T> iterator = realTables.iterator(); iterator.hasNext(); ) {
+            if (monitor.isCanceled()) {
+                break;
+            }
             T table = iterator.next();
             try {
-                if (CommonUtils.isEmpty(table.getAssociations(monitor))) {
+                if (CommonUtils.isEmpty(table.getAssociations(proxyMonitor))) {
                     simpleTables.add(table);
                     iterator.remove();
                 }
             } catch (DBException e) {
                 log.debug(e);
             }
+            monitor.worked(1);
         }
 
         // 2. Get tables referring tables from p.1 only
         // 3. Repeat p.2 until something is found
         boolean refsFound = true;
         while (refsFound) {
+            if (monitor.isCanceled()) {
+                break;
+            }
             refsFound = false;
             for (Iterator<T> iterator = realTables.iterator(); iterator.hasNext(); ) {
+                if (monitor.isCanceled()) {
+                    break;
+                }
                 T table = iterator.next();
                 try {
                     boolean allGood = true;
-                    for (DBSEntityAssociation ref : CommonUtils.safeCollection(table.getAssociations(monitor))) {
+                    for (DBSEntityAssociation ref : CommonUtils.safeCollection(table.getAssociations(proxyMonitor))) {
+                        monitor.worked(1);
                         DBSEntity refEntity = ref.getAssociatedEntity();
                         if (refEntity == null || (!simpleTables.contains(refEntity) && refEntity != table)) {
                             allGood = false;
@@ -206,6 +220,7 @@ public final class DBStructUtils {
 
         // 4. The rest is cycled tables
         cyclicTables.addAll(realTables);
+        monitor.done();
     }
 
     public static String mapTargetDataType(DBSObject objectContainer, DBSTypedObject typedObject, boolean addModifiers) {
@@ -218,8 +233,8 @@ public final class DBStructUtils {
         String typeName = typedObject.getTypeName();
         String typeNameLower = typeName.toLowerCase(Locale.ENGLISH);
         DBPDataKind dataKind = typedObject.getDataKind();
-        if (objectContainer instanceof DBPDataTypeProvider) {
-            DBPDataTypeProvider dataTypeProvider = (DBPDataTypeProvider) objectContainer;
+        DBPDataTypeProvider dataTypeProvider = DBUtils.getParentOfType(DBPDataTypeProvider.class, objectContainer);
+        if (dataTypeProvider != null) {
             DBSDataType dataType = dataTypeProvider.getLocalDataType(typeName);
             if (dataType == null && typeNameLower.equals("double")) {
                 dataType = dataTypeProvider.getLocalDataType("DOUBLE PRECISION");

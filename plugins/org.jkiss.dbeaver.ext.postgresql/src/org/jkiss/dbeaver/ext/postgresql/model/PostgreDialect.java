@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.jkiss.dbeaver.ext.postgresql.PostgreConstants;
 import org.jkiss.dbeaver.ext.postgresql.edit.PostgreTableColumnManager;
 import org.jkiss.dbeaver.ext.postgresql.model.data.PostgreBinaryFormatter;
 import org.jkiss.dbeaver.ext.postgresql.sql.PostgreDollarQuoteRule;
+import org.jkiss.dbeaver.ext.postgresql.sql.PostgreEscapeStringRule;
 import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
@@ -40,7 +41,8 @@ import org.jkiss.dbeaver.model.text.parser.TPRuleProvider;
 import org.jkiss.utils.ArrayUtils;
 
 import java.sql.Types;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * PostgreSQL dialect
@@ -745,7 +747,6 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
         removeSQLKeyword("LENGTH");
 
         if (dataSource instanceof PostgreDataSource) {
-            ((PostgreDataSource) dataSource).getServerType().configureDialect(this);
             serverExtension = ((PostgreDataSource) dataSource).getServerType();
             serverExtension.configureDialect(this);
         }
@@ -876,6 +877,7 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider {
     public void extendRules(@Nullable DBPDataSourceContainer dataSource, @NotNull List<TPRule> rules, @NotNull RulePosition position) {
         if (position == RulePosition.INITIAL || position == RulePosition.PARTITION) {
             rules.add(new PostgreDollarQuoteRule(dataSource, position == RulePosition.PARTITION));
+            rules.add(new PostgreEscapeStringRule());
         }
     }
 }

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
     private static final Log log = Log.getLog(PostgreDataSource.class);
 
     private DatabaseCache databaseCache;
+    private SettingCache settingCache;
     private String activeDatabaseName;
     private PostgreServerExtension serverExtension;
     private String serverVersion;
@@ -95,7 +96,7 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
             this,
             activeDatabaseName);
         databaseCache.setCache(Collections.singletonList(defDatabase));
-
+        settingCache = new SettingCache();
     }
 
     @Override
@@ -119,7 +120,7 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
             activeDatabaseName = PostgreConstants.DEFAULT_DATABASE;
         }
         databaseCache = new DatabaseCache();
-
+        settingCache = new SettingCache();
         DBPConnectionConfiguration configuration = getContainer().getActualConnectionConfiguration();
         final boolean showNDD = CommonUtils.getBoolean(configuration.getProviderProperty(PostgreConstants.PROP_SHOW_NON_DEFAULT_DB), false);
         List<PostgreDatabase> dbList = new ArrayList<>();
@@ -132,6 +133,12 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
         databaseCache.setCache(dbList);
         // Initiate default context
         getDefaultInstance().checkInstanceConnection(monitor, false);
+        try {
+            // Preload some settings, if available
+            settingCache.getObject(monitor, this, PostgreConstants.OPTION_STANDARD_CONFORMING_STRINGS);
+        } catch (DBException e) {
+            // ignore
+        }
     }
 
     private void loadAvailableDatabases(@NotNull DBRProgressMonitor monitor, DBPConnectionConfiguration configuration, List<PostgreDatabase> dbList) throws DBException {
@@ -278,6 +285,18 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
     public PostgreDatabase getDatabase(String name)
     {
         return databaseCache.getCachedObject(name);
+    }
+
+    public SettingCache getSettingCache() {
+        return settingCache;
+    }
+
+    public Collection<PostgreSetting> getSettings() {
+        return settingCache.getCachedObjects();
+    }
+
+    public PostgreSetting getSetting(String name) {
+        return settingCache.getCachedObject(name);
     }
 
     @Override
@@ -611,6 +630,27 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
         }
     }
 
+    static class SettingCache extends JDBCObjectLookupCache<PostgreDataSource, PostgreSetting> {
+        @NotNull
+        @Override
+        public JDBCStatement prepareLookupStatement(@NotNull JDBCSession session, @NotNull PostgreDataSource owner, @Nullable PostgreSetting object, @Nullable String objectName) throws SQLException {
+            if (object != null || objectName != null) {
+                final JDBCPreparedStatement dbStat = session.prepareStatement("select * from pg_catalog.pg_settings where name=?");
+                dbStat.setString(1, object != null ? object.getName() : objectName);
+                return dbStat;
+            }
+
+            return session.prepareStatement("select * from pg_catalog.pg_settings");
+        }
+
+        @Nullable
+        @Override
+        protected PostgreSetting fetchObject(@NotNull JDBCSession session, @NotNull PostgreDataSource owner, @NotNull JDBCResultSet dbResult) throws SQLException, DBException {
+            return new PostgreSetting(owner, dbResult);
+        }
+    }
+
+
     private final Pattern ERROR_POSITION_PATTERN = Pattern.compile("\\n\\s*\\p{L}+\\s*: ([0-9]+)");
 
     @Nullable
@@ -624,7 +664,7 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
                     Object position = BeanUtils.readObjectProperty(serverErrorMessage, "position");
                     if (position instanceof Number) {
                         ErrorPosition pos = new ErrorPosition();
-                        pos.position = ((Number) position).intValue();
+                        pos.position = ((Number) position).intValue() - 1;
                         return new ErrorPosition[] {pos};
                     }
                 }
@@ -685,5 +725,9 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
             return new QueryTransformerFetchAll();
         }
         return null;
+    }
+
+    public boolean supportReadingAllDataTypes() {
+        return CommonUtils.toBoolean(getContainer().getActualConnectionConfiguration().getProviderProperty(PostgreConstants.PROP_READ_ALL_DATA_TYPES));
     }
 }

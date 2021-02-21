@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,6 +95,7 @@ public class FireBirdMetaModel extends GenericMetaModel
                             continue;
                         }
                         String description = JDBCUtils.safeGetStringTrimmed(dbResult, "RDB$DESCRIPTION");
+                        boolean isSystem = JDBCUtils.safeGetBoolean(dbResult, "RDB$SYSTEM_FLAG");
                         FireBirdSequence sequence = new FireBirdSequence(
                             container,
                             name,
@@ -102,7 +103,8 @@ public class FireBirdMetaModel extends GenericMetaModel
                             null,
                             0,
                             -1,
-                            1
+                            1,
+                            isSystem
                         );
                         result.add(sequence);
                     }
@@ -145,13 +147,19 @@ public class FireBirdMetaModel extends GenericMetaModel
                         int sequence = JDBCUtils.safeGetInt(dbResult, "RDB$TRIGGER_SEQUENCE");
                         int type = JDBCUtils.safeGetInt(dbResult, "RDB$TRIGGER_TYPE");
                         String description = JDBCUtils.safeGetStringTrimmed(dbResult, "RDB$DESCRIPTION");
+                        int systemFlag = JDBCUtils.safeGetInt(dbResult, "RDB$SYSTEM_FLAG");
+                        boolean isSystem = true;
+                        if (systemFlag == 0) { // System flag value 0 - if user-defined and 1 or more if system
+                            isSystem = false;
+                        }
                         FireBirdTrigger trigger = new FireBirdTrigger(
                             container,
                             table,
                             name,
                             description,
                             FireBirdTriggerType.getByType(type),
-                            sequence);
+                            sequence,
+                            isSystem);
                         result.add(trigger);
                     }
                 }

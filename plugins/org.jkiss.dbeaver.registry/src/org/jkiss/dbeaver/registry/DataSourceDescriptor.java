@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,7 +186,7 @@ public class DataSourceDescriptor
         this.connectionInfo = connectionInfo;
         this.preferenceStore = new DataSourcePreferenceStore(this);
         this.virtualModel = new DBVModel(this);
-        this.navigatorSettings = new DataSourceNavigatorSettings(DataSourceNavigatorSettings.PRESET_FULL.getSettings());
+        this.navigatorSettings = new DataSourceNavigatorSettings(DataSourceNavigatorSettings.getDefaultSettings());
     }
 
     // Copy constructor
@@ -1479,7 +1479,13 @@ public class DataSourceDescriptor
         final String user = networkHandler != null ? networkHandler.getUserName() : actualConfig.getUserName();
         final String password = networkHandler != null ? networkHandler.getPassword() : actualConfig.getUserPassword();
 
-        DBPAuthInfo authInfo = DBWorkbench.getPlatformUI().promptUserCredentials(prompt, user, password, passwordOnly, !dataSourceContainer.isTemporary());
+        DBPAuthInfo authInfo;
+        try {
+            authInfo = DBWorkbench.getPlatformUI().promptUserCredentials(prompt, user, password, passwordOnly, !dataSourceContainer.isTemporary());
+        } catch (Exception e) {
+            log.debug(e);
+            authInfo = new DBPAuthInfo(user, password, false);
+        }
         if (authInfo == null) {
             return false;
         }

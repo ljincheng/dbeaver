@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2020 DBeaver Corp and others
+ * Copyright (C) 2010-2021 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -669,6 +669,9 @@ public abstract class LightGrid extends Canvas {
     public GridCell posToCell(GridPos pos)
     {
         if (pos.col < 0 || pos.row < 0) {
+            return null;
+        }
+        if (pos.col >= columnElements.length || pos.row >= rowElements.length) {
             return null;
         }
         return new GridCell(columnElements[pos.col], rowElements[pos.row]);
@@ -4251,7 +4254,9 @@ public abstract class LightGrid extends Canvas {
         }
         List<GridCell> cells = new ArrayList<>(selectedCells.size());
         for (GridPos pos : selectedCells) {
-            cells.add(posToCell(pos));
+        	GridCell cell = posToCell(pos);
+        	if (cell != null)
+        		cells.add(cell);
         }
         return cells;
     }
