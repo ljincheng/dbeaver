@@ -33,6 +33,7 @@ import org.jkiss.dbeaver.model.exec.jdbc.JDBCStatement;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSEntityConstraintType;
+import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureType;
 import org.jkiss.utils.CommonUtils;
 
 import java.sql.SQLException;
@@ -75,6 +76,11 @@ public class FireBirdMetaModel extends GenericMetaModel
     @Override
     public String getProcedureDDL(DBRProgressMonitor monitor, GenericProcedure sourceObject) throws DBException {
         return FireBirdUtils.getProcedureSource(monitor, sourceObject);
+    }
+
+    @Override
+    public GenericProcedure createProcedureImpl(GenericStructContainer container, String procedureName, String specificName, String remarks, DBSProcedureType procedureType, GenericFunctionResultType functionResultType) {
+        return new FireBirdProcedure(container, procedureName, specificName, remarks, procedureType, functionResultType);
     }
 
     @Override
@@ -234,13 +240,7 @@ public class FireBirdMetaModel extends GenericMetaModel
     public GenericTableBase createTableImpl(@NotNull JDBCSession session, @NotNull GenericStructContainer owner, @NotNull GenericMetaObject tableObject, @NotNull JDBCResultSet dbResult) {
         String relationName = JDBCUtils.safeGetStringTrimmed(dbResult, "RDB$RELATION_NAME");
         boolean isSystem = JDBCUtils.safeGetInt(dbResult, "RDB$SYSTEM_FLAG") != 0;
-        int relType;
-        try {
-            relType = dbResult.getInt("RDB$RELATION_TYPE");
-        } catch (SQLException e) {
-            relType = JDBCUtils.safeGetBytes(dbResult, "RDB$VIEW_BLR") == null ? 0 : 1;
-
-        }
+        int relType = getRelationType(dbResult);
         GenericTableBase table;
         if (relType == 1) {
             table = new FireBirdView(owner, relationName, isSystem ? "SYSTEM VIEW" : "VIEW", dbResult);
@@ -269,6 +269,23 @@ public class FireBirdMetaModel extends GenericMetaModel
         table.setSystem(isSystem);
         table.setDescription(JDBCUtils.safeGetStringTrimmed(dbResult, "RDB$DESCRIPTION"));
         return table;
+    }
+
+    // [dbeaver/issues/10492]
+    private static int getRelationType(@NotNull JDBCResultSet dbResult) {
+        try {
+            Integer i = dbResult.getObject("RDB$RELATION_TYPE", Integer.class);
+            if (i == null) {
+                return getRelTypeFromViewBLR(dbResult);
+            }
+            return i;
+        } catch (SQLException e) {
+            return getRelTypeFromViewBLR(dbResult);
+        }
+    }
+
+    private static int getRelTypeFromViewBLR(@NotNull JDBCResultSet dbResult) {
+        return JDBCUtils.safeGetBytes(dbResult, "RDB$VIEW_BLR") == null ? 0 : 1;
     }
 
 /*
