@@ -31,6 +31,7 @@ import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.CustomToolTipHandler;
 import org.jkiss.dbeaver.ui.dnd.LocalObjectTransfer;
 import org.jkiss.dbeaver.ui.editors.data.internal.DataEditorsMessages;
+import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 import org.jkiss.utils.IntKeyMap;
@@ -1836,7 +1837,9 @@ public abstract class LightGrid extends Canvas {
             newTopIndex = range.startIndex;        // note: use startIndex because of inverse==true
         }
 
-        setTopIndex(newTopIndex);
+        if (newTopIndex != topIndex) {
+            setTopIndex(newTopIndex);
+        }
     }
 
     /**
@@ -2667,6 +2670,18 @@ public abstract class LightGrid extends Canvas {
         boolean reverseDuplicateSelections,
         EventSource eventSource)
     {
+        if (RuntimeUtils.isMacOS() && (stateMask & SWT.CTRL) == SWT.CTRL) {
+            /*
+             * On macOS, Ctrl + Click is a system shortcut that opens a context menu.
+             * More than that, the context menu will be opened even if some additional buttons are pressed.
+             *
+             * There is no need to do anything with the selection in this case, just return.
+             *
+             * [dbeaver/dbeaver/issues/10725]
+             */
+            return null;
+        }
+
         boolean shift = (stateMask & SWT.MOD2) == SWT.MOD2;
         boolean ctrl = (stateMask & SWT.MOD1) == SWT.MOD1;
         if (eventSource == EventSource.KEYBOARD) {
@@ -3815,8 +3830,8 @@ public abstract class LightGrid extends Canvas {
                 selEvent.data = newPos;
                 notifyListeners(SWT.Selection, selEvent);
             }
-
-            redraw();
+            // No need to redraw - it is done in showItem
+            //redraw();
         }
     }
 

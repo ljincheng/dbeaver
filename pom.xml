@@ -9,7 +9,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <dbeaver-version>21.0.0</dbeaver-version>
+        <dbeaver-version>21.0.1</dbeaver-version>
         <dbeaver-product>DBeaver</dbeaver-product>
         <tycho-version>2.0.0</tycho-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -141,7 +141,7 @@
 
                 <!-- Products -->
                 <module>product/appstore</module>
-                <module>product/standalone</module>
+                <module>product/community</module>
                 <module>product/repositories</module>
             </modules>
         </profile>
