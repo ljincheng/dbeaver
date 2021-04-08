@@ -38,10 +38,7 @@ import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.*;
-import org.jkiss.dbeaver.model.struct.rdb.DBSForeignKeyModifyRule;
-import org.jkiss.dbeaver.model.struct.rdb.DBSIndexType;
-import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureContainer;
-import org.jkiss.dbeaver.model.struct.rdb.DBSSchema;
+import org.jkiss.dbeaver.model.struct.rdb.*;
 import org.jkiss.utils.CommonUtils;
 
 import java.sql.SQLException;
@@ -103,6 +100,10 @@ public class SQLServerSchema implements DBSSchema, DBPSaveableObject, DBPQualifi
 
     public ProcedureCache getProcedureCache() {
         return procedureCache;
+    }
+
+    public SynonymCache getSynonymCache() {
+        return synonymCache;
     }
 
     public TriggerCache getTriggerCache() {
@@ -676,7 +677,7 @@ public class SQLServerSchema implements DBSSchema, DBPSaveableObject, DBPQualifi
                 return null;
             }
             DBSEntityConstraint refConstraint = index;
-            for (SQLServerTableUniqueKey refPK : refTable.getConstraints(monitor)) {
+            for (SQLServerTableUniqueKey refPK : CommonUtils.safeCollection(refTable.getConstraints(monitor))) {
                 if (refPK.getIndex() == index) {
                     refConstraint = refPK;
                     break;

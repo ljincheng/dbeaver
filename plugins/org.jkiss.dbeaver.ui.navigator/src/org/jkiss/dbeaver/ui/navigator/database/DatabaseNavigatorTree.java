@@ -52,6 +52,7 @@ import org.jkiss.dbeaver.model.runtime.DBRRunnableWithResult;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSEntity;
 import org.jkiss.dbeaver.model.struct.DBSObject;
+import org.jkiss.dbeaver.model.struct.DBSStructContainer;
 import org.jkiss.dbeaver.model.struct.rdb.*;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.AbstractUIJob;
@@ -63,6 +64,7 @@ import org.jkiss.dbeaver.ui.navigator.INavigatorFilter;
 import org.jkiss.dbeaver.ui.navigator.INavigatorItemRenderer;
 import org.jkiss.dbeaver.ui.navigator.NavigatorPreferences;
 import org.jkiss.dbeaver.ui.navigator.actions.NavigatorHandlerObjectRename;
+import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
@@ -448,34 +450,29 @@ public class DatabaseNavigatorTree extends Composite implements INavigatorListen
     private void expandNodeOnLoad(final DBNNode node)
     {
         if (node instanceof DBNDataSource && DBWorkbench.getPlatform().getPreferenceStore().getBoolean(NavigatorPreferences.NAVIGATOR_EXPAND_ON_CONNECT)) {
-            try {
-                DBRRunnableWithResult<DBNNode> runnable = new DBRRunnableWithResult<DBNNode>() {
-                    @Override
-                    public void run(DBRProgressMonitor monitor) throws InvocationTargetException {
-                        try {
-                            result = findActiveNode(monitor, node);
-                        } catch (DBException e) {
-                            throw new InvocationTargetException(e);
-                        }
-                    }
-                };
-                UIUtils.runInProgressService(runnable);
-                if (runnable.getResult() != null && !treeViewer.getTree().isDisposed()) {
-                    showNode(runnable.getResult());
-                    treeViewer.expandToLevel(runnable.getResult(), 1);
-/*
-                    // TODO: it is a bug in Eclipse Photon.
+            DBRRunnableWithResult<DBNNode> runnable = new DBRRunnableWithResult<DBNNode>() {
+                @Override
+                public void run(DBRProgressMonitor monitor) throws InvocationTargetException {
                     try {
-                        treeViewer.expandToLevel(runnable.getResult(), 1, true);
-                    } catch (Throwable e) {
-                        treeViewer.expandToLevel(runnable.getResult(), 1);
+                        result = findActiveNode(monitor, node);
+                    } catch (DBException e) {
+                        throw new InvocationTargetException(e);
                     }
-*/
                 }
-            } catch (InvocationTargetException e) {
-                log.error("Can't expand node", e.getTargetException());
-            } catch (InterruptedException e) {
-                // skip it
+            };
+            // Run task with timeout. Don't use UI service to avoid UI interactions (see #10479)
+            RuntimeUtils.runTask(runnable, "Find active node", 2000);
+            if (runnable.getResult() != null && !treeViewer.getTree().isDisposed()) {
+                showNode(runnable.getResult());
+                treeViewer.expandToLevel(runnable.getResult(), 1);
+/*
+                // TODO: it is a bug in Eclipse Photon.
+                try {
+                    treeViewer.expandToLevel(runnable.getResult(), 1, true);
+                } catch (Throwable e) {
+                    treeViewer.expandToLevel(runnable.getResult(), 1);
+                }
+*/
             }
         }
     }
@@ -733,6 +730,14 @@ public class DatabaseNavigatorTree extends Composite implements INavigatorListen
                         break;
                     case container:
                         needToMatch = object instanceof DBSSchema || object instanceof DBSCatalog;
+                        if (needToMatch) {
+                            try {
+                                Class<? extends DBSObject> primaryChildType = ((DBSStructContainer) object).getPrimaryChildType(null);
+                                needToMatch = !DBSStructContainer.class.isAssignableFrom(primaryChildType);
+                            } catch (Exception e) {
+                                log.debug(e);
+                            }
+                        }
                         break;
                     default:
                         needToMatch =

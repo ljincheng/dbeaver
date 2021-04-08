@@ -62,6 +62,7 @@ import org.jkiss.utils.ArrayUtils;
 public class SQLEditorSourceViewerConfiguration extends TextSourceViewerConfiguration {
     private static final Log log = Log.getLog(SQLEditorSourceViewerConfiguration.class);
 
+    @Nullable
     private final SQLReconcilingStrategy reconcilingStrategy;
 
     /**
@@ -89,14 +90,17 @@ public class SQLEditorSourceViewerConfiguration extends TextSourceViewerConfigur
      *
      * @param editor the SQLEditor to configure
      */
-    public SQLEditorSourceViewerConfiguration(
-        SQLEditorBase editor, IPreferenceStore preferenceStore) {
+    public SQLEditorSourceViewerConfiguration(SQLEditorBase editor, IPreferenceStore preferenceStore) {
+        this(editor, preferenceStore, new SQLReconcilingStrategy(editor));
+    }
+
+    public SQLEditorSourceViewerConfiguration(SQLEditorBase editor, IPreferenceStore preferenceStore, @Nullable SQLReconcilingStrategy reconcilingStrategy) {
         super(preferenceStore);
         this.editor = editor;
         this.ruleManager = editor.getRuleScanner();
         this.contextInformer = new SQLContextInformer(editor, editor.getSyntaxManager());
         this.hyperlinkDetector = new SQLHyperlinkDetector(editor, this.contextInformer);
-        this.reconcilingStrategy = new SQLReconcilingStrategy(editor);
+        this.reconcilingStrategy = reconcilingStrategy;
     }
 
     public SQLContextInformer getContextInformer() {
@@ -179,6 +183,7 @@ public class SQLEditorSourceViewerConfiguration extends TextSourceViewerConfigur
         try {
             assistant.addContentAssistProcessor(completionProcessor, IDocument.DEFAULT_CONTENT_TYPE);
             assistant.addContentAssistProcessor(completionProcessor, SQLParserPartitions.CONTENT_TYPE_SQL_QUOTED);
+            assistant.addContentAssistProcessor(completionProcessor, SQLParserPartitions.CONTENT_TYPE_SQL_STRING);
         } catch (Throwable e) {
             // addContentAssistProcessor API was added in 4.12
             // Let's support older Eclipse versions
@@ -382,10 +387,21 @@ public class SQLEditorSourceViewerConfiguration extends TextSourceViewerConfigur
     void onDataSourceChange() {
         contextInformer.refresh(editor.getSyntaxManager());
         ((IHyperlinkDetectorExtension) hyperlinkDetector).dispose();
-        reconcilingStrategy.onDataSourceChange();
+        if (reconcilingStrategy != null) {
+            reconcilingStrategy.onDataSourceChange();
+        }
+    }
+
+    void saveFoldingState() {
+        if (reconcilingStrategy != null) {
+            reconcilingStrategy.saveState();
+        }
     }
 
     public IReconciler getReconciler(ISourceViewer sourceViewer) {
+        if (reconcilingStrategy == null) {
+            return null;
+        }
         return new MonoReconciler(reconcilingStrategy, true);
     }
 }

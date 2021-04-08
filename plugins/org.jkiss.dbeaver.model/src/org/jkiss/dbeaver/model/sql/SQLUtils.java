@@ -210,9 +210,8 @@ public final class SQLUtils {
         }
     }
 
-    public static boolean isStringQuoted(String string)
-    {
-        return string.length() > 1 && string.startsWith("'") && string.endsWith("'");
+    public static boolean isStringQuoted(DBSObject object, String string) {
+        return object.getDataSource().getSQLDialect().isQuotedString(string);
     }
 
     public static String quoteString(DBSObject object, String string)
@@ -222,7 +221,7 @@ public final class SQLUtils {
 
     public static String quoteString(DBPDataSource dataSource, String string)
     {
-        return "'" + escapeString(dataSource, string) + "'";
+        return dataSource.getSQLDialect().getQuotedString(string);
     }
 
     public static String escapeString(DBPDataSource dataSource, String string)
@@ -661,12 +660,9 @@ public final class SQLUtils {
             case STRING:
             case ROWID:
                 if (sqlDialect != null) {
-                    strValue = sqlDialect.escapeString(strValue);
+                    return sqlDialect.getTypeCastClause(attribute, sqlDialect.getQuotedString(strValue));
                 }
-                if (dataKind == DBPDataKind.STRING || !(strValue.startsWith("'") && strValue.endsWith("'"))) {
-                    strValue = '\'' + strValue + '\'';
-                }
-                return sqlDialect.getTypeCastClause(attribute, strValue);
+                return strValue;
             default:
                 if (sqlDialect != null) {
                     return sqlDialect.escapeScriptValue(attribute, value, strValue);
@@ -983,7 +979,7 @@ public final class SQLUtils {
     }
 
     public static String getScriptLineDelimiter(SQLDialect sqlDialect) {
-        String delimiter = sqlDialect.getScriptDelimiter();
+        String delimiter = SQLUtils.getDefaultScriptDelimiter(sqlDialect);
         if (!delimiter.isEmpty() && Character.isLetterOrDigit(delimiter.charAt(0))) {
             delimiter = ' ' + delimiter;
         }
@@ -1184,35 +1180,47 @@ public final class SQLUtils {
     }
 
     public static boolean needQueryDelimiter(SQLDialect sqlDialect, String query) {
-        String delimiter = sqlDialect.getScriptDelimiter();
-        if (!delimiter.isEmpty()) {
-            if (Character.isLetterOrDigit(delimiter.charAt(0))) {
-                if (query.toUpperCase().endsWith(delimiter.toUpperCase())) {
-                    if (!Character.isLetterOrDigit(query.charAt(query.length() - delimiter.length() - 1))) {
-                        return true;
+        String[] scriptDelimiters = sqlDialect.getScriptDelimiters();
+        for (String delimiter : scriptDelimiters) {
+            if (!delimiter.isEmpty()) {
+                if (Character.isLetterOrDigit(delimiter.charAt(0))) {
+                    if (query.toUpperCase().endsWith(delimiter.toUpperCase())) {
+                        if (!Character.isLetterOrDigit(query.charAt(query.length() - delimiter.length() - 1))) {
+                            return true;
+                        }
                     }
+                } else {
+                    return !query.endsWith(delimiter);
                 }
-            } else {
-                return !query.endsWith(delimiter);
             }
         }
-        return true;
+        return false;
     }
 
     public static String removeQueryDelimiter(SQLDialect sqlDialect, String query) {
-        String delimiter = sqlDialect.getScriptDelimiter();
-        if (!delimiter.isEmpty() && query.contains(delimiter)) {
-            String queryWithoutDelimiter = query.substring(0, query.lastIndexOf(delimiter));
-            if (Character.isLetterOrDigit(delimiter.charAt(0))) {
-                if (query.toUpperCase().endsWith(delimiter.toUpperCase())) {
-                    if (!Character.isLetterOrDigit(query.charAt(query.length() - delimiter.length() - 1))) {
-                        return queryWithoutDelimiter;
+        String[] scriptDelimiters = sqlDialect.getScriptDelimiters();
+        for (String delimiter : scriptDelimiters) {
+            if (!delimiter.isEmpty() && query.contains(delimiter)) {
+                String queryWithoutDelimiter = query.substring(0, query.lastIndexOf(delimiter));
+                if (Character.isLetterOrDigit(delimiter.charAt(0))) {
+                    if (query.toUpperCase().endsWith(delimiter.toUpperCase())) {
+                        if (!Character.isLetterOrDigit(query.charAt(query.length() - delimiter.length() - 1))) {
+                            return queryWithoutDelimiter;
+                        }
                     }
+                } else if (query.endsWith(delimiter)) {
+                    return queryWithoutDelimiter;
                 }
-            } else if (query.endsWith(delimiter)) {
-                return queryWithoutDelimiter;
             }
         }
         return query;
+    }
+
+    public static String getDefaultScriptDelimiter(SQLDialect sqlDialect) {
+        String[] scriptDelimiters = sqlDialect.getScriptDelimiters();
+        if (!ArrayUtils.isEmpty(scriptDelimiters)) {
+            return scriptDelimiters[0];
+        }
+        return SQLConstants.DEFAULT_STATEMENT_DELIMITER;
     }
 }

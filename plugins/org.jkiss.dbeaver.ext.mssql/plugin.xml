@@ -158,8 +158,8 @@
 
                     <replace provider="mssql" driver="mssql_jdbc_ms_new"/>
 
-                    <file type="jar" path="maven:/com.microsoft.sqlserver:mssql-jdbc:RELEASE[8.2.0.jre8]" bundle="!drivers.mssql.new"/>
-                    <file type="lib" path="maven:/com.microsoft.sqlserver:mssql-jdbc_auth:RELEASE[8.2.0.x64]" os="win32" arch="x86_64" optional="true" bundle="!drivers.mssql.new"/>
+                    <file type="jar" path="maven:/com.microsoft.sqlserver:mssql-jdbc:RELEASE[9.2.0.jre8]" bundle="!drivers.mssql.new"/>
+                    <file type="lib" path="maven:/com.microsoft.sqlserver:mssql-jdbc_auth:RELEASE[9.2.0.x64]" os="win32" arch="x86_64" optional="true" bundle="!drivers.mssql.new"/>
 
                     <file type="jar" path="drivers/mssql/new" bundle="drivers.mssql.new"/>
                     <file type="lib" os="win32" arch="x86_64" path="drivers/mssql/new/auth/x64" optional="true" bundle="drivers.mssql.new"/>
@@ -183,11 +183,11 @@
 
                     <replace provider="mssql" driver="mssql_jdbc_azure"/>
 
-                    <file type="jar" path="maven:/com.microsoft.sqlserver:mssql-jdbc:RELEASE[8.2.0.jre8]" bundle="!drivers.mssql.new"/>
+                    <file type="jar" path="maven:/com.microsoft.sqlserver:mssql-jdbc:RELEASE[9.2.0.jre8]" bundle="!drivers.mssql.new"/>
                     <file type="jar" path="drivers/mssql/new" bundle="drivers.mssql.new"/>
 
                     <!-- Active directory auth -->
-                    <file type="jar" path="maven:/com.microsoft.azure:adal4j:RELEASE[1.6.0]" optional="true" />
+                    <file type="jar" path="maven:/com.microsoft.azure:msal4j[1.9.1]" optional="true" />
                 </driver>
 
                 <!-- jTDS driver - deprecated -->
@@ -301,7 +301,7 @@
 
                     <parameter name="query-get-active-db" value="select db_name()"/>
                     <parameter name="query-set-active-db" value="use [?]"/>
-                    <parameter name="script-delimiter" value="go"/>
+                    <parameter name="script-delimiter" value=";,go"/>
                     <parameter name="supports-multiple-results" value="true"/>
 
                     <parameter name="native-format-timestamp" value="'{ts '''yyyy-MM-dd HH:mm:ss.fff'''}'"/>
@@ -336,7 +336,7 @@
 
                     <parameter name="query-get-active-db" value="select db_name()"/>
                     <parameter name="query-set-active-db" value="use [?]"/>
-                    <parameter name="script-delimiter" value="go"/>
+                    <parameter name="script-delimiter" value=";,go"/>
                     <parameter name="supports-multiple-results" value="true"/>
 
                     <parameter name="native-format-timestamp" value="'{ts '''yyyy-MM-dd HH:mm:ss.fff'''}'"/>
@@ -373,7 +373,7 @@
 
                     <parameter name="query-get-active-db" value="select db_name()"/>
                     <parameter name="query-set-active-db" value="use ?"/>
-                    <parameter name="script-delimiter" value="go"/>
+                    <parameter name="script-delimiter" value=";,go"/>
                     <parameter name="ddl-drop-column-short" value="true"/>
                     <parameter name="supports-multiple-results" value="true"/>
 
@@ -403,7 +403,7 @@
 
                     <parameter name="query-get-active-db" value="select db_name()"/>
                     <parameter name="query-set-active-db" value="use ?"/>
-                    <parameter name="script-delimiter" value="go"/>
+                    <parameter name="script-delimiter" value=";,go"/>
                     <parameter name="ddl-drop-column-short" value="true"/>
                     <parameter name="supports-multiple-results" value="true"/>
 
@@ -434,7 +434,7 @@
 
                     <parameter name="query-get-active-db" value="select db_name()"/>
                     <parameter name="query-set-active-db" value="use ?"/>
-                    <parameter name="script-delimiter" value="go"/>
+                    <parameter name="script-delimiter" value=";,go"/>
                     <parameter name="ddl-drop-column-short" value="true"/>
                     <parameter name="supports-multiple-results" value="true"/>
 
@@ -463,6 +463,7 @@
         <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerCheckConstraintManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerTableCheckConstraint"/>
         <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerTableTriggerManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerTableTrigger"/>
         <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerProcedureManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerProcedure"/>
+        <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerSynonymManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerSynonym"/>
         <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerViewManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerView"/>
         <manager class="org.jkiss.dbeaver.ext.mssql.edit.SQLServerDataTypeManager" objectType="org.jkiss.dbeaver.ext.mssql.model.SQLServerDataType"/>
 

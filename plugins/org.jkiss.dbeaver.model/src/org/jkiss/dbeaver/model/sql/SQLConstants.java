@@ -27,6 +27,7 @@ public class SQLConstants {
     public static final String STR_QUOTE_SINGLE = "'";
     public static final String STR_QUOTE_DOUBLE = "\"";
     public static final String[][] DOUBLE_QUOTE_STRINGS = {{STR_QUOTE_DOUBLE, STR_QUOTE_DOUBLE}};
+    public static final String[] DEFAULT_SCRIPT_DELIMITER = {";"};
 
     public static final String STR_QUOTE_APOS = "`";
     public static final String ML_COMMENT_START = "/*";
@@ -52,6 +53,9 @@ public class SQLConstants {
     public static final String KEYWORD_NOT = "NOT";
     public static final String KEYWORD_NULL = "NULL";
     public static final String KEYWORD_IN = "IN";
+
+    public static final String KEYWORD_LIKE = "LIKE";
+    public static final String KEYWORD_ILIKE = "ILIKE";
 
     public static final String KEYWORD_FUNCTION = "FUNCTION";
     public static final String KEYWORD_PROCEDURE = "PROCEDURE";

@@ -24,6 +24,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
@@ -42,14 +43,19 @@ import org.jkiss.dbeaver.ui.controls.resultset.ResultSetViewer;
 import org.jkiss.dbeaver.ui.controls.resultset.internal.ResultSetMessages;
 import org.jkiss.dbeaver.ui.dialogs.AbstractPopupPanel;
 import org.jkiss.dbeaver.ui.editors.object.struct.EditDictionaryPage;
+import org.jkiss.utils.CommonUtils;
 
 public class FilterValueEditPopup extends AbstractPopupPanel {
 
     private static final String DIALOG_ID = "DBeaver.FilterValueEditMenu";//$NON-NLS-1$
 
+    private static final String PROP_SHOW_ROW_COUNT = "showRowCount";
+    private static final String PROP_QUERY_DATABASE = "queryDatabase";
+
     private Object value;
     private GenericFilterValueEdit filter;
     private Point location;
+    private Button showRowCountCheck;
 
     public FilterValueEditPopup(Shell parentShell, @NotNull ResultSetViewer viewer, @NotNull DBDAttributeBinding attr, @NotNull ResultSetRow[] rows) {
         super(parentShell, NLS.bind(ResultSetMessages.dialog_filter_value_edit_title, attr.getFullyQualifiedName(DBPEvaluationContext.UI)));
@@ -94,7 +100,7 @@ public class FilterValueEditPopup extends AbstractPopupPanel {
                     public void widgetSelected(SelectionEvent e) {
                         EditDictionaryPage editDictionaryPage = new EditDictionaryPage(((DBSEntityAssociation) descReferrer).getAssociatedEntity());
                         if (editDictionaryPage.edit(parent.getShell())) {
-                            filter.loadValues(null);
+                            reloadFilterValues();
                         }
                     }
                 });
@@ -104,7 +110,7 @@ public class FilterValueEditPopup extends AbstractPopupPanel {
             }
         }
 
-        Text filterTextbox = filter.addFilterTextbox(group);
+        Text filterTextbox = filter.addFilterText(group);
         filterTextbox.setFocus();
         filterTextbox.addTraverseListener(e -> {
             Table table = filter.getTableViewer().getTable();
@@ -156,8 +162,9 @@ public class FilterValueEditPopup extends AbstractPopupPanel {
                 public String getText(Object element) {
                     if (element instanceof DBDLabelValuePairExt) {
                         return String.valueOf(((DBDLabelValuePairExt) element).getCount());
+                    } else {
+                        return CommonUtils.notEmpty(((DBDLabelValuePair) element).getLabel());
                     }
-                    return "";
                 }
             });
         }
@@ -169,9 +176,46 @@ public class FilterValueEditPopup extends AbstractPopupPanel {
         });
         filter.getTableViewer().addDoubleClickListener(event -> applyFilterValue());
 
-        filter.setFilterPattern(null);
-        filter.loadValues(() ->
-            UIUtils.asyncExec(() -> UIUtils.packColumns(table, false)));
+        Composite buttonsPanel = filter.getButtonsPanel();
+        {
+            Button queryDatabaseCheck = UIUtils.createCheckbox(
+                buttonsPanel,
+                "Read from server",
+                "Read possible values from database (may be slow). Otherwise use already fetched values.",
+                isQueryDatabaseEnabled(),
+                1);
+            ((GridLayout) buttonsPanel.getLayout()).numColumns++;
+            queryDatabaseCheck.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    boolean isEnabled = queryDatabaseCheck.getSelection();
+                    getDialogBoundsSettings().put(PROP_QUERY_DATABASE, isEnabled);
+                    if (showRowCountCheck != null) {
+                        showRowCountCheck.setEnabled(isEnabled);
+                    }
+                    reloadFilterValues();
+                }
+            });
+            closeOnFocusLost(queryDatabaseCheck);
+        }
+        if (!filter.isDictionarySelector()) {
+            showRowCountCheck = UIUtils.createCheckbox(
+                buttonsPanel,
+                "Show row count",
+                "Show row count for each dictionary value.\nMay be slow for big tables.",
+                isRowCountEnabled(),
+                1);
+            ((GridLayout) buttonsPanel.getLayout()).numColumns++;
+            showRowCountCheck.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(SelectionEvent e) {
+                    getDialogBoundsSettings().put(PROP_SHOW_ROW_COUNT, showRowCountCheck.getSelection());
+                    reloadFilterValues();
+                }
+            });
+            showRowCountCheck.setEnabled(isQueryDatabaseEnabled());
+            closeOnFocusLost(showRowCountCheck);
+        }
 
         filter.createFilterButton(ResultSetMessages.sql_editor_resultset_filter_panel_btn_apply, new SelectionAdapter() {
             @Override
@@ -182,7 +226,30 @@ public class FilterValueEditPopup extends AbstractPopupPanel {
 
         closeOnFocusLost(filterTextbox, table);
 
+        filter.setFilterPattern(null);
+        reloadFilterValues();
+
         return tableComposite;
+    }
+
+    private boolean isRowCountEnabled() {
+        return getDialogBoundsSettings().getBoolean(PROP_SHOW_ROW_COUNT);
+    }
+
+    private boolean isQueryDatabaseEnabled() {
+        return CommonUtils.getBoolean(getDialogBoundsSettings().get(PROP_QUERY_DATABASE), true);
+    }
+
+    private void reloadFilterValues() {
+        filter.setQueryDatabase(isQueryDatabaseEnabled());
+        filter.setShowRowCount(isRowCountEnabled());
+        filter.loadValues(() ->
+            UIUtils.asyncExec(() -> {
+                Table table = filter.getTableViewer().getTable();
+                if (table != null && !table.isDisposed()) {
+                    UIUtils.packColumns(table, false);
+                }
+            }));
     }
 
     private void applyFilterValue() {

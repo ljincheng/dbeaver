@@ -175,16 +175,28 @@ public class SQLSemanticProcessor {
                 orderByElements = new ArrayList<>();
                 select.setOrderByElements(orderByElements);
             }
-            for (DBDAttributeConstraint co : filter.getOrderConstraints()) {
-                String columnName = co.getAttributeName();
-                boolean forceNumeric = filter.hasNameDuplicates(columnName) || !SQLUtils.PATTERN_SIMPLE_NAME.matcher(columnName).matches();
-                Expression orderExpr = getOrderConstraintExpression(monitor, dataSource, select, co, forceNumeric);
-                OrderByElement element = new OrderByElement();
-                element.setExpression(orderExpr);
-                if (co.isOrderDescending()) {
-                    element.setAsc(false);
-                    element.setAscDescPresent(true);
+            List<DBDAttributeConstraint> orderConstraints = filter.getOrderConstraints();
+            if (!CommonUtils.isEmpty(orderConstraints)) {
+                for (DBDAttributeConstraint co : orderConstraints) {
+                    String columnName = co.getAttributeName();
+                    boolean forceNumeric = filter.hasNameDuplicates(columnName) || !SQLUtils.PATTERN_SIMPLE_NAME.matcher(columnName).matches();
+                    Expression orderExpr = getOrderConstraintExpression(monitor, dataSource, select, co, forceNumeric);
+                    OrderByElement element = new OrderByElement();
+                    element.setExpression(orderExpr);
+                    if (co.isOrderDescending()) {
+                        element.setAsc(false);
+                        element.setAscDescPresent(true);
+                    }
+                    orderByElements.add(element);
                 }
+            }
+            String filterOrder = filter.getOrder();
+            if (!CommonUtils.isEmpty(filterOrder)) {
+                // expression = CCJSqlParserUtil.parseExpression(filterOrder);
+                // It's good place to use parseExpression, but it parse fine just one column name, not "column1,column2" or "column1 DESC"
+                Expression expression = new CustomExpression(filterOrder);
+                OrderByElement element = new OrderByElement();
+                element.setExpression(expression);
                 orderByElements.add(element);
             }
 
