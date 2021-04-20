@@ -30,9 +30,8 @@ import org.jkiss.dbeaver.model.sql.registry.SQLDialectDescriptor;
 import org.jkiss.dbeaver.model.sql.registry.SQLDialectRegistry;
 import org.jkiss.dbeaver.model.sql.registry.SQLInsertReplaceMethodDescriptor;
 import org.jkiss.dbeaver.model.struct.DBSDataManipulator;
-import org.jkiss.dbeaver.tools.transfer.DataTransferPipe;
-import org.jkiss.dbeaver.tools.transfer.IDataTransferConsumer;
 import org.jkiss.dbeaver.tools.transfer.database.DatabaseConsumerSettings;
+import org.jkiss.dbeaver.tools.transfer.database.DatabaseMappingContainer;
 import org.jkiss.dbeaver.tools.transfer.internal.DTMessages;
 import org.jkiss.dbeaver.tools.transfer.ui.internal.DTUIMessages;
 import org.jkiss.dbeaver.tools.transfer.ui.wizard.DataTransferWizard;
@@ -197,31 +196,31 @@ public class DatabaseConsumerPageLoadSettings extends ActiveWizardPage<DataTrans
     private void loadUISettingsForDisableReferentialIntegrityCheckbox() {
         try {
             getWizard().getRunnableContext().run(false, false, monitor -> {
-                for (DataTransferPipe pipe: getWizard().getSettings().getDataPipes()) {
-                    IDataTransferConsumer<?, ?> consumer = pipe.getConsumer();
-                    if (consumer instanceof DBPReferentialIntegrityController) {
-                        DBPReferentialIntegrityController controller = (DBPReferentialIntegrityController) consumer;
-                        try {
-                            if (controller.supportsChangingReferentialIntegrity(monitor)) {
-                                isDisablingReferentialIntegritySupported = true;
-                                String caveat = controller.getReferentialIntegrityDisableWarning(monitor);
-                                if (caveat.isEmpty()) {
-                                    disableReferentialIntegrityCheckboxTooltip =
-                                            DTUIMessages.database_consumer_wizard_disable_referential_integrity_tip_no_caveats;
-                                } else {
-                                    disableReferentialIntegrityCheckboxTooltip =
-                                            DTUIMessages.database_consumer_wizard_disable_referential_integrity_tip_with_caveats + "\n" + caveat;
-                                }
-                                return;
+                for (DatabaseMappingContainer mappingContainer : getSettings().getDataMappings().values()) {
+                    if (!(mappingContainer.getTarget() instanceof DBPReferentialIntegrityController)) {
+                        continue;
+                    }
+                    DBPReferentialIntegrityController controller = (DBPReferentialIntegrityController) mappingContainer.getTarget();
+                    try {
+                        if (controller.supportsChangingReferentialIntegrity(monitor)) {
+                            isDisablingReferentialIntegritySupported = true;
+                            String caveat = controller.getReferentialIntegrityDisableWarning(monitor);
+                            if (caveat.isEmpty()) {
+                                disableReferentialIntegrityCheckboxTooltip =
+                                    DTUIMessages.database_consumer_wizard_disable_referential_integrity_tip_no_caveats;
+                            } else {
+                                disableReferentialIntegrityCheckboxTooltip =
+                                    DTUIMessages.database_consumer_wizard_disable_referential_integrity_tip_with_caveats + "\n" + caveat;
                             }
-                        } catch (DBException e) {
-                            log.warn("Unexpected DBException when calculating UI options for disableReferentialIntegrity checkbox");
+                            return;
                         }
+                    } catch (DBException e) {
+                        log.debug("Unexpected error when calculating UI options for 'Disable referential integrity' checkbox", e);
                     }
                 }
             });
         } catch (InvocationTargetException e) {
-            log.warn("Unexpected InvocationTargetException when calculating UI options for disableReferentialIntegrity checkbox");
+            log.debug("Unexpected error", e.getTargetException());
         } catch (InterruptedException e) {
             //ignore
         }

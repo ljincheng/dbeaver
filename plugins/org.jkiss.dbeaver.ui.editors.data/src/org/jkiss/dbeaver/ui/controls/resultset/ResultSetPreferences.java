@@ -23,6 +23,7 @@ package org.jkiss.dbeaver.ui.controls.resultset;
 public final class ResultSetPreferences {
 
     public static final int MIN_SEGMENT_SIZE = 100;
+    public static final int MAX_DEF_COLUMN_WIDTH = 30;
 
     // ResultSet
     public static final String RS_EDIT_MAX_TEXT_SIZE = "resultset.edit.maxtextsize"; //$NON-NLS-1$
@@ -41,6 +42,7 @@ public final class ResultSetPreferences {
     public static final String RESULT_SET_BINARY_EDITOR_TYPE = "resultset.binary.editor"; //$NON-NLS-1$
     public static final String RESULT_SET_ORDERING_MODE = "resultset.order.mode"; //$NON-NLS-1$
     public static final String RESULT_SET_SHOW_ODD_ROWS = "resultset.show.oddRows"; //$NON-NLS-1$
+    public static final String RESULT_SET_HIGHLIGHT_SELECTED_ROWS = "resultset.highlight.selectedRows"; //$NON-NLS-1$
     public static final String RESULT_SET_SHOW_CELL_ICONS = "resultset.show.cellIcons"; //$NON-NLS-1$
     public static final String RESULT_SET_SHOW_ATTR_ICONS = "resultset.show.attIcons"; //$NON-NLS-1$
     public static final String RESULT_SET_SHOW_ATTR_FILTERS = "resultset.show.attFilters"; //$NON-NLS-1$
@@ -61,6 +63,7 @@ public final class ResultSetPreferences {
     public static final String RESULT_SET_AUTO_SWITCH_MODE = "resultset.behavior.autoSwitchMode"; //$NON-NLS-1$
     public static final String RESULT_SET_DOUBLE_CLICK = "resultset.behavior.doubleClick"; //$NON-NLS-1$
     public static final String RESULT_SET_ROW_BATCH_SIZE = "resultset.show.row.batch.size"; //$NON-NLS-1$
+    public static final String RESULT_SET_MAX_COLUMN_DEF_WIDTH = "resultset.max.column.def.width"; //$NON-NLS-1$
     
     public static final String RESULT_SET_FILTER_AUTO_COMPLETE_PROPOSIAL = "resultset.behavior.autoCompleteProposial"; //$NON-NLS-1$
 

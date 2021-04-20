@@ -14,27 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.ext.postgresql.model.impls;
+package org.jkiss.dbeaver.model.sql;
 
-import org.jkiss.dbeaver.ext.postgresql.model.PostgreDataSource;
+import org.jkiss.code.NotNull;
 
-/**
- * PostgreServerTimescale
- */
-public class PostgreServerTimescale extends PostgreServerExtensionBase {
-
-    public PostgreServerTimescale(PostgreDataSource dataSource) {
-        super(dataSource);
-    }
-
-    @Override
-    public boolean supportsEntityMetadataInResults() {
-        return true;
-    }
-
-    @Override
-    public String getServerTypeName() {
-        return "Timescale";
-    }
+@FunctionalInterface
+public interface SQLExpressionFormatter {
+    @NotNull
+    String format(@NotNull String left, @NotNull String right);
 }
-
