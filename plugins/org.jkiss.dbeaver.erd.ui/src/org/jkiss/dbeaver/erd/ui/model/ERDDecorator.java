@@ -30,9 +30,12 @@ public interface ERDDecorator {
 
     boolean supportsAttributeVisibility();
 
+    boolean supportsStructureEdit();
+
     /**
      * Margin around entity figure. This affects diagram connections layout
      */
+    @NotNull
     Insets getDefaultEntityInsets();
 
     @NotNull

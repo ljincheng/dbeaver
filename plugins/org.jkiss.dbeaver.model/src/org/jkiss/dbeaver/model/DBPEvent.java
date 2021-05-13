@@ -17,9 +17,11 @@
 
 package org.jkiss.dbeaver.model;
 
+import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -36,6 +38,7 @@ public class DBPEvent
     }
 
     public static final Object REORDER = new Object();
+    public static final Object RENAME = new Object();
 
     private Action action;
 
@@ -79,9 +82,9 @@ public class DBPEvent
         return data;
     }
 
-    @Nullable
+    @NotNull
     public Map<String, Object> getOptions() {
-        return options;
+        return options == null ? Collections.emptyMap() : options;
     }
 
     public void setOptions(Map<String, Object> options) {

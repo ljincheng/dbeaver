@@ -35,7 +35,7 @@ import org.jkiss.dbeaver.erd.model.ERDEntity;
 import org.jkiss.dbeaver.erd.model.ERDNote;
 import org.jkiss.dbeaver.erd.ui.ERDUIConstants;
 import org.jkiss.dbeaver.erd.ui.command.EntityAddCommand;
-import org.jkiss.dbeaver.erd.ui.command.EntityDeleteCommand;
+import org.jkiss.dbeaver.erd.ui.command.EntityRemoveCommand;
 import org.jkiss.dbeaver.erd.ui.figures.EntityDiagramFigure;
 import org.jkiss.dbeaver.erd.ui.internal.ERDUIActivator;
 import org.jkiss.dbeaver.erd.ui.internal.ERDUIMessages;
@@ -101,6 +101,11 @@ public class DiagramPart extends PropertyAwarePart {
         resetFonts();
         getViewer().getEditDomain().getCommandStack().removeCommandStackEventListener(stackListener);
         super.deactivate();
+    }
+
+    @Override
+    public void performRequest(Request request) {
+        getDiagram().getModelAdapter().performPartRequest(this, request);
     }
 
     public void resetFonts()
@@ -218,6 +223,8 @@ public class DiagramPart extends PropertyAwarePart {
     {
         installEditPolicy(EditPolicy.CONTAINER_ROLE, new DiagramContainerEditPolicy());
         installEditPolicy(EditPolicy.LAYOUT_ROLE, null);
+
+        getDiagram().getModelAdapter().installPartEditPolicies(this);
     }
 
     /**
@@ -375,7 +382,7 @@ public class DiagramPart extends PropertyAwarePart {
     }
 
     public Command createEntityDeleteCommand(EntityPart entityPart) {
-        return new EntityDeleteCommand(entityPart);
+        return new EntityRemoveCommand(entityPart);
     }
 
     @Override

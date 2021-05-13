@@ -23,6 +23,7 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ext.generic.model.*;
 import org.jkiss.dbeaver.ext.generic.model.meta.GenericMetaModel;
 import org.jkiss.dbeaver.ext.vertica.VerticaUtils;
+import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.exec.DBCQueryTransformProvider;
@@ -48,6 +49,8 @@ import java.util.Map;
 public class VerticaMetaModel extends GenericMetaModel implements DBCQueryTransformProvider
 {
     private static final Log log = Log.getLog(VerticaMetaModel.class);
+
+    private Boolean childObjectColumnAvailable;
 
     public VerticaMetaModel() {
         super();
@@ -95,7 +98,7 @@ public class VerticaMetaModel extends GenericMetaModel implements DBCQueryTransf
     @Override
     public JDBCStatement prepareTableColumnLoadStatement(@NotNull JDBCSession session, @NotNull GenericStructContainer owner, @Nullable GenericTableBase forTable) throws SQLException {
         JDBCPreparedStatement dbStat;
-        boolean supportsCommentReading = owner.getDataSource().isServerVersionAtLeast(9, 3);
+        boolean supportsCommentReading = isChildCommentColumnAvailable(session.getProgressMonitor(), owner.getDataSource());
         StringBuilder ddl = new StringBuilder();
         ddl.append("SELECT ");
         if (supportsCommentReading) ddl.append("com.comment AS REMARKS,");
@@ -119,6 +122,26 @@ public class VerticaMetaModel extends GenericMetaModel implements DBCQueryTransf
             dbStat.setString(1, owner.getName());
         }
         return dbStat;
+    }
+
+    private boolean isChildCommentColumnAvailable(@NotNull DBRProgressMonitor monitor, @NotNull DBPDataSource dataSource) {
+        // child_object is very helpful column in v_catalog.comments table, but it's not childObjectColumnAvailable in Vertica versions < 9.3 and in some other cases
+        if (childObjectColumnAvailable == null) {
+            try {
+                try (JDBCSession session = DBUtils.openMetaSession(monitor, dataSource, "Check child comment column existence")) {
+                    try (final JDBCPreparedStatement dbStat = session.prepareStatement(
+                            "SELECT child_object FROM v_catalog.comments WHERE 1<>1"))
+                    {
+                        dbStat.setFetchSize(1);
+                        dbStat.execute();
+                        childObjectColumnAvailable = true;
+                    }
+                }
+            } catch (Exception e) {
+                childObjectColumnAvailable = false;
+            }
+        }
+        return childObjectColumnAvailable;
     }
 
     @Override
@@ -191,15 +214,18 @@ public class VerticaMetaModel extends GenericMetaModel implements DBCQueryTransf
     }
 
     @Override
-    public boolean supportsSequences(GenericDataSource dataSource) {
+    public boolean supportsSequences(@NotNull GenericDataSource dataSource) {
         return true;
     }
 
     @Override
-    public List<GenericSequence> loadSequences(DBRProgressMonitor monitor, GenericStructContainer container) throws DBException {
-        try (JDBCSession session = DBUtils.openMetaSession(monitor, container, "Read system sequences")) {
+    public List<GenericSequence> loadSequences(@NotNull DBRProgressMonitor monitor, GenericStructContainer container) throws DBException {
+        try (JDBCSession session = DBUtils.openMetaSession(monitor, container, "Read sequences")) {
             try (JDBCPreparedStatement dbStat = session.prepareStatement(
-                "SELECT * FROM v_catalog.sequences WHERE sequence_schema=? ORDER BY sequence_name")) {
+                "SELECT s.*, c.comment FROM v_catalog.sequences s\n" +
+                    "LEFT JOIN v_catalog.comments c\n" +
+                    "ON s.sequence_id = c.object_id\n" +
+                    "WHERE sequence_schema=? ORDER BY sequence_name")) {
                 dbStat.setString(1, container.getSchema().getName());
                 List<GenericSequence> result = new ArrayList<>();
 
@@ -210,14 +236,17 @@ public class VerticaMetaModel extends GenericMetaModel implements DBCQueryTransf
                             continue;
                         }
                         name = name.trim();
-                        GenericSequence sequence = new GenericSequence(
+                        VerticaSequence sequence = new VerticaSequence(
                             container,
                             name,
-                            null,
+                            JDBCUtils.safeGetString(dbResult, "comment"),
                             JDBCUtils.safeGetLong(dbResult, "current_value"),
                             JDBCUtils.safeGetLong(dbResult, "minimum"),
                             JDBCUtils.safeGetLong(dbResult, "maximum"),
-                            JDBCUtils.safeGetLong(dbResult, "increment_by")
+                            JDBCUtils.safeGetLong(dbResult, "increment_by"),
+                            JDBCUtils.safeGetString(dbResult, "identity_table_name"),
+                            JDBCUtils.safeGetLong(dbResult, "session_cache_count"),
+                            JDBCUtils.safeGetBoolean(dbResult, "allow_cycle")
                         );
                         result.add(sequence);
                     }

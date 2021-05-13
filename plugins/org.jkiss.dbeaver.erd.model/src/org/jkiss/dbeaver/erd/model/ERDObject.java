@@ -34,16 +34,18 @@ import java.beans.PropertyChangeSupport;
  */
 public abstract class ERDObject<OBJECT> implements IAdaptable, DBPNamedObject {
 
-    public static final String CHILD = "CHILD";
-    public static final String REORDER = "REORDER";
-    public static final String INPUT = "INPUT";
-    public static final String OUTPUT = "OUTPUT";
-    public static final String NAME = "NAME";
+    public static final String PROP_CHILD = "CHILD";
+    public static final String PROP_REORDER = "REORDER";
+    public static final String PROP_INPUT = "INPUT";
+    public static final String PROP_OUTPUT = "OUTPUT";
+    public static final String PROP_NAME = "NAME";
+    public static final String PROP_CONTENTS = "CONTENTS";
+    public static final String PROP_SIZE = "SIZE";
 
     private transient PropertyChangeSupport listeners = null;//new PropertyChangeSupport(this);
 
     protected OBJECT object;
-    protected Object userData;
+    private Object userData;
 
     protected ERDObject(OBJECT object) {
         this.object = object;
@@ -87,7 +89,9 @@ public abstract class ERDObject<OBJECT> implements IAdaptable, DBPNamedObject {
     @Override
     public <T> T getAdapter(Class<T> adapter) {
         if (adapter == DBPPropertySource.class) {
-            return adapter.cast(new PropertyCollector(object, false));
+            PropertyCollector propertyCollector = new PropertyCollector(object, false);
+            propertyCollector.collectProperties();
+            return adapter.cast(propertyCollector);
         }
         return null;
     }

@@ -95,14 +95,14 @@ public class ERDEntity extends ERDElement<DBSEntity> {
         }
         attributes.add(attribute);
         if (reflect) {
-            firePropertyChange(CHILD, null, attribute);
+            firePropertyChange(PROP_CHILD, null, attribute);
         }
     }
 
     public void removeAttribute(ERDEntityAttribute attribute, boolean reflect) {
         attributes.remove(attribute);
         if (reflect) {
-            firePropertyChange(CHILD, attribute, null);
+            firePropertyChange(PROP_CHILD, attribute, null);
         }
     }
 
@@ -110,13 +110,25 @@ public class ERDEntity extends ERDElement<DBSEntity> {
         attributes.remove(attribute);
         attributes.add(index, attribute);
         if (reflect) {
-            firePropertyChange(REORDER, this, attribute);
+            firePropertyChange(PROP_REORDER, this, attribute);
         }
     }
 
     @NotNull
     public List<ERDEntityAttribute> getAttributes() {
         return CommonUtils.safeList(attributes);
+    }
+
+    public ERDEntityAttribute getAttribute(DBSEntityAttribute attribute) {
+        if (attribute == null) {
+            return null;
+        }
+        for (ERDEntityAttribute attr : attributes) {
+            if (attr.getObject() == attribute) {
+                return attr;
+            }
+        }
+        return null;
     }
 
     @NotNull

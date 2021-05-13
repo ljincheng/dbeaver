@@ -17,14 +17,25 @@
 package org.jkiss.dbeaver.erd.ui.part;
 
 import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.ConnectionEditPart;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.GraphicalEditPart;
 import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+import org.eclipse.ui.views.properties.IPropertySource;
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.erd.model.ERDObject;
+import org.jkiss.dbeaver.erd.ui.editor.ERDEditorPart;
+import org.jkiss.dbeaver.erd.ui.editor.ERDGraphicalViewer;
 import org.jkiss.dbeaver.erd.ui.model.EntityDiagram;
 import org.jkiss.dbeaver.model.DBPNamedObject;
+import org.jkiss.dbeaver.model.edit.DBECommandContext;
+import org.jkiss.dbeaver.model.struct.DBSObject;
+import org.jkiss.dbeaver.runtime.properties.PropertyCollector;
+import org.jkiss.dbeaver.runtime.properties.PropertySourceEditable;
+import org.jkiss.dbeaver.ui.properties.PropertySourceDelegate;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -60,8 +71,22 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         return getDiagramPart().getDiagram();
     }
 
-    protected boolean isEditEnabled() {
+    @NotNull
+    public ERDEditorPart getEditor() {
+        return ((ERDGraphicalViewer)getViewer()).getEditor();
+    }
+
+    @Nullable
+    public DBECommandContext getCommandContext() {
+        return getEditor().getCommandContext();
+    }
+
+    protected boolean isLayoutEnabled() {
         return getDiagram().isLayoutManualAllowed();
+    }
+
+    protected boolean isEditEnabled() {
+        return getDiagram().isEditEnabled();
     }
 
     protected boolean isColumnDragAndDropSupported() {
@@ -72,7 +97,7 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
     public void activate() {
         super.activate();
         ERDObject<?> erdObject = (ERDObject<?>) getModel();
-        if (isEditEnabled()) {
+        if (isLayoutEnabled() || isEditEnabled()) {
             erdObject.addPropertyChangeListener(this);
         }
     }
@@ -80,7 +105,7 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
     @Override
     public void deactivate() {
         super.deactivate();
-        if (isEditEnabled()) {
+        if (isLayoutEnabled() || isEditEnabled()) {
             ERDObject<?> erdObject = (ERDObject<?>) getModel();
             erdObject.removePropertyChangeListener(this);
         }
@@ -92,26 +117,42 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         String property = evt.getPropertyName();
 
         switch (property) {
-            case ERDObject.CHILD:
+            case ERDObject.PROP_CHILD:
                 handleChildChange(evt);
                 break;
-            case ERDObject.REORDER:
+            case ERDObject.PROP_REORDER:
                 handleReorderChange(evt);
                 break;
-            case ERDObject.OUTPUT:
+            case ERDObject.PROP_OUTPUT:
                 handleOutputChange(evt);
                 break;
-            case ERDObject.INPUT:
+            case ERDObject.PROP_INPUT:
                 handleInputChange(evt);
                 break;
-            case ERDObject.NAME:
+            case ERDObject.PROP_NAME:
                 commitNameChange(evt);
                 break;
+            case ERDObject.PROP_CONTENTS:
+                commitRefresh(evt);
+                break;
+            case ERDObject.PROP_SIZE: {
+                IFigure figure = getFigure();
+                if (this instanceof NodePart) {
+                    Rectangle curBounds = figure.getBounds().getCopy();
+                    Dimension newSize = figure.getPreferredSize();
+                    curBounds.width = newSize.width;
+                    curBounds.height = newSize.height;
+                    ((NodePart) this).modifyBounds(curBounds);
+                } else {
+                    figure.setSize(figure.getPreferredSize());
+                }
+                break;
+            }
         }
 
         //we want direct edit name changes to update immediately
         //not use the Graph animation, if automatic layout is being used
-        if (ERDObject.NAME.equals(property)) {
+        if (ERDObject.PROP_NAME.equals(property)) {
             GraphicalEditPart graphicalEditPart = (GraphicalEditPart) (getViewer().getContents());
             IFigure partFigure = graphicalEditPart.getFigure();
             partFigure.getUpdateManager().performUpdate();
@@ -136,7 +177,7 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         Object oldValue = evt.getOldValue();
 
         if (!((oldValue != null) ^ (newValue != null))) {
-            throw new IllegalStateException("Exactly one of old or new values must be non-null for INPUT event");
+            throw new IllegalStateException("Exactly one of old or new values must be non-null for PROP_INPUT event");
         }
 
         if (newValue != null) {
@@ -184,7 +225,7 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         Object oldValue = evt.getOldValue();
 
         if (!((oldValue != null) ^ (newValue != null))) {
-            throw new IllegalStateException("Exactly one of old or new values must be non-null for INPUT event");
+            throw new IllegalStateException("Exactly one of old or new values must be non-null for PROP_INPUT event");
         }
 
         if (newValue != null) {
@@ -227,7 +268,7 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         Object oldValue = evt.getOldValue();
 
         if ((oldValue != null) == (newValue != null)) {
-            throw new IllegalStateException("Exactly one of old or new values must be non-null for CHILD event");
+            throw new IllegalStateException("Exactly one of old or new values must be non-null for PROP_CHILD event");
         }
 
         if (newValue != null) {
@@ -265,7 +306,39 @@ public abstract class PropertyAwarePart extends AbstractGraphicalEditPart implem
         refreshVisuals();
     }
 
+    // Refresh part name
     protected void commitNameChange(PropertyChangeEvent evt) {
     }
 
+    // Refresh part contents
+    protected void commitRefresh(PropertyChangeEvent evt) {
+        commitNameChange(evt);
+        refreshChildren();
+        refreshVisuals();
+    }
+
+    @Override
+    public Object getAdapter(Class key) {
+        if (key == IPropertySource.class) {
+            Object model = getModel();
+            if (model instanceof ERDObject) {
+                Object object = ((ERDObject) model).getObject();
+                if (object instanceof DBSObject) {
+                    if (isEditEnabled()) {
+                        DBECommandContext commandContext = getCommandContext();
+                        if (commandContext != null) {
+                            PropertySourceEditable pse = new PropertySourceEditable(commandContext, object, object);
+                            pse.collectProperties();
+                            return new PropertySourceDelegate(pse);
+                        }
+                    }
+                    PropertyCollector propertyCollector = new PropertyCollector(object, false);
+                    propertyCollector.collectProperties();
+                    return new PropertySourceDelegate(propertyCollector);
+                }
+            }
+            return null;
+        }
+        return super.getAdapter(key);
+    }
 }

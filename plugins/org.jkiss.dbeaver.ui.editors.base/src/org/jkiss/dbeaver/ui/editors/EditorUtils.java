@@ -37,21 +37,22 @@ import org.eclipse.ui.texteditor.ITextEditor;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.Log;
-import org.jkiss.dbeaver.model.DBPDataSourceContainer;
-import org.jkiss.dbeaver.model.DBPExternalFileManager;
-import org.jkiss.dbeaver.model.DBUtils;
+import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.app.DBPProject;
-import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
-import org.jkiss.dbeaver.model.exec.DBCExecutionContextDefaults;
+import org.jkiss.dbeaver.model.exec.*;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.rdb.DBSCatalog;
 import org.jkiss.dbeaver.model.struct.rdb.DBSSchema;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.utils.ContentUtils;
+import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * EditorUtils
@@ -292,15 +293,17 @@ public class EditorUtils {
             return;
         }
         DBPDataSourceContainer dataSourceContainer = context.getDataSourceContainer();
+        Map<String, Object> fileProps = new LinkedHashMap<>();
         String dataSourceId = dataSourceContainer == null ? null : dataSourceContainer.getId();
-        projectMeta.setResourceProperty(file, PROP_SQL_DATA_SOURCE_ID, dataSourceId);
+        fileProps.put(PROP_SQL_DATA_SOURCE_ID, dataSourceId);
         if (!isDefaultContextSettings(context)) {
-            projectMeta.setResourceProperty(file, PROP_CONTEXT_DEFAULT_DATASOURCE, dataSourceId);
+            fileProps.put(PROP_CONTEXT_DEFAULT_DATASOURCE, dataSourceId);
             String catalogName = getDefaultCatalogName(context);
-            if (catalogName != null) projectMeta.setResourceProperty(file, PROP_CONTEXT_DEFAULT_CATALOG, catalogName);
+            if (catalogName != null) fileProps.put(PROP_CONTEXT_DEFAULT_CATALOG, catalogName);
             String schemaName = getDefaultSchemaName(context);
-            if (catalogName != null || schemaName != null) projectMeta.setResourceProperty(file, PROP_CONTEXT_DEFAULT_SCHEMA, schemaName);
+            if (catalogName != null || schemaName != null) fileProps.put(PROP_CONTEXT_DEFAULT_SCHEMA, schemaName);
         }
+        projectMeta.setResourceProperties(file, fileProps);
     }
 
     private static boolean isDefaultContextSettings(DatabaseEditorContext context) {
@@ -414,6 +417,27 @@ public class EditorUtils {
             ((IRevertableEditor) editorPart).doRevertToSaved();
         } else if (editorPart instanceof ITextEditor) {
             ((ITextEditor) editorPart).doRevertToSaved();
+        }
+
+        // Revert editor's transaction
+        if (editorPart instanceof DBPContextProvider && editorPart instanceof IDataSourceContainerProviderEx) {
+            DBCExecutionContext executionContext = ((DBPContextProvider) editorPart).getExecutionContext();
+            if (executionContext != null) {
+                DBCTransactionManager txnManager = DBUtils.getTransactionManager(executionContext);
+                try {
+                    if (txnManager != null && !txnManager.isAutoCommit()) {
+                        RuntimeUtils.runTask(monitor -> {
+                            try (DBCSession session = executionContext.openSession(monitor, DBCExecutionPurpose.UTIL, "Rollback editor transaction")) {
+                                txnManager.rollback(session, null);
+                            } catch (DBCException e) {
+                                throw new InvocationTargetException(e);
+                            }
+                        }, "End editor transaction", 5000);
+                    }
+                } catch (DBCException e) {
+                    log.error(e);
+                }
+            }
         }
     }
 

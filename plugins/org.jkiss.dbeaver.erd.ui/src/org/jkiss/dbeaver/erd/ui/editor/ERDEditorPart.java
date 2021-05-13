@@ -41,12 +41,14 @@ import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.printing.PrintDialog;
 import org.eclipse.swt.printing.Printer;
 import org.eclipse.swt.printing.PrinterData;
 import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.*;
+import org.eclipse.ui.menus.IMenuService;
 import org.eclipse.ui.model.IWorkbenchAdapter;
 import org.eclipse.ui.model.WorkbenchAdapter;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
@@ -57,7 +59,6 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.erd.model.*;
 import org.jkiss.dbeaver.erd.ui.ERDUIConstants;
 import org.jkiss.dbeaver.erd.ui.action.DiagramLayoutAction;
-import org.jkiss.dbeaver.erd.ui.action.DiagramRefreshAction;
 import org.jkiss.dbeaver.erd.ui.action.DiagramToggleGridAction;
 import org.jkiss.dbeaver.erd.ui.action.ERDEditorPropertyTester;
 import org.jkiss.dbeaver.erd.ui.directedit.StatusLineValidationMessageHandler;
@@ -81,14 +82,22 @@ import org.jkiss.dbeaver.erd.ui.part.NodePart;
 import org.jkiss.dbeaver.erd.ui.part.NotePart;
 import org.jkiss.dbeaver.model.DBPDataSourceTask;
 import org.jkiss.dbeaver.model.DBPNamedObject;
+import org.jkiss.dbeaver.model.edit.DBECommandContext;
+import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.load.ILoadService;
+import org.jkiss.dbeaver.model.struct.DBSEntity;
+import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.controls.ProgressLoaderVisualizer;
 import org.jkiss.dbeaver.ui.controls.ProgressPageControl;
+import org.jkiss.dbeaver.ui.controls.PropertyPageStandard;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
+import org.jkiss.dbeaver.ui.editors.IDatabaseEditorInput;
 import org.jkiss.dbeaver.ui.editors.IDatabaseModellerEditor;
+import org.jkiss.dbeaver.ui.navigator.INavigatorModelView;
+import org.jkiss.dbeaver.ui.navigator.actions.ToggleViewAction;
 import org.jkiss.dbeaver.ui.navigator.itemlist.ObjectSearcher;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
@@ -104,7 +113,7 @@ import java.util.List;
  * an editor </i> in chapter <i>Introduction to GEF </i>
  */
 public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
-    implements DBPDataSourceTask, IDatabaseModellerEditor, ISearchContextProvider, IRefreshablePart
+    implements DBPDataSourceTask, IDatabaseModellerEditor, ISearchContextProvider, IRefreshablePart, INavigatorModelView
 {
     @Nullable
     protected ProgressControl progressControl;
@@ -149,6 +158,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
     private ERDContentProvider contentProvider;
     private ERDDecorator decorator;
     private ZoomComboContributionItem zoomCombo;
+    private NavigatorViewerAdapter navigatorViewerAdapter;
 
     /**
      * No-arg constructor
@@ -169,6 +179,28 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
             decorator = createDecorator();
         }
         return decorator;
+    }
+
+    /////////////////////////////////////////
+    // INavigatorModelView implementation
+    // We need it to support a set of standard commands like copy/paste/rename/etc
+
+    @Override
+    public DBNNode getRootNode() {
+        IEditorInput editorInput = this.getEditorInput();
+        if (editorInput instanceof IDatabaseEditorInput) {
+            return ((IDatabaseEditorInput) editorInput).getNavigatorNode();
+        }
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public Viewer getNavigatorViewer() {
+        if (navigatorViewerAdapter == null) {
+            navigatorViewerAdapter = new NavigatorViewerAdapter();
+        }
+        return navigatorViewerAdapter;
     }
 
     protected ERDContentProvider createContentProvider() {
@@ -220,6 +252,14 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         if (hasProgressControl()) {
             progressControl.createProgressPanel();
         }
+    }
+
+    public DBECommandContext getCommandContext() {
+        IEditorInput editorInput = this.getEditorInput();
+        if (editorInput instanceof IDatabaseEditorInput) {
+            return ((IDatabaseEditorInput) editorInput).getCommandContext();
+        }
+        return null;
     }
 
     protected void updateToolbarActions() {
@@ -279,7 +319,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         } else if (adapter == ActionRegistry.class) {
             return getActionRegistry();
         } else if (adapter == IPropertySheetPage.class) {
-            return getPropertySheetPage();
+            return new PropertyPageStandard();
         } else if (adapter == IContentOutlinePage.class) {
             return getOverviewOutlinePage();
         } else if (adapter == ZoomManager.class) {
@@ -893,7 +933,10 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         //toolBarManager.add(createAttributeVisibilityMenu());
         toolBarManager.add(new DiagramLayoutAction(ERDEditorPart.this));
         toolBarManager.add(new DiagramToggleGridAction());
-        toolBarManager.add(new DiagramRefreshAction(ERDEditorPart.this));
+        toolBarManager.add(new Separator());
+        toolBarManager.add(new ToggleViewAction(IPageLayout.ID_PROP_SHEET));
+        toolBarManager.add(new ToggleViewAction(IPageLayout.ID_OUTLINE));
+        //toolBarManager.add(new DiagramRefreshAction(ERDEditorPart.this));
         toolBarManager.add(new Separator());
         {
             toolBarManager.add(ActionUtils.makeCommandContribution(
@@ -907,12 +950,6 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
                 IWorkbenchCommandConstants.FILE_SAVE_AS,
                 ERDUIMessages.erd_editor_control_action_save_external_format,
                 UIIcon.PICTURE_SAVE));
-
-            toolBarManager.add(ActionUtils.makeCommandContribution(
-                getSite(),
-                IWorkbenchCommandConstants.FILE_SAVE,
-                null,
-                UIIcon.SAVE));
         }
         toolBarManager.add(new Separator());
         {
@@ -936,6 +973,16 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
     @Override
     public boolean isActiveTask() {
         return diagramLoadingJob != null && diagramLoadingJob.getState() == Job.RUNNING;
+    }
+
+    @Override
+    public boolean isModelEditEnabled() {
+        return getDiagram().isEditEnabled();
+    }
+
+    @Override
+    public boolean containsModelObject(DBSObject object) {
+        return object instanceof DBSEntity && getDiagram().getEntity((DBSEntity) object) != null;
     }
 
     private class ChangeAttributePresentationAction extends Action {
@@ -1083,6 +1130,15 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         @Override
         public void fillCustomActions(IContributionManager toolBarManager) {
             fillDefaultEditorContributions(toolBarManager);
+        }
+
+        @Override
+        protected void populateCustomActions(ContributionManager contributionManager) {
+            // Add dynamic toolbar contributions
+            final IMenuService menuService = getSite().getService(IMenuService.class);
+            if (menuService != null) {
+                menuService.populateContributionManager(contributionManager, "toolbar:ERDEditorToolbar");
+            }
         }
 
         @Override
@@ -1236,5 +1292,37 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         }
 
         protected abstract void finishLoading();
+    }
+
+    private class NavigatorViewerAdapter extends Viewer {
+        @Override
+        public Control getControl() {
+            return getGraphicalControl();
+        }
+
+        @Override
+        public Object getInput() {
+            return getRootNode();
+        }
+
+        @Override
+        public ISelection getSelection() {
+            return getViewer().getSelection();
+        }
+
+        @Override
+        public void refresh() {
+            refreshDiagram(false, false);
+        }
+
+        @Override
+        public void setInput(Object input) {
+
+        }
+
+        @Override
+        public void setSelection(ISelection selection, boolean reveal) {
+
+        }
     }
 }

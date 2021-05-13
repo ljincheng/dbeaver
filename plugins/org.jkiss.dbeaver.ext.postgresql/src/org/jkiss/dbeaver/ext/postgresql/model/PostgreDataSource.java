@@ -81,7 +81,9 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
     {
         super(monitor, container, new PostgreDialect());
 
-        hasStatistics = !container.getPreferenceStore().getBoolean(ModelPreferences.READ_EXPENSIVE_STATISTICS);
+        // Statistics was disabled then mark it as already read
+        this.hasStatistics = !CommonUtils.getBoolean(container.getConnectionConfiguration().getProviderProperty(
+            PostgreConstants.PROP_SHOW_DATABASE_STATISTICS));
     }
 
     // Constructor for tests
@@ -103,9 +105,9 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
     @Override
     public Object getDataSourceFeature(String featureId) {
         switch (featureId) {
-            case DBConstants.FEATURE_MAX_STRING_LENGTH:
+            case DBPDataSource.FEATURE_MAX_STRING_LENGTH:
                 return 10485760;
-            case DBConstants.FEATURE_LOB_REQUIRE_TRANSACTIONS:
+            case DBPDataSource.FEATURE_LOB_REQUIRE_TRANSACTIONS:
                 return true;
         }
         return super.getDataSourceFeature(featureId);

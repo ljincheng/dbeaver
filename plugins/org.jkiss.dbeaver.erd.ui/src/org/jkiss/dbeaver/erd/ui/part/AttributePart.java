@@ -17,28 +17,17 @@
 package org.jkiss.dbeaver.erd.ui.part;
 
 import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.Label;
-import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.*;
-import org.eclipse.gef.tools.DirectEditManager;
 import org.eclipse.gef.tools.DragEditPartsTracker;
-import org.eclipse.jface.viewers.TextCellEditor;
 import org.jkiss.dbeaver.erd.model.ERDEntity;
 import org.jkiss.dbeaver.erd.model.ERDEntityAttribute;
 import org.jkiss.dbeaver.erd.ui.ERDUIUtils;
 import org.jkiss.dbeaver.erd.ui.command.AttributeCheckCommand;
-import org.jkiss.dbeaver.erd.ui.directedit.ColumnNameTypeCellEditorValidator;
-import org.jkiss.dbeaver.erd.ui.directedit.ExtendedDirectEditManager;
-import org.jkiss.dbeaver.erd.ui.directedit.LabelCellEditorLocator;
-import org.jkiss.dbeaver.erd.ui.directedit.ValidationMessageHandler;
-import org.jkiss.dbeaver.erd.ui.editor.ERDGraphicalViewer;
 import org.jkiss.dbeaver.erd.ui.figures.AttributeItemFigure;
 import org.jkiss.dbeaver.erd.ui.figures.EditableLabel;
 import org.jkiss.dbeaver.erd.ui.internal.ERDUIMessages;
 import org.jkiss.dbeaver.erd.ui.policy.AttributeConnectionEditPolicy;
-import org.jkiss.dbeaver.erd.ui.policy.AttributeDirectEditPolicy;
 import org.jkiss.dbeaver.erd.ui.policy.AttributeDragAndDropEditPolicy;
-import org.jkiss.dbeaver.erd.ui.policy.AttributeEditPolicy;
 
 import java.beans.PropertyChangeEvent;
 import java.util.Map;
@@ -91,54 +80,26 @@ public class AttributePart extends PropertyAwarePart {
      */
     @Override
     protected void createEditPolicies() {
-        if (isEditEnabled()) {
-            installEditPolicy(EditPolicy.COMPONENT_ROLE, new AttributeEditPolicy());
-            installEditPolicy(EditPolicy.DIRECT_EDIT_ROLE, new AttributeDirectEditPolicy());
-            //installEditPolicy(EditPolicy.LAYOUT_ROLE, null);
-
+        if (isLayoutEnabled()) {
             if (getEditPolicy(EditPolicy.CONTAINER_ROLE) == null && isColumnDragAndDropSupported()) {
                 installEditPolicy(EditPolicy.CONTAINER_ROLE, new AttributeConnectionEditPolicy(this));
                 installEditPolicy(EditPolicy.PRIMARY_DRAG_ROLE, new AttributeDragAndDropEditPolicy(this));
             }
         }
+        getDiagram().getModelAdapter().installPartEditPolicies(this);
     }
 
     @Override
     public void performRequest(Request request) {
-        if (request.getType() == RequestConstants.REQ_DIRECT_EDIT) {
-/*
-			if (request instanceof DirectEditRequest
-					&& !directEditHitTest(((DirectEditRequest) request).getLocation().getCopy()))
-				return;
-			performDirectEdit();
-*/
-        } else if (request.getType() == RequestConstants.REQ_OPEN) {
-            ERDUIUtils.openObjectEditor(getAttribute());
+        if (request.getType() == RequestConstants.REQ_OPEN) {
+            ERDUIUtils.openObjectEditor(getDiagram(), getAttribute());
+        } else {
+            getDiagram().getModelAdapter().performPartRequest(this, request);
         }
     }
 
     public AttributeCheckCommand createAttributeCheckCommand(boolean newChecked) {
-        return new AttributeCheckCommand(this, newChecked);
-    }
-
-    private boolean directEditHitTest(Point requestLoc) {
-        IFigure figure = getFigure();
-        figure.translateToRelative(requestLoc);
-        return figure.containsPoint(requestLoc);
-    }
-
-    protected void performDirectEdit() {
-        ERDGraphicalViewer viewer = (ERDGraphicalViewer) getViewer();
-        ValidationMessageHandler handler = viewer.getValidationHandler();
-
-        Label l = getFigure().getLabel();
-        ColumnNameTypeCellEditorValidator columnNameTypeCellEditorValidator = new ColumnNameTypeCellEditorValidator(
-                handler);
-
-        DirectEditManager manager = new ExtendedDirectEditManager(this, TextCellEditor.class, new LabelCellEditorLocator(l), l,
-                columnNameTypeCellEditorValidator);
-
-        manager.show();
+        return new AttributeCheckCommand<>(this, newChecked);
     }
 
     /**
@@ -148,18 +109,25 @@ public class AttributePart extends PropertyAwarePart {
     public void setSelected(int value) {
         super.setSelected(value);
         EditableLabel columnLabel = getFigure().getLabel();
-        if (value != EditPart.SELECTED_NONE)
-            columnLabel.setSelected(true);
-        else
-            columnLabel.setSelected(false);
+        columnLabel.setSelected(value != EditPart.SELECTED_NONE);
+        if (false) {
+            IFigure rightPanel = getFigure().getRightPanel();
+            if (rightPanel instanceof EditableLabel) {
+                ((EditableLabel) rightPanel).setSelected(value != EditPart.SELECTED_NONE);
+            }
+        }
         columnLabel.repaint();
     }
 
-    public void handleNameChange(String textValue) {
-        EditableLabel label = getFigure().getLabel();
-        label.setVisible(false);
+    public void handleNameChange() {
+        AttributeItemFigure figure = getFigure();
+        figure.updateLabels();
         setSelected(EditPart.SELECTED_NONE);
-        label.revalidate();
+        figure.revalidate();
+        //EditableLabel label = getFigure().getLabel();
+        //label.setText(textValue);
+        //setSelected(EditPart.SELECTED_NONE);
+        //label.revalidate();
     }
 
     /**
@@ -169,17 +137,6 @@ public class AttributePart extends PropertyAwarePart {
     protected void commitNameChange(PropertyChangeEvent evt) {
         AttributeItemFigure figure = getFigure();
         figure.updateLabels();
-        setSelected(EditPart.SELECTED_PRIMARY);
-        figure.revalidate();
-    }
-
-
-    /**
-     * Reverts state back to prior edit state
-     */
-    public void revertNameChange(String oldValue) {
-        AttributeItemFigure figure = getFigure();
-        figure.setVisible(true);
         setSelected(EditPart.SELECTED_PRIMARY);
         figure.revalidate();
     }

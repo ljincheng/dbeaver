@@ -92,18 +92,20 @@ public abstract class BasePlatformImpl implements DBPPlatform, DBPPlatformLangua
         this.navigatorModel = new DBNModel(this, null);
         this.navigatorModel.initialize();
 
-        // Activate plugin services
-        for (IPluginService pluginService : PluginServiceRegistry.getInstance().getServices()) {
-            try {
-                pluginService.activateService();
-                activatedServices.add(pluginService);
-            } catch (Throwable e) {
-                log.error("Error activating plugin service", e);
+        if (!getApplication().isExclusiveMode()) {
+            // Activate plugin services
+            for (IPluginService pluginService : PluginServiceRegistry.getInstance().getServices()) {
+                try {
+                    pluginService.activateService();
+                    activatedServices.add(pluginService);
+                } catch (Throwable e) {
+                    log.error("Error activating plugin service", e);
+                }
             }
-        }
 
-        // Connections monitoring job
-        new DataSourceMonitorJob(this).scheduleMonitor();
+            // Connections monitoring job
+            new DataSourceMonitorJob(this).scheduleMonitor();
+        }
     }
 
     public synchronized void dispose() {
@@ -179,7 +181,18 @@ public abstract class BasePlatformImpl implements DBPPlatform, DBPPlatformLangua
     @Override
     public boolean isLanguageChangeEnabled() {
         File iniFile = getApplicationConfiguration();
-        return iniFile.exists() && iniFile.canWrite();
+        if (iniFile.exists() && iniFile.canWrite()) {
+            // Try to create temp file in the same folder
+            File testFile = new File(iniFile.getParentFile(), ".test-dbeaver-" + System.currentTimeMillis() + ".ini");
+            try {
+                testFile.createNewFile();
+                testFile.delete();
+                return true;
+            } catch (IOException e) {
+                return false;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -225,6 +238,11 @@ public abstract class BasePlatformImpl implements DBPPlatform, DBPPlatformLangua
     @Override
     public File getCustomDriversHome() {
         return DriverDescriptor.getCustomDriversHome();
+    }
+
+    @Override
+    public boolean isReadOnly() {
+        return Platform.getInstanceLocation().isReadOnly();
     }
 
     // Patch config and add/update -nl parameter

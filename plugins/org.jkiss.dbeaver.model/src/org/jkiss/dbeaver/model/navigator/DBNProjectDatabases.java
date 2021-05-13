@@ -22,7 +22,7 @@ import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
-import org.jkiss.dbeaver.model.edit.DBEObjectMaker;
+import org.jkiss.dbeaver.model.edit.DBEObjectManager;
 import org.jkiss.dbeaver.model.messages.ModelMessages;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
@@ -305,8 +305,8 @@ public class DBNProjectDatabases extends DBNNode implements DBNContainer, DBPEve
                     addDataSource((DBPDataSourceContainer) event.getObject(), true, event.getEnabled() != null && event.getEnabled());
                 } else if (model.getNodeByObject(event.getObject()) == null) {
                     DBNDatabaseNode parentNode = null;
-                    if (event.getOptions() != null) {
-                        Object containerNode = event.getOptions().get(DBEObjectMaker.OPTION_CONTAINER);
+                    {
+                        Object containerNode = event.getOptions().get(DBEObjectManager.OPTION_CONTAINER);
                         if (containerNode instanceof DBNDatabaseFolder && event.getObject().getClass().getName().equals(((DBNDatabaseFolder) containerNode).getMeta().getType())) {
                             // Use container node only if it a folder with exact object type
                             // Otherwise it may be a wrong node (e.g. grand-parent node)

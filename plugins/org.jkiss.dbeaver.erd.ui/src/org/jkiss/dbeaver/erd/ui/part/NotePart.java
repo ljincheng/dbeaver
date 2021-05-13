@@ -64,8 +64,8 @@ public class NotePart extends NodePart
 	@Override
     protected void createEditPolicies()
 	{
-        final boolean editEnabled = isEditEnabled();
-        if (editEnabled) {
+        final boolean layoutEnabled = isLayoutEnabled();
+        if (layoutEnabled) {
             installEditPolicy(EditPolicy.GRAPHICAL_NODE_ROLE, new EntityConnectionEditPolicy());
             //installEditPolicy(EditPolicy.LAYOUT_ROLE, new EntityLayoutEditPolicy());
             //installEditPolicy(EditPolicy.CONTAINER_ROLE, new EntityContainerEditPolicy());
@@ -75,6 +75,8 @@ public class NotePart extends NodePart
 
             //installEditPolicy(EditPolicy.SELECTION_FEEDBACK_ROLE, new ResizableEditPolicy());
         }
+
+        getDiagram().getModelAdapter().installPartEditPolicies(this);
 	}
 
     @Override
@@ -97,6 +99,8 @@ public class NotePart extends NodePart
 					&& !directEditHitTest(((DirectEditRequest) request).getLocation().getCopy()))
 				return;
 			performDirectEdit();
+        } else {
+            getDiagram().getModelAdapter().performPartRequest(this, request);
         }
 	}
 
@@ -114,7 +118,7 @@ public class NotePart extends NodePart
         return figure.containsPoint(requestLoc);
     }
 
-    protected void performDirectEdit() {
+    private void performDirectEdit() {
         if (manager == null) {
             NoteFigure figure = (NoteFigure) getFigure();
             manager = new ExtendedDirectEditManager(

@@ -21,7 +21,6 @@ package org.jkiss.dbeaver.erd.ui.directedit;
 
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Label;
-import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.gef.EditPolicy;
 import org.eclipse.gef.GraphicalEditPart;
 import org.eclipse.gef.commands.Command;
@@ -32,8 +31,6 @@ import org.eclipse.jface.viewers.ICellEditorValidator;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.events.VerifyListener;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Text;
@@ -45,12 +42,11 @@ import org.jkiss.dbeaver.erd.ui.figures.NoteFigure;
  */
 public class ExtendedDirectEditManager extends DirectEditManager {
 
-    protected Font figureFont;
-    protected VerifyListener verifyListener;
-    protected IFigure figure;
-    protected String originalValue;
+    private VerifyListener verifyListener;
+    private IFigure figure;
+    private String originalValue;
     private boolean committing = false;
-    private ICellEditorValidator validator = null;
+    private ICellEditorValidator validator;
 
     /**
      * Creates a new ActivityDirectEditManager with the given attributes.
@@ -67,6 +63,15 @@ public class ExtendedDirectEditManager extends DirectEditManager {
         this.validator = validator;
     }
 
+    protected IFigure getCellEditorFrame() {
+        IFigure cellEditorFrame = super.getCellEditorFrame();
+        if (cellEditorFrame.getBorder() != null) {
+            //cellEditorFrame.setBorder(null);
+        }
+        return cellEditorFrame;
+    }
+
+
     private static String getFigureText(IFigure figure) {
         if (figure instanceof Label) {
             return ((Label) figure).getText();
@@ -77,21 +82,6 @@ public class ExtendedDirectEditManager extends DirectEditManager {
         }
     }
 
-    /**
-     * @see org.eclipse.gef.tools.DirectEditManager#bringDown()
-     */
-    @Override
-    protected void bringDown() {
-        Font disposeFont = figureFont;
-        figureFont = null;
-        super.bringDown();
-        if (disposeFont != null)
-            disposeFont.dispose();
-    }
-
-    /**
-     * @see org.eclipse.gef.tools.DirectEditManager#initCellEditor()
-     */
     @Override
     protected void initCellEditor() {
 
@@ -109,10 +99,10 @@ public class ExtendedDirectEditManager extends DirectEditManager {
                 Text text = (Text) getCellEditor().getControl();
                 String oldText = text.getText();
                 String leftText = oldText.substring(0, event.start);
-                String rightText = oldText.substring(event.end, oldText.length());
+                String rightText = oldText.substring(event.end);
                 GC gc = new GC(text);
 
-                String s = leftText + event.text + rightText;
+                //String s = leftText + event.text + rightText;
 
                 Point size = gc.textExtent(leftText + event.text + rightText);
 
@@ -132,22 +122,8 @@ public class ExtendedDirectEditManager extends DirectEditManager {
         //set the initial value of the
         originalValue = getFigureText(this.figure);
         getCellEditor().setValue(originalValue);
-
-        //calculate the font size of the underlying
-        IFigure figure = getEditPart().getFigure();
-        figureFont = figure.getFont();
-        FontData data = figureFont.getFontData()[0];
-        Dimension fontSize = new Dimension(0, data.getHeight());
-
-        //set the font to be used
-        this.figure.translateToAbsolute(fontSize);
-        data.setHeight(fontSize.height);
-        figureFont = new Font(null, data);
-
-        //set the validator for the CellEditor
         getCellEditor().setValidator(validator);
 
-        text.setFont(figureFont);
         text.selectAll();
     }
 
@@ -168,7 +144,7 @@ public class ExtendedDirectEditManager extends DirectEditManager {
 
             //we set the cell editor control to invisible to remove any
             // possible flicker
-            getCellEditor().getControl().setVisible(false);
+            //getCellEditor().getControl().setVisible(false);
             if (isDirty()) {
                 CommandStack stack = getEditPart().getViewer().getEditDomain().getCommandStack();
                 EditPolicy editPolicy = getEditPart().getEditPolicy(EditPolicy.DIRECT_EDIT_ROLE);

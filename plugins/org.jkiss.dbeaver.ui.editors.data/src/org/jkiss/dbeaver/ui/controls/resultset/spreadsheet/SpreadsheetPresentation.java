@@ -1048,7 +1048,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 }
             }
         } else {
-            if (isShowAsCheckbox(attr)) {
+            if (isShowAsCheckbox(attr) && getPreferenceStore().getBoolean(ResultSetPreferences.RESULT_SET_CLICK_TOGGLE_BOOLEAN)) {
                 // No inline boolean editor. Single click changes value
                 return null;
             }
@@ -1164,6 +1164,9 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
 
         Object value = controller.getModel().getCellValue(attr, row);
         if (isShowAsCheckbox(attr)) {
+            if (!getPreferenceStore().getBoolean(ResultSetPreferences.RESULT_SET_CLICK_TOGGLE_BOOLEAN)) {
+                return;
+            }
             if (!DBExecUtils.isAttributeReadOnly(attr)) {
                 // Switch boolean value
                 toggleBooleanValue(attr, row, value);
@@ -1986,7 +1989,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 if (!hasScope || inScope) {
                     java.util.regex.Pattern searchPattern = findReplaceTarget.getSearchPattern();
                     if (searchPattern != null) {
-                        String cellText = getCellText(colElement, rowElement);
+                        String cellText = CommonUtils.toString(getCellValue(colElement, rowElement, false, false));
                         if (searchPattern.matcher(cellText).find()) {
                             return backgroundMatched;
                         }
@@ -1997,7 +2000,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 }
             }
 
-            if (!ignoreRowSelection && highlightRowsWithSelectedCells && spreadsheet.isRowSelected(row.getRowNumber())) {
+            if (!ignoreRowSelection && highlightRowsWithSelectedCells && spreadsheet.isRowSelected(row.getVisualNumber())) {
                 Color normalColor = getCellBackground(colElement, rowElement, false, true);
                 Color selectedCellColor;
                 if (normalColor == null || normalColor == backgroundNormal) {
