@@ -255,6 +255,9 @@ public class OracleDataType extends OracleObject<DBSObject>
     @Property(hidden = true, editable = true, updatable = true, order = -1)
     public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBCException
     {
+        if (flagPredefined) {
+            return "-- Source code not available";
+        }
         if (sourceDeclaration == null && monitor != null) {
             sourceDeclaration = OracleUtils.getSource(monitor, this, false, false);
         }
@@ -267,14 +270,17 @@ public class OracleDataType extends OracleObject<DBSObject>
     }
 
     @Override
-    public DBEPersistAction[] getCompileActions(DBRProgressMonitor monitor)
-    {
-        return new DBEPersistAction[] {
-            new OracleObjectPersistAction(
-                OracleObjectType.VIEW,
-                "Compile type",
-                "ALTER TYPE " + getFullyQualifiedName(DBPEvaluationContext.DDL) + " COMPILE"
-            )};
+    public DBEPersistAction[] getCompileActions(DBRProgressMonitor monitor) throws DBCException {
+        if (!isPredefined()) {
+            return new DBEPersistAction[]{
+                    new OracleObjectPersistAction(
+                            OracleObjectType.VIEW,
+                            "Compile type",
+                            "ALTER TYPE " + getFullyQualifiedName(DBPEvaluationContext.DDL) + " COMPILE"
+                    )};
+        } else {
+            throw new DBCException("Can't compile " + getName() + ". Compilation works only for user-defined types.");
+        }
     }
 
     @Override

@@ -56,7 +56,7 @@ public class DataEditorsPreferencesInitializer extends AbstractPreferenceInitial
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_BINARY_EDITOR_TYPE, IValueController.EditType.EDITOR);
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_ORDERING_MODE, ResultSetUtils.OrderingMode.SMART);
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_SHOW_ODD_ROWS, true);
-        PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_HIGHLIGHT_SELECTED_ROWS, false);
+        PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_HIGHLIGHT_SELECTED_ROWS, true);
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_SHOW_CELL_ICONS, true);
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_SHOW_ATTR_ICONS, true);
         PrefUtils.setDefaultPreferenceValue(store, ResultSetPreferences.RESULT_SET_SHOW_ATTR_FILTERS, true);
@@ -98,5 +98,4 @@ public class DataEditorsPreferencesInitializer extends AbstractPreferenceInitial
         // Override default editor page
         //PrefUtils.setDefaultPreferenceValue(store, NavigatorPreferences.NAVIGATOR_DEFAULT_EDITOR_PAGE, DatabaseDataEditor.class.getName());
     }
-
 }

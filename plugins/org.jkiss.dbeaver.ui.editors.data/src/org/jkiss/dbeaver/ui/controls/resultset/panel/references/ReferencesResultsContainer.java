@@ -63,6 +63,15 @@ class ReferencesResultsContainer implements IResultSetContainer {
     private ResultSetViewer dataViewer;
 
     private DBSDataContainer parentDataContainer;
+
+    /**
+     * Full name of the latest parentDataContainer. It is used for detection if the underlying data container has changed.
+     * See <a href="https://github.com/dbeaver/dbeaver/issues/11201">this ticket.</a>
+     *
+     */
+    @Nullable
+    private String parentContainerFullName;
+
     private DBSDataContainer dataContainer;
 
     private final List<ReferenceKey> referenceKeys = new ArrayList<>();
@@ -164,14 +173,22 @@ class ReferencesResultsContainer implements IResultSetContainer {
         return mainComposite;
     }
 
-    public void refreshReferences() {
+    void refreshReferences() {
         dataViewer.resetHistory();
-        DBSDataContainer newParentContainer = this.parentController.getDataContainer();
-        if (newParentContainer != parentDataContainer) {
+        DBSDataContainer newParentContainer = parentController.getDataContainer();
+        if (newParentContainer != parentDataContainer || !Objects.equals(getDataContainerFullName(newParentContainer), parentContainerFullName)) {
             refreshReferenceKeyList();
         } else if (dataContainer != null) {
             refreshKeyValues(false);
         }
+    }
+
+    @Nullable
+    private static String getDataContainerFullName(@Nullable DBSDataContainer dataContainer) {
+        if (dataContainer == null) {
+            return null;
+        }
+        return DBUtils.getObjectFullName(dataContainer, DBPEvaluationContext.DDL);
     }
 
     /**
@@ -192,13 +209,17 @@ class ReferencesResultsContainer implements IResultSetContainer {
         }
 
         parentDataContainer = parentController.getDataContainer();
+        parentContainerFullName = getDataContainerFullName(parentDataContainer);
         if (parentDataContainer == null) {
             return;
         }
+
         Set<DBSEntity> allEntities = new LinkedHashSet<>();
+        Collection<DBSEntityAttribute> entityAttributes = new HashSet<>();
         for (DBDAttributeBinding attr : visibleAttributes) {
             DBSEntityAttribute entityAttribute = attr.getEntityAttribute();
             if (entityAttribute != null) {
+                entityAttributes.add(entityAttribute);
                 allEntities.add(entityAttribute.getParentObject());
             }
         }
@@ -236,13 +257,30 @@ class ReferencesResultsContainer implements IResultSetContainer {
                             }
                             // Foreign keys
                             Collection<? extends DBSEntityAssociation> associations = DBVUtils.getAllAssociations(monitor, entity);
-                            for (DBSEntityAssociation assoc : associations) {
-                                if (assoc instanceof DBSEntityReferrer) {
-                                    List<? extends DBSEntityAttributeRef> attrs = ((DBSEntityReferrer) assoc).getAttributeReferences(monitor);
-                                    if (!CommonUtils.isEmpty(attrs)) {
-                                        ReferenceKey referenceKey = new ReferenceKey(monitor, false, assoc.getAssociatedEntity(), assoc, attrs);
-                                        refs.add(referenceKey);
+                            for (DBSEntityAssociation association: associations) {
+                                if (!(association instanceof DBSEntityReferrer)) {
+                                    continue;
+                                }
+                                DBSEntityReferrer entityReferrer = (DBSEntityReferrer) association;
+                                List<? extends DBSEntityAttributeRef> attributeRefs = entityReferrer.getAttributeReferences(monitor);
+                                if (attributeRefs == null) {
+                                    continue;
+                                }
+                                Collection<DBSEntityAttribute> attributes = new HashSet<>();
+                                for (DBSEntityAttributeRef attributeRef: attributeRefs) {
+                                    DBSEntityAttribute entityAttribute = attributeRef.getAttribute();
+                                    if (entityAttribute != null) {
+                                        attributes.add(entityAttribute);
                                     }
+                                }
+                                if (!attributes.isEmpty() && entityAttributes.containsAll(attributes)) {
+                                    refs.add(new ReferenceKey(
+                                        monitor,
+                                        false,
+                                        association.getAssociatedEntity(),
+                                        association,
+                                        attributeRefs
+                                    ));
                                 }
                             }
 

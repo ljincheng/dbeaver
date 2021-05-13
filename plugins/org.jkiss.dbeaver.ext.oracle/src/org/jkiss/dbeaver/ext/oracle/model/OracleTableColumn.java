@@ -23,10 +23,7 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTableColumn;
-import org.jkiss.dbeaver.model.meta.IPropertyCacheValidator;
-import org.jkiss.dbeaver.model.meta.IPropertyValueListProvider;
-import org.jkiss.dbeaver.model.meta.LazyProperty;
-import org.jkiss.dbeaver.model.meta.Property;
+import org.jkiss.dbeaver.model.meta.*;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSDataType;
@@ -53,6 +50,7 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
     private OracleDataTypeModifier typeMod;
     private String comment;
     private boolean hidden;
+    private Integer scale;
 
     public OracleTableColumn(OracleTableBase table)
     {
@@ -88,8 +86,9 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
         String charUsed = JDBCUtils.safeGetString(dbResult, "CHAR_USED");
         setMaxLength(JDBCUtils.safeGetLong(dbResult, "C".equals(charUsed) ? "CHAR_LENGTH" : "DATA_LENGTH"));
         setRequired(!"Y".equals(JDBCUtils.safeGetString(dbResult, "NULLABLE")));
-        this.setScale(JDBCUtils.safeGetInteger(dbResult, "DATA_SCALE"));
-        if (this.scale < 0) {
+        this.scale = JDBCUtils.safeGetInteger(dbResult, "DATA_SCALE");
+        if (this.scale == null) {
+            // Scale can be null in case when type was declared without parameters (examples: NUMBER, NUMBER(*), FLOAT)
             if (this.type != null && this.type.getScale() != null) {
                 this.scale = this.type.getScale();
             }
@@ -163,7 +162,12 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
     @Property(viewable = false, editableExpr = "!object.table.view", updatableExpr = "!object.table.view", order = 42)
     public Integer getScale()
     {
-        return super.getScale();
+        return scale;
+    }
+
+    @Override
+    public void setScale(Integer scale) {
+        this.scale = scale;
     }
 
     @Property(viewable = true, editableExpr = "!object.table.view", updatableExpr = "!object.table.view", order = 50)
@@ -200,7 +204,7 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
         return getComment(monitor);
     }
 
-    @Property(viewable = true, editable = true, updatable = true, multiline = true, order = 100)
+    @Property(viewable = true, editable = true, updatable = true, length = PropertyLength.MULTILINE, order = 100)
     @LazyProperty(cacheValidator = CommentLoadValidator.class)
     public String getComment(DBRProgressMonitor monitor) {
         if (comment == null) {

@@ -39,18 +39,6 @@
             properties="standalone,hasActiveProject,hasMultipleProjects"
             type="java.lang.Object"/>
         <propertyTester
-            class="org.jkiss.dbeaver.ui.actions.ObjectPropertyTester"
-            id="org.jkiss.dbeaver.ui.actions.ObjectPropertyTester"
-            namespace="org.jkiss.dbeaver.core.object"
-            properties="canOpen,canCreate,canPaste,canDelete,canRename,canMoveUp,canMoveDown,canFilter,canFilterObject,hasFilter"
-            type="org.jkiss.dbeaver.model.navigator.DBNNode"/>
-        <propertyTester
-            class="org.jkiss.dbeaver.ui.actions.UIPropertyTester"
-            id="org.jkiss.dbeaver.ui.actions.UIPropertyTester"
-            namespace="org.jkiss.dbeaver.core.ui"
-            properties="toolbarVisible"
-            type="java.lang.Object"/>
-        <propertyTester
             class="org.jkiss.dbeaver.ui.actions.DataSourcePropertyTester"
             id="org.jkiss.dbeaver.ui.actions.DataSourcePropertyTester"
             namespace="org.jkiss.dbeaver.core.datasource"
@@ -197,9 +185,7 @@
             </with>
         </definition>
         <definition id="org.jkiss.dbeaver.core.ui.toolbar.general.visible">
-            <with variable="activeWorkbenchWindow.activePerspective">
-                <reference definitionId="DBeaverPerspectiveActive"/>
-            </with>
+            <reference definitionId="DBeaverPerspectiveActive"/>
         </definition>
         <definition id="org.jkiss.dbeaver.core.ui.editor.transactional">
             <with variable="activeEditor">
@@ -490,7 +476,7 @@
         <!-- Database menu -->
         <menuContribution allPopups="false" locationURI="menu:org.eclipse.ui.main.menu?before=window">
             <menu id="dataSourceMenu" label="%menu.database">
-                <!--<visibleWhen><reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/></visibleWhen>-->
+                <visibleWhen><reference definitionId="DBeaverPerspectiveActive"/></visibleWhen>
 
                 <separator name="driverGroup" visible="true"/>
                 <command commandId="org.jkiss.dbeaver.core.new.connection"/>
@@ -582,48 +568,15 @@
                 </command>
             </toolbar>
 
+<!--
             <toolbar id="dbeaver-edit" label="%toolbar.dbeaver-edit.label">
-                <command commandId="org.eclipse.ui.file.save">
-                    <visibleWhen>
-                        <and>
-                            <test property="org.jkiss.dbeaver.core.ui.toolbarVisible" value="dbeaver-edit"/>
-                            <reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/>
-                        </and>
-                    </visibleWhen>
-                </command>
-                <command commandId="org.eclipse.ui.file.revert" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/reset.png">
-                    <visibleWhen>
-                        <and>
-                            <test property="org.jkiss.dbeaver.core.ui.toolbarVisible" value="dbeaver-edit"/>
-                            <reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/>
-                        </and>
-                    </visibleWhen>
-                </command>
-                <command commandId="org.eclipse.ui.edit.undo">
-                    <visibleWhen>
-                        <and>
-                            <test property="org.jkiss.dbeaver.core.ui.toolbarVisible" value="dbeaver-edit"/>
-                            <reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/>
-                        </and>
-                    </visibleWhen>
-                </command>
-                <command commandId="org.eclipse.ui.edit.redo">
-                    <visibleWhen>
-                        <and>
-                            <test property="org.jkiss.dbeaver.core.ui.toolbarVisible" value="dbeaver-edit"/>
-                            <reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/>
-                        </and>
-                    </visibleWhen>
-                </command>
-                <command commandId="org.eclipse.ui.file.refresh">
-                    <visibleWhen>
-                        <and>
-                            <test property="org.jkiss.dbeaver.core.ui.toolbarVisible" value="dbeaver-edit"/>
-                            <reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/>
-                        </and>
-                    </visibleWhen>
-                </command>
+                <command commandId="org.eclipse.ui.file.save"/>
+                <command commandId="org.eclipse.ui.file.revert" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/reset.png"/>
+                <command commandId="org.eclipse.ui.edit.undo"/>
+                <command commandId="org.eclipse.ui.edit.redo"/>
+                <command commandId="org.eclipse.ui.file.refresh"/>
             </toolbar>
+-->
 
             <toolbar id="dbeaver-connection-selector" label="%toolbar.dbeaver-datasource-selector.label">
                 <visibleWhen><reference definitionId="org.jkiss.dbeaver.core.ui.datasource.editor"/></visibleWhen>
@@ -1219,6 +1172,13 @@
                 id="org.jkiss.dbeaver.core.perspective"
                 name="%perspective.name">
         </perspective>
+    </extension>
+
+    <extension point="org.eclipse.ui.perspectiveExtensions">
+        <perspectiveExtension targetID="org.jkiss.dbeaver.core.perspective">
+            <hiddenToolBarItem id="org.eclipse.ui.edit.text.gotoNextEditPosition"/>
+            <hiddenToolBarItem id="org.eclipse.ui.edit.text.gotoLastEditPosition"/>
+        </perspectiveExtension>
     </extension>
 
 </plugin>

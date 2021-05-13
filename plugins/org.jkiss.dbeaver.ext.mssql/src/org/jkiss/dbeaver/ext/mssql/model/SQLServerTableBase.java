@@ -33,6 +33,7 @@ import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTable;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTableColumn;
 import org.jkiss.dbeaver.model.meta.Association;
 import org.jkiss.dbeaver.model.meta.Property;
+import org.jkiss.dbeaver.model.meta.PropertyLength;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.struct.rdb.DBSIndexType;
@@ -111,7 +112,7 @@ public abstract class SQLServerTableBase extends JDBCTable<SQLServerDataSource, 
     }
 
     @Override
-    @Property(viewable = true, editable = true, updatable = true, multiline = true, order = 100)
+    @Property(viewable = true, editable = true, updatable = true, length = PropertyLength.MULTILINE, order = 100)
     public String getDescription() {
         return description;
     }
@@ -262,8 +263,13 @@ public abstract class SQLServerTableBase extends JDBCTable<SQLServerDataSource, 
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException {
         rowCount = null;
+        if (supportsTriggers()) {
+            getContainer().getTriggerCache().clearChildrenOf(this);
+        }
         return getContainer().getTableCache().refreshObject(monitor, getContainer(), this);
     }
+
+    abstract boolean supportsTriggers();
 
     boolean isClustered(@NotNull DBRProgressMonitor monitor) throws DBException {
         if (isView()) {
@@ -278,5 +284,21 @@ public abstract class SQLServerTableBase extends JDBCTable<SQLServerDataSource, 
             }
         }
         return false;
+    }
+
+    @NotNull
+    @Association
+    public List<SQLServerTableTrigger> getTriggers(@NotNull DBRProgressMonitor monitor) throws DBException {
+        if (!supportsTriggers()) {
+            return Collections.emptyList();
+        }
+        SQLServerSchema schema = getSchema();
+        List<SQLServerTableTrigger> triggers = new ArrayList<>();
+        for (SQLServerTableTrigger trigger: schema.getTriggerCache().getAllObjects(monitor, schema)) {
+            if (this == trigger.getTable()) {
+                triggers.add(trigger);
+            }
+        }
+        return triggers;
     }
 }

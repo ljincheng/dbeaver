@@ -36,6 +36,7 @@ import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCDataType;
 import org.jkiss.dbeaver.model.meta.ForTest;
 import org.jkiss.dbeaver.model.meta.Property;
+import org.jkiss.dbeaver.model.meta.PropertyLength;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.*;
@@ -776,7 +777,7 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
         }
     }
 
-    @Property(order = 100, editable = true, viewable = true, updatable = true)
+    @Property(order = 100, length = PropertyLength.MULTILINE, editable = true, viewable = true, updatable = true)
     @Override
     public String getDescription() {
         return description;
@@ -981,6 +982,14 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
                                 break;
                             case "xml":
                                 valueType = Types.SQLXML;
+                                break;
+                            case "int1":
+                            case "uint1":
+                            case "uint2":
+                            case "uint4":
+                            case "uint8":
+                                // All this types are custom, from pguint extension. Pguint is popular and we know that these types are numeric
+                                valueType = Types.NUMERIC;
                                 break;
                             default:
                                 valueType = Types.OTHER;
