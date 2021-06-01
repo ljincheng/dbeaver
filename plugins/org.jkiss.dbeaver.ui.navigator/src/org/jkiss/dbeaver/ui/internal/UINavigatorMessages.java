@@ -129,6 +129,7 @@ public class UINavigatorMessages extends NLS {
     public static String pref_page_database_general_label_double_click_connection_expand_collapse;
     public static String pref_page_navigator_default_editor_page_label;
     public static String pref_page_navigator_default_editor_page_tip;
+    public static String pref_page_navigator_default_editor_page_last;
 
     // ProjectSettings
     public static String pref_page_projects_settings_label_resource_location;
@@ -136,6 +137,7 @@ public class UINavigatorMessages extends NLS {
     public static String pref_page_projects_settings_label_folder;
     public static String pref_page_projects_settings_label_select;
     public static String pref_page_projects_settings_label_root_folder;
+    public static String pref_page_projects_settings_label_not_use_project_root;
     public static String pref_page_projects_settings_label_not_use_hidden_folders;
     public static String pref_page_projects_settings_label_not_store_resources_in_another_project;
     public static String pref_page_projects_settings_label_restart_require_refresh_global_settings;

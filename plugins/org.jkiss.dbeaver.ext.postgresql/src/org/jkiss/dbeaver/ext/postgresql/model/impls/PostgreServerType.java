@@ -30,7 +30,8 @@ public class PostgreServerType extends AbstractDescriptor {
     private final String id;
     private final String name;
     private final DBPImage icon;
-    private final boolean hostIsCloudInstance;
+    private final boolean cloudServer;
+    private final boolean supportsClient;
     private final boolean needsPort;
 
     private final boolean supportsCustomConnectionURL;
@@ -44,7 +45,8 @@ public class PostgreServerType extends AbstractDescriptor {
         icon = iconToImage(config.getAttribute("logo"));
 
         supportsCustomConnectionURL = CommonUtils.getBoolean(config.getAttribute("customURL"), false);
-        hostIsCloudInstance = CommonUtils.getBoolean(config.getAttribute("hostIsCloudInstance"), false);
+        cloudServer = CommonUtils.getBoolean(config.getAttribute("cloudServer"), false);
+        supportsClient = CommonUtils.getBoolean(config.getAttribute("supportsClient"), true);
         needsPort = CommonUtils.getBoolean(config.getAttribute("needsPort"), true);
         turnOffPreparedStatements = CommonUtils.getBoolean(config.getAttribute("turnOffPreparedStatements"), false);
     }
@@ -73,10 +75,14 @@ public class PostgreServerType extends AbstractDescriptor {
         return supportsCustomConnectionURL;
     }
     
-    public boolean hostIsCloudInstance() {
-	return hostIsCloudInstance;
+    public boolean isCloudServer() {
+	    return cloudServer;
     }
-    
+
+    public boolean supportsClient() {
+        return supportsClient;
+    }
+
     public boolean needsPort() {
 	return needsPort;
     }

@@ -172,6 +172,7 @@ public final class SQLUtils {
             else if (c == '?' || c == '_') result.append(".");
             else if (c == '%') result.append(".*");
             else if (Character.isLetterOrDigit(c)) result.append(c);
+            else if (c == '(' || c == ')' || c == '[' || c == ']') result.append('\\').append(c);
             else if (c == '\\') {
                 if (i < like.length() - 1) {
                     char nc = like.charAt(i + 1);
@@ -552,7 +553,14 @@ public final class SQLUtils {
                         conString.append(" AND");
                     }
                     String strValue;
-                    if (inlineCriteria) {
+                    if (constraint.getAttribute() == null) {
+                        // We have only attribute name
+                        if (value instanceof CharSequence) {
+                            strValue = dataSource.getSQLDialect().getQuotedString(value.toString());
+                        } else {
+                            strValue = CommonUtils.toString(value);
+                        }
+                    } else if (inlineCriteria) {
                         strValue = convertValueToSQL(dataSource, constraint.getAttribute(), value);
                     } else {
                         strValue = dataSource.getSQLDialect().getTypeCastClause(constraint.getAttribute(), "?");
@@ -608,13 +616,13 @@ public final class SQLUtils {
         }
     }
 
-    public static String convertValueToSQL(@NotNull DBPDataSource dataSource, @NotNull DBSAttributeBase attribute, @Nullable Object value) {
+    public static String convertValueToSQL(@NotNull DBPDataSource dataSource, @NotNull DBSTypedObject attribute, @Nullable Object value) {
         DBDValueHandler valueHandler = DBUtils.findValueHandler(dataSource, attribute);
 
         return convertValueToSQL(dataSource, attribute, valueHandler, value, DBDDisplayFormat.NATIVE);
     }
 
-    public static String convertValueToSQL(@NotNull DBPDataSource dataSource, @NotNull DBSAttributeBase attribute, @NotNull DBDValueHandler valueHandler, @Nullable Object value, DBDDisplayFormat displayFormat) {
+    public static String convertValueToSQL(@NotNull DBPDataSource dataSource, @NotNull DBSTypedObject attribute, @NotNull DBDValueHandler valueHandler, @Nullable Object value, DBDDisplayFormat displayFormat) {
         if (DBUtils.isNullValue(value)) {
             return SQLConstants.NULL_VALUE;
         }
@@ -624,7 +632,7 @@ public final class SQLUtils {
             convertValueToSQLFormat(dataSource, attribute, valueHandler, value, displayFormat));
     }
 
-    private static String convertValueToSQLFormat(@NotNull DBPDataSource dataSource, @NotNull DBSAttributeBase attribute, @NotNull DBDValueHandler valueHandler, @Nullable Object value, DBDDisplayFormat displayFormat) {
+    private static String convertValueToSQLFormat(@NotNull DBPDataSource dataSource, @NotNull DBSTypedObject attribute, @NotNull DBDValueHandler valueHandler, @Nullable Object value, DBDDisplayFormat displayFormat) {
         if (DBUtils.isNullValue(value)) {
             return SQLConstants.NULL_VALUE;
         }
@@ -668,7 +676,7 @@ public final class SQLUtils {
         }
     }
 
-    public static String convertStreamToSQL(DBSAttributeBase attribute, DBDContent content, DBDValueHandler valueHandler, DBPDataSource dataSource) {
+    public static String convertStreamToSQL(DBSTypedObject attribute, DBDContent content, DBDValueHandler valueHandler, DBPDataSource dataSource) {
         try {
             DBRProgressMonitor monitor = new VoidProgressMonitor();
             if (!content.isNull() && ContentUtils.isTextContent(content)) {

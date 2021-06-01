@@ -55,5 +55,8 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
+<<<<<<< HEAD
 
 org.jkiss.dbeaver.sourcecode.feature/
+=======
+>>>>>>> upstream/devel

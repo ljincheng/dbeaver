@@ -24,6 +24,7 @@ import org.jkiss.dbeaver.ext.postgresql.PostgreUtils;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.access.DBARole;
 import org.jkiss.dbeaver.model.access.DBAUser;
+import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCPreparedStatement;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCResultSet;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCSession;
@@ -34,7 +35,9 @@ import org.jkiss.dbeaver.model.meta.Association;
 import org.jkiss.dbeaver.model.meta.IPropertyValueValidator;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.DBSObject;
+import org.jkiss.utils.CommonUtils;
 import org.jkiss.utils.StandardConstants;
 
 import java.sql.ResultSet;
@@ -44,27 +47,38 @@ import java.util.*;
 /**
  * PostgreRole
  */
-public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPersistedObject, DBPSaveableObject, DBPRefreshableObject, DBPNamedObject2, DBARole, DBAUser, PostgreScriptObject {
+public class PostgreRole implements
+    PostgreObject,
+    PostgrePrivilegeOwner,
+    DBPPersistedObject,
+    DBPSaveableObject,
+    DBPRefreshableObject,
+    DBPNamedObject2,
+    DBARole,
+    DBAUser,
+    PostgreScriptObject,
+    DBPScriptObjectExt2
+{
 
     public static final String CAT_SETTINGS = "Settings";
     public static final String CAT_FLAGS = "Flags";
 
     private static final Log log = Log.getLog(PostgreRole.class);
 
-    private final PostgreDatabase database;
-    private long oid;
-    private String name;
-    private boolean superUser;
-    private boolean inherit;
-    private boolean createRole;
-    private boolean createDatabase;
-    private boolean canLogin;
-    private boolean replication;
-    private boolean bypassRls;
-    private int connLimit;
-    private String password;
-    private Date validUntil;
-    private boolean persisted;
+    protected final PostgreDatabase database;
+    protected long oid;
+    protected String name;
+    protected boolean superUser;
+    protected boolean inherit;
+    protected boolean createRole;
+    protected boolean createDatabase;
+    protected boolean canLogin;
+    protected boolean replication;
+    protected boolean bypassRls;
+    protected int connLimit;
+    protected String password;
+    protected Date validUntil;
+    protected boolean persisted;
     private MembersCache membersCache = new MembersCache(true);
     private MembersCache belongsCache = new MembersCache(false);
 
@@ -111,7 +125,7 @@ public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPer
         this.loadInfo(dbResult);
     }
 
-    private void loadInfo(ResultSet dbResult) {
+    protected void loadInfo(ResultSet dbResult) {
         this.persisted = true;
 
         this.oid = JDBCUtils.safeGetLong(dbResult, "oid");
@@ -162,7 +176,7 @@ public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPer
 
     @NotNull
     @Override
-    @Property(viewable = true, editable = true, updatable = true, order = 1)
+    @Property(viewable = true, editable = true, order = 1)
     public String getName() {
         return name;
     }
@@ -296,6 +310,11 @@ public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPer
     }
 
     @Override
+    public boolean supportsObjectDefinitionOption(String option) {
+        return DBPScriptObject.OPTION_INCLUDE_PERMISSIONS.equals(option);
+    }
+
+    @Override
     public void setObjectDefinitionText(String sourceText) throws DBException {
 
     }
@@ -315,13 +334,24 @@ public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPer
         addOptionToDDL(ddl, isBypassRls(), "BYPASSRLS");
         if (getConnLimit() > 0) {
             ddl.append(lineBreak);
-            ddl.append("\tCONNECTION LIMIT ").append(getClass());
+            ddl.append("\tCONNECTION LIMIT ").append(getConnLimit());
+        } else {
+            ddl.append(lineBreak);
+            ddl.append("\tCONNECTION LIMIT UNLIMITED");
         }
         if (getValidUntil() != null) {
             ddl.append(lineBreak);
             ddl.append("\tVALID UNTIL '").append(getValidUntil().toString()).append("'");
         }
         ddl.append(";");
+
+        if (CommonUtils.getOption(options, DBPScriptObject.OPTION_INCLUDE_PERMISSIONS)) {
+            ddl.append("\n");
+            List<DBEPersistAction> actions = new ArrayList<>();
+            PostgreUtils.getObjectGrantPermissionActions(monitor, this, actions, options);
+            ddl.append("\n").append(SQLUtils.generateScript(getDataSource(), actions.toArray(new DBEPersistAction[0]), false));
+        }
+
         return ddl.toString();
     }
 
@@ -438,7 +468,7 @@ public class PostgreRole implements PostgreObject, PostgrePrivilegeOwner, DBPPer
         return null;
     }
 
-    private static Collection<PostgrePrivilege> getRolePermissions(PostgreRole role, PostgrePrivilegeGrant.Kind kind, JDBCPreparedStatement dbStat) throws SQLException {
+    protected static Collection<PostgrePrivilege> getRolePermissions(PostgreRole role, PostgrePrivilegeGrant.Kind kind, JDBCPreparedStatement dbStat) throws SQLException {
         try (JDBCResultSet dbResult = dbStat.executeQuery()) {
             Map<String, List<PostgrePrivilegeGrant>> privs = new LinkedHashMap<>();
             while (dbResult.next()) {

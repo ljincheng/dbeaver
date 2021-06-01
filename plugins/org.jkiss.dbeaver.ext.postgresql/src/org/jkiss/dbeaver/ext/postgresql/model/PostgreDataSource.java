@@ -31,6 +31,7 @@ import org.jkiss.dbeaver.ext.postgresql.model.jdbc.PostgreJdbcFactory;
 import org.jkiss.dbeaver.ext.postgresql.model.plan.PostgreQueryPlaner;
 import org.jkiss.dbeaver.ext.postgresql.model.session.PostgreSessionManager;
 import org.jkiss.dbeaver.model.*;
+import org.jkiss.dbeaver.model.access.DBAUserChangePassword;
 import org.jkiss.dbeaver.model.admin.sessions.DBAServerSessionManager;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.connection.DBPDriver;
@@ -67,6 +68,20 @@ import java.util.regex.Pattern;
 public class PostgreDataSource extends JDBCDataSource implements DBSInstanceContainer, IAdaptable, DBPObjectStatisticsCollector {
 
     private static final Log log = Log.getLog(PostgreDataSource.class);
+    private static final PostgrePrivilegeType[] SUPPORTED_PRIVILEGE_TYPES = new PostgrePrivilegeType[]{
+        PostgrePrivilegeType.SELECT,
+        PostgrePrivilegeType.INSERT,
+        PostgrePrivilegeType.UPDATE,
+        PostgrePrivilegeType.DELETE,
+        PostgrePrivilegeType.TRUNCATE,
+        PostgrePrivilegeType.REFERENCES,
+        PostgrePrivilegeType.TRIGGER,
+        PostgrePrivilegeType.CREATE,
+        PostgrePrivilegeType.CONNECT,
+        PostgrePrivilegeType.TEMPORARY,
+        PostgrePrivilegeType.EXECUTE,
+        PostgrePrivilegeType.USAGE
+    };
 
     private DatabaseCache databaseCache;
     private SettingCache settingCache;
@@ -463,6 +478,8 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
             return adapter.cast(new PostgreSessionManager(this));
         } else if (adapter == DBCQueryPlanner.class) {
             return adapter.cast(new PostgreQueryPlaner(this));
+        } else if (getServerType().supportsAlterUserChangePassword() && adapter == DBAUserChangePassword.class) {
+            return adapter.cast(new PostgresUserChangePassword(this));
         }
         return super.getAdapter(adapter);
     }
@@ -517,6 +534,19 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
     @Override
     public List<PostgreDatabase> getAvailableInstances() {
         return databaseCache.getCachedObjects();
+    }
+
+    void setActiveDatabase(PostgreDatabase newDatabase) {
+        final PostgreDatabase oldDatabase = getDefaultInstance();
+        if (oldDatabase == newDatabase) {
+            return;
+        }
+
+        activeDatabaseName = newDatabase.getName();
+
+        // Notify UI
+        DBUtils.fireObjectSelect(oldDatabase, false);
+        DBUtils.fireObjectSelect(newDatabase, true);
     }
 
     /**
@@ -591,6 +621,11 @@ public class PostgreDataSource extends JDBCDataSource implements DBSInstanceCont
 
     public boolean supportsRoles() {
         return getServerType().supportsRoles() && !getContainer().getNavigatorSettings().isShowOnlyEntities() && !getContainer().getNavigatorSettings().isHideFolders();
+    }
+
+    @NotNull
+    public PostgrePrivilegeType[] getSupportedPrivilegeTypes() {
+        return SUPPORTED_PRIVILEGE_TYPES;
     }
 
     @Override

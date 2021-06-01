@@ -20,6 +20,8 @@ import org.jkiss.dbeaver.model.access.DBAPrivilegeType;
 
 /**
  * PostgrePrivilegeType
+ *
+ * @see <a href="https://www.postgresql.org/docs/current/ddl-priv.html#PRIVILEGE-ABBREVS-TABLE">5.1. ACL Privilege Abbreviations</a>
  */
 public enum PostgrePrivilegeType implements DBAPrivilegeType {
     // ALL privs
@@ -32,15 +34,14 @@ public enum PostgrePrivilegeType implements DBAPrivilegeType {
     TRUNCATE('D', true, PostgreTableReal.class),
     REFERENCES('x', true, PostgreTableReal.class, PostgreTableColumn.class),
     TRIGGER('t', true, PostgreTableReal.class),
-    RULE('R', true, PostgreTableReal.class), // Redshift specific type
-
     CREATE('C', true, PostgreDatabase.class, PostgreSchema.class, PostgreTablespace.class),
-    // Misc
-    USAGE('U', true, PostgreSequence.class, PostgreDataType.class, PostgreSchema.class),
-
     CONNECT('c', true, PostgreDatabase.class),
     TEMPORARY('T', true, PostgreDatabase.class),
     EXECUTE('X', true, PostgreProcedure.class),
+    USAGE('U', true, PostgreSequence.class, PostgreDataType.class, PostgreSchema.class),
+
+    // Redshift-specific types
+    RULE('R', true, PostgreTableReal.class),
 
     UNKNOWN((char)0, false);
 
@@ -69,8 +70,11 @@ public enum PostgrePrivilegeType implements DBAPrivilegeType {
 
     @Override
     public boolean supportsType(Class<?> objectType) {
-        for (int i = 0; i < targetType.length; i++) {
-            if (targetType[i].isAssignableFrom(objectType)) {
+        if (PostgreRole.class.isAssignableFrom(objectType)) {
+            return true;
+        }
+        for (Class<?> aClass : targetType) {
+            if (aClass.isAssignableFrom(objectType)) {
                 return true;
             }
         }

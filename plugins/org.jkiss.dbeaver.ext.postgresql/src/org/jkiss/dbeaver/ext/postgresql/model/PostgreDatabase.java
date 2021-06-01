@@ -24,6 +24,7 @@ import org.jkiss.dbeaver.ext.postgresql.PostgreConstants;
 import org.jkiss.dbeaver.ext.postgresql.PostgreUtils;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.exec.DBCException;
+import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.exec.DBCExecutionPurpose;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCPreparedStatement;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCResultSet;
@@ -84,7 +85,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
     private long dbTotalSize = -1;
     private Boolean supportTypColumn;
 
-    public final RoleCache roleCache = new RoleCache();
+    public final PostgreDatabaseJDBCObjectCache<? extends PostgreRole> roleCache = createRoleCache();
     public final AccessMethodCache accessMethodCache = new AccessMethodCache();
     public final ForeignDataWrapperCache foreignDataWrapperCache = new ForeignDataWrapperCache();
     public final ForeignServerCache foreignServerCache = new ForeignServerCache();
@@ -286,6 +287,14 @@ public class PostgreDatabase extends JDBCRemoteInstance
         return JDBCExecutionContext.TYPE_METADATA + " <" + getName() + ">";
     }
 
+    @NotNull
+    @Override
+    public PostgreExecutionContext openIsolatedContext(@NotNull DBRProgressMonitor monitor, @NotNull String purpose, @Nullable DBCExecutionContext initFrom) throws DBException {
+        PostgreExecutionContext ec = (PostgreExecutionContext) super.openIsolatedContext(monitor, purpose, initFrom);
+        ec.setIsolatedContext(true);
+        return ec;
+    }
+
     @Override
     @Property(viewable = true, editable = true, updatable = true, length = PropertyLength.MULTILINE, order = 100)
     public String getDescription(DBRProgressMonitor monitor) {
@@ -416,7 +425,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
     // Infos
 
     @Association
-    public Collection<PostgreRole> getAuthIds(DBRProgressMonitor monitor) throws DBException {
+    public Collection<? extends PostgreRole> getAuthIds(DBRProgressMonitor monitor) throws DBException {
         if (!getDataSource().supportsRoles()) {
             return Collections.emptyList();
         }
@@ -760,7 +769,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
         return this;
     }
 
-    public Collection<PostgreRole> getUsers(DBRProgressMonitor monitor) throws DBException {
+    public Collection<? extends PostgreRole> getUsers(DBRProgressMonitor monitor) throws DBException {
         if (!getDataSource().getServerType().supportsRoles()) {
             return Collections.emptyList();
         }
@@ -906,6 +915,11 @@ public class PostgreDatabase extends JDBCRemoteInstance
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Caches
+
+    @NotNull
+    protected PostgreDatabaseJDBCObjectCache<? extends PostgreRole> createRoleCache() {
+        return new RoleCache();
+    }
 
     protected static abstract class PostgreDatabaseJDBCObjectCache<OBJECT extends DBSObject> extends JDBCObjectCache<PostgreDatabase, OBJECT> {
         boolean handlePermissionDeniedError(Exception e) {
@@ -1207,7 +1221,7 @@ public class PostgreDatabase extends JDBCRemoteInstance
         public Object[] getPossibleValues(PostgreDatabase object)
         {
             try {
-                Collection<PostgreRole> roles = object.getAuthIds(new VoidProgressMonitor());
+                Collection<? extends PostgreRole> roles = object.getAuthIds(new VoidProgressMonitor());
                 return roles.toArray(new Object[0]);
             } catch (DBException e) {
                 log.error(e);
