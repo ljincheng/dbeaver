@@ -201,6 +201,10 @@ public class OracleSchema extends OracleGlobalObject implements DBSSchema, DBPRe
         return tableCache.getObject(monitor, this, name, OracleMaterializedView.class);
     }
 
+    public TableCache getTableCache() {
+        return tableCache;
+    }
+
     @Association
     public Collection<OracleDataType> getDataTypes(DBRProgressMonitor monitor)
         throws DBException
@@ -1083,7 +1087,7 @@ public class OracleSchema extends OracleGlobalObject implements DBSSchema, DBPRe
                     ", " + OracleUtils.getAdminAllViewPrefix(session.getProgressMonitor(), getDataSource(), "IND_COLUMNS") + " ic, " +
                     OracleUtils.getAdminAllViewPrefix(session.getProgressMonitor(), getDataSource(), "IND_EXPRESSIONS") + " iex " +
                     "WHERE ic.INDEX_OWNER=i.OWNER AND ic.INDEX_NAME=i.INDEX_NAME \n" +
-                    "AND iex.INDEX_OWNER(+)=i.OWNER AND iex.INDEX_NAME(+)=i.INDEX_NAME\n" +
+                    "AND iex.INDEX_OWNER(+)=i.OWNER AND iex.INDEX_NAME(+)=i.INDEX_NAME AND iex.COLUMN_POSITION(+)=ic.COLUMN_POSITION\n" +
                     "AND ");
             if (forTable == null) {
                 sql.append("i.OWNER=?");
@@ -1248,7 +1252,7 @@ public class OracleSchema extends OracleGlobalObject implements DBSSchema, DBPRe
             throws SQLException
         {
             JDBCPreparedStatement dbStat = session.prepareStatement(
-                "SELECT " + OracleUtils.getSysCatalogHint(owner.getDataSource()) + " * FROM " +
+                "SELECT " + OracleUtils.getSysCatalogHint(owner.getDataSource()) + " OBJECT_NAME, STATUS FROM " +
                 OracleUtils.getAdminAllViewPrefix(session.getProgressMonitor(), owner.getDataSource(), "OBJECTS") +
                 " WHERE OBJECT_TYPE='PACKAGE' AND OWNER=? " +
                 " ORDER BY OBJECT_NAME");

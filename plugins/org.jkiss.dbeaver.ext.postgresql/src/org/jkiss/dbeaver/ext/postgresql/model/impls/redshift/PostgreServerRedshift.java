@@ -151,7 +151,9 @@ public class PostgreServerRedshift extends PostgreServerExtensionBase implements
 
     @Override
     public boolean supportsRoles() {
-        return true;
+        // Redshift has support for roles only as a part of the EE extension.
+        // That's a silly workaround (see #11912, #12691)
+        return dataSource.getClass() != PostgreDataSource.class;
     }
 
     @Override
@@ -207,6 +209,18 @@ public class PostgreServerRedshift extends PostgreServerExtensionBase implements
             throw new DBException(e, table.getDataSource());
         }
     }
+
+    @Override
+    public PostgreTableBase createNewRelation(DBRProgressMonitor monitor, PostgreSchema schema, PostgreClass.RelKind kind, Object copyFrom) throws DBException {
+        if (kind == PostgreClass.RelKind.r) {
+            return new RedshiftTable(schema);
+        } else if (kind == PostgreClass.RelKind.v) {
+            return new RedshiftView(schema);
+        }
+        return super.createNewRelation(monitor, schema, kind, copyFrom);
+    }
+
+
     public PostgreTableBase createRelationOfClass(PostgreSchema schema, PostgreClass.RelKind kind, JDBCResultSet dbResult) {
         if (kind == PostgreClass.RelKind.r) {
             return new RedshiftTable(schema, dbResult);
@@ -254,10 +268,6 @@ public class PostgreServerRedshift extends PostgreServerExtensionBase implements
         Map<String, String> aliasMap = new LinkedHashMap<>(super.getDataTypeAliases());
         aliasMap.put("character", PostgreConstants.TYPE_BPCHAR);
         aliasMap.put("character varying", PostgreConstants.TYPE_VARCHAR);
-        aliasMap.put("time with time zone", PostgreConstants.TYPE_TIMETZ);
-        aliasMap.put("time without time zone", PostgreConstants.TYPE_TIME);
-        aliasMap.put("timestamp with time zone", PostgreConstants.TYPE_TIMESTAMPTZ);
-        aliasMap.put("timestamp without time zone", PostgreConstants.TYPE_TIMESTAMP);        
         return aliasMap;
     }
 
