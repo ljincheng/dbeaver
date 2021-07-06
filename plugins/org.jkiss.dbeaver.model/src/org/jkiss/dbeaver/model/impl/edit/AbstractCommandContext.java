@@ -137,8 +137,10 @@ public abstract class AbstractCommandContext implements DBECommandContext {
             if (txnManager != null && txnManager.isSupportsTransactions()) {
                 try {
                     try (DBCSession session = executionContext.openSession(monitor, DBCExecutionPurpose.UTIL, "Commit script transaction")) {
-                        session.enableLogging(false);
-                        txnManager.commit(session);
+                        if (!txnManager.isAutoCommit()) {
+                            session.enableLogging(false);
+                            txnManager.commit(session);
+                        }
                     } finally {
                         if (oldAutoCommit != useAutoCommit) {
                             txnManager.setAutoCommit(monitor, oldAutoCommit);
@@ -196,7 +198,14 @@ public abstract class AbstractCommandContext implements DBECommandContext {
                                     }
                                     try {
                                         if (error == null || actionType == DBEPersistAction.ActionType.FINALIZER) {
+                                            boolean disableSessionLogging = session.isLoggingEnabled() && cmd.command.isDisableSessionLogging();
+                                            if (disableSessionLogging) {
+                                                session.enableLogging(false);
+                                            }
                                             queue.objectManager.executePersistAction(session, cmd.command, persistInfo.action);
+                                            if (disableSessionLogging) {
+                                                session.enableLogging(true);
+                                            }
                                         }
                                         persistInfo.executed = true;
                                     } catch (DBException e) {

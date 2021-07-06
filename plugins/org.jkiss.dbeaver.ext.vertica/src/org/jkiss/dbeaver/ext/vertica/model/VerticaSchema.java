@@ -37,6 +37,7 @@ import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectLookupCache;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCStructLookupCache;
 import org.jkiss.dbeaver.model.meta.Association;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.struct.DBSEntity;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.utils.ArrayUtils;
 
@@ -61,8 +62,6 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
 
     final ProjectionCache projectionCache = new ProjectionCache();
     final UDFCache udfCache = new UDFCache();
-
-    final Set<String> flexTablNames = new HashSet<>();
 
     public VerticaSchema(GenericDataSource dataSource, GenericCatalog catalog, String schemaName) {
         super(dataSource, catalog, schemaName);
@@ -116,13 +115,13 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
 
 * */
     @Association
-    public List<VerticaTable> getFlexTables(DBRProgressMonitor monitor) throws DBException {
+    public List<VerticaFlexTable> getFlexTables(DBRProgressMonitor monitor) throws DBException {
         List<? extends GenericTableBase> tables = getTables(monitor);
         if (tables != null) {
-            List<VerticaTable> filtered = new ArrayList<>();
+            List<VerticaFlexTable> filtered = new ArrayList<>();
             for (GenericTableBase table : tables) {
-                if (table instanceof VerticaTable && flexTablNames.contains(table.getName())) {
-                    filtered.add((VerticaTable) table);
+                if (table instanceof VerticaFlexTable) {
+                    filtered.add((VerticaFlexTable) table);
                 }
             }
             return filtered;
@@ -148,14 +147,6 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
     @Override
     public boolean isSystem() {
         return ArrayUtils.contains(SYSTEM_SCHEMAS, getName());
-    }
-
-    boolean isFlexTableName(String tableName) {
-        return flexTablNames.contains(tableName);
-    }
-
-    public void cacheFlexTableName(String tableName) {
-        flexTablNames.add(tableName);
     }
 
     @Override
@@ -190,6 +181,12 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
         } finally {
             hasStatistics = true;
         }
+    }
+
+    @NotNull
+    @Override
+    public Class<? extends DBSEntity> getPrimaryChildType(@Nullable DBRProgressMonitor monitor) throws DBException {
+        return VerticaTable.class;
     }
 
     public class ProjectionCache extends JDBCStructLookupCache<VerticaSchema, VerticaProjection, VerticaProjectionColumn> {

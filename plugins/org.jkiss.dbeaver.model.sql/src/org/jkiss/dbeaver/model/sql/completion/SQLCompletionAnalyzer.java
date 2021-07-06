@@ -151,6 +151,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
         String wordPart = request.getWordPart();
         boolean emptyWord = wordPart.length() == 0;
         boolean isInLiteral = SQLParserPartitions.CONTENT_TYPE_SQL_STRING.equals(request.getContentType());
+        boolean isNumber = !CommonUtils.isEmpty(wordPart) && CommonUtils.isNumber(wordPart);
         boolean isInQuotedIdentifier = SQLParserPartitions.CONTENT_TYPE_SQL_QUOTED.equals(request.getContentType());
 
         SQLCompletionRequest.QueryType queryType = request.getQueryType();
@@ -169,7 +170,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
         if (queryType != null) {
             // Try to determine which object is queried (if wordPart is not empty)
             // or get list of root database objects
-            if (emptyWord || isInLiteral || isInQuotedIdentifier) {
+            if (emptyWord || isInLiteral || isNumber || isInQuotedIdentifier) {
                 // Get root objects
                 DBPObject rootObject = null;
                 if (queryType == SQLCompletionRequest.QueryType.COLUMN && dataSource instanceof DBSObjectContainer) {
@@ -195,7 +196,11 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
                                                 !CommonUtils.isEmpty(prevDelimiter) &&
                                                 !prevDelimiter.endsWith(")")));
                                     if (waitsForValue) {
-                                        makeProposalsFromAttributeValues(dataSource, wordDetector, isInLiteral, (DBSEntity) rootObject);
+                                        makeProposalsFromAttributeValues(
+                                            dataSource,
+                                            wordDetector,
+                                            isInLiteral || isNumber,
+                                            (DBSEntity) rootObject);
                                     }
                                 }
                                 break;
@@ -899,7 +904,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
                     state = InlineState.TABLE_NAME;
                     continue;
                 }
-                if (state == InlineState.TABLE_NAME && (tok.getData() == SQLTokenType.T_QUOTED || tok.getData() == SQLTokenType.T_OTHER)) {
+                if (state == InlineState.TABLE_NAME && isNamePartToken(tok)) {
                     matchedTableName = CommonUtils.notEmpty(matchedTableName) + value;
                     state = InlineState.TABLE_DOT;
                     continue;
@@ -924,7 +929,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
                     // Any keyword but AS resets state to
                     state = CommonUtils.isEmpty(matchedTableName) ? InlineState.UNMATCHED : InlineState.MATCHED;
                 }
-                if ((state == InlineState.ALIAS_AS || state == InlineState.ALIAS_NAME) && (tok.getData() == SQLTokenType.T_QUOTED || tok.getData() == SQLTokenType.T_OTHER)) {
+                if ((state == InlineState.ALIAS_AS || state == InlineState.ALIAS_NAME) && isNamePartToken(tok)) {
                     matchedTableAlias = value;
                     state = InlineState.MATCHED;
                 }
@@ -952,6 +957,12 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
         }
 
         return null;
+    }
+
+    private static boolean isNamePartToken(TPToken tok) {
+        return tok.getData() == SQLTokenType.T_QUOTED
+            || tok.getData() == SQLTokenType.T_KEYWORD
+            || tok.getData() == SQLTokenType.T_OTHER;
     }
 
     private static boolean isTableQueryToken(TPToken tok, String value) {
@@ -1050,17 +1061,22 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
             } else if (!matchedObjects.isEmpty()) {
                 if (startPart == null || scoredMatches.isEmpty()) {
                     if (dataSource != null && request.getContext().isSortAlphabetically()) {
-                        matchedObjects.sort(DBUtils.nameComparatorIgnoreCase());
+                        matchedObjects.sort((o1, o2) -> {
+                            if (o1 instanceof DBSAttributeBase && o2 instanceof DBSAttributeBase) {
+                                return DBUtils.orderComparator().compare((DBSAttributeBase) o1, (DBSAttributeBase) o2);
+                            }
+                            return DBUtils.nameComparatorIgnoreCase().compare(o1, o2);
+                        });
                     }
                 } else {
                     matchedObjects.sort((o1, o2) -> {
                         int score1 = scoredMatches.get(o1.getName());
                         int score2 = scoredMatches.get(o2.getName());
                         if (score1 == score2) {
-                            if (o1 instanceof DBSAttributeBase) {
-                                return ((DBSAttributeBase) o1).getOrdinalPosition() - ((DBSAttributeBase) o2).getOrdinalPosition();
+                            if (o1 instanceof DBSAttributeBase && o2 instanceof DBSAttributeBase) {
+                                return DBUtils.orderComparator().compare((DBSAttributeBase) o1, (DBSAttributeBase) o2);
                             }
-                            return o1.getName().compareToIgnoreCase(o2.getName());
+                            return DBUtils.nameComparatorIgnoreCase().compare(o1, o2);
                         }
                         return score2 - score1;
                     });

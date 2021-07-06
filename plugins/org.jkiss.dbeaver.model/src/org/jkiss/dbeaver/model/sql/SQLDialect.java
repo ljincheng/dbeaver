@@ -26,7 +26,6 @@ import org.jkiss.dbeaver.model.data.DBDBinaryFormatter;
 import org.jkiss.dbeaver.model.data.DBDDataFilter;
 import org.jkiss.dbeaver.model.exec.DBCLogicalOperator;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.dbeaver.model.struct.DBSAttributeBase;
 import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 import org.jkiss.dbeaver.model.struct.rdb.DBSProcedure;
 import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureParameter;
@@ -234,6 +233,10 @@ public interface SQLDialect {
     @NotNull
     SQLStateType getSQLStateType();
 
+    boolean isWordStart(int ch);
+
+    boolean isWordPart(int ch);
+
     boolean validIdentifierStart(char c);
     /**
      * Checks that specified character is a valid identifier part. Non-valid characters should be quoted in queries.
@@ -408,6 +411,6 @@ public interface SQLDialect {
 
     boolean isDisableScriptEscapeProcessing();
 
-    boolean supportsAlterTableConstraint();
+    boolean supportsAlterTableStatement();
 
 }

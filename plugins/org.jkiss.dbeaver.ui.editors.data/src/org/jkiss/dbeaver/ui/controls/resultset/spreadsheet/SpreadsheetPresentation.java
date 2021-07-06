@@ -108,6 +108,7 @@ import org.jkiss.utils.xml.XMLUtils;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Spreadsheet presentation.
@@ -319,10 +320,23 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                         GridPos curPos = spreadsheet.getCursorPosition();
                         GridCell newCell = spreadsheet.posToCell(new GridPos(curPos.col, curRow.getVisualNumber()));
                         if (newCell != null) {
-                            spreadsheet.setCursor(newCell, false, true);
+                            spreadsheet.setCursor(newCell, false, true, true);
                         }
                     }
                     break;
+            }
+
+            if (recordMode && controller.getSelectedRecords().length > 1 && curRow != null) {
+                // Shift to new row in record mode
+                curRow = controller.getCurrentRow();
+                int newColumnIndex = ArrayUtils.indexOf(controller.getSelectedRecords(), 0, curRow.getVisualNumber());
+                if (newColumnIndex >= 0) {
+                    GridPos focusPos = spreadsheet.getCursorPosition();
+                    GridCell newPos = spreadsheet.posToCell(new GridPos(newColumnIndex, focusPos.row));
+                    if (newPos != null) {
+                        spreadsheet.setCursor(newPos, true, true, false);
+                    }
+                }
             }
 
             spreadsheet.getHorizontalScrollBarProxy().setSelection(hScrollPos);
@@ -357,8 +371,13 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         GridCell cell = controller.isRecordMode() ?
             new GridCell(curRow, this.curAttribute) :
             new GridCell(this.curAttribute, curRow);
-        this.spreadsheet.setCursor(cell, false, true);
+        this.spreadsheet.setCursor(cell, false, true, true);
         //this.spreadsheet.showColumn(this.curAttribute);
+    }
+
+    @Override
+    public void showAttribute(@NotNull DBDAttributeBinding attribute) {
+        this.spreadsheet.showColumn(attribute);
     }
 
     @Override
@@ -443,6 +462,10 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
             changed = curAttribute != newRow;
             if (newRow instanceof DBDAttributeBinding) {
                 curAttribute = (DBDAttributeBinding) newRow;
+            }
+            if (newCol instanceof ResultSetRow && curRow != newCol) {
+                curRow = (ResultSetRow) newCol;
+                controller.setCurrentRow(curRow);
             }
         }
         if (changed) {
@@ -891,9 +914,9 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         this.columnOrder = recordMode ? SWT.DEFAULT : SWT.NONE;
         if (oldRow != null && oldAttribute != null) {
             if (!recordMode) {
-                spreadsheet.setCursor(new GridCell(oldAttribute, oldRow), false, true);
+                spreadsheet.setCursor(new GridCell(oldAttribute, oldRow), false, true, true);
             } else {
-                spreadsheet.setCursor(new GridCell(oldRow, oldAttribute), false, true);
+                spreadsheet.setCursor(new GridCell(oldRow, oldAttribute), false, true, true);
             }
         }
         spreadsheet.layout(true, true);
@@ -911,6 +934,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 selectedColumns.add(attr);
             }
             if (!controller.isRecordMode() && !selectedColumns.isEmpty()) {
+                // Row mode
                 manager.insertBefore(IResultSetController.MENU_GROUP_ADDITIONS, new Separator());
                 {
                     // Pin/unpin
@@ -977,6 +1001,31 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                                 }
                                 refreshData(true, false, true);
                             }
+                        }
+                    });
+                }
+            }
+        }
+
+        if (controller.isRecordMode() && row != null) {
+            // Record mode
+            List<Integer> selectedRowIndexes = new ArrayList<>();
+            for (Object sRow : spreadsheet.getColumnSelection()) {
+                if (sRow instanceof ResultSetRow) {
+                    selectedRowIndexes.add(((ResultSetRow) sRow).getVisualNumber());
+                }
+            }
+
+            if (!selectedRowIndexes.isEmpty() && selectedRowIndexes.size() < controller.getSelectedRecords().length) {
+                List<Integer> curRowIndexes = Arrays.stream(controller.getSelectedRecords())
+                    .boxed().collect(Collectors.toList());
+                curRowIndexes.removeAll(selectedRowIndexes);
+                if (!curRowIndexes.isEmpty()) {
+                    manager.insertAfter(IResultSetController.MENU_GROUP_ADDITIONS, new Action("Hide row(s)") {
+                        @Override
+                        public void run() {
+                            controller.setSelectedRecords(curRowIndexes.stream().mapToInt(i->i).toArray());
+                            refreshData(true, false, true);
                         }
                     });
                 }
@@ -1523,6 +1572,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
             return ssSelection.iterator().next();
         }
 
+        @NotNull
         @Override
         public Iterator<GridPos> iterator()
         {
@@ -1542,7 +1592,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         }
 
         @Override
-        public List toList()
+        public List<GridPos> toList()
         {
             return new ArrayList<>(spreadsheet.getSelection());
         }
@@ -1588,16 +1638,18 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         @Override
         public List<ResultSetRow> getSelectedRows()
         {
-            if (controller.isRecordMode()) {
-                ResultSetRow currentRow = controller.getCurrentRow();
-                if (currentRow == null) {
-                    return Collections.emptyList();
-                }
-                return Collections.singletonList(currentRow);
-            } else {
+            {
                 List<ResultSetRow> rows = new ArrayList<>();
-                for (Integer row : spreadsheet.getRowSelection()) {
-                    rows.add(controller.getModel().getRow(row));
+                if (controller.isRecordMode()) {
+                    for (Object col : spreadsheet.getColumnSelection()) {
+                        if (col instanceof ResultSetRow) {
+                            rows.add((ResultSetRow) col);
+                        }
+                    }
+                } else {
+                    for (Integer row : spreadsheet.getRowSelection()) {
+                        rows.add(controller.getModel().getRow(row));
+                    }
                 }
                 rows.sort(Comparator.comparingInt(ResultSetRow::getVisualNumber));
                 return rows;
@@ -1646,8 +1698,12 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 if (!recordMode) {
                     return model.getVisibleAttributes().toArray();
                 } else {
-                    Object curRow = controller.getCurrentRow();
-                    return curRow == null ? new Object[0] : new Object[] {curRow};
+                    int[] selectedRecords = controller.getSelectedRecords();
+                    Object[] rows = new Object[selectedRecords.length];
+                    for (int i = 0; i < selectedRecords.length; i++) {
+                        rows[i] = controller.getModel().getRow(selectedRecords[i]);
+                    }
+                    return rows;
                 }
             } else {
                 // rows
@@ -1961,7 +2017,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
         @Nullable
         @Override
         public Color getCellBackground(Object colElement, Object rowElement, boolean selected) {
-            return getCellBackground(colElement, rowElement, selected, false);
+            return getCellBackground(colElement, rowElement, selected, getController().isRecordMode());
         }
 
         private Color getCellBackground(Object colElement, Object rowElement, boolean cellSelected, boolean ignoreRowSelection) {
@@ -2195,10 +2251,11 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                     return attributeBinding.getLabel();
                 }
             } else {
+                String rowNumber = String.valueOf(((ResultSetRow) element).getVisualNumber() + 1);
                 if (!controller.isRecordMode()) {
-                    return String.valueOf(((ResultSetRow)element).getVisualNumber() + 1);
+                    return rowNumber;
                 } else {
-                    return ResultSetMessages.controls_resultset_viewer_value;
+                    return ResultSetMessages.controls_resultset_viewer_status_row + " #" + rowNumber;
                 }
             }
         }
