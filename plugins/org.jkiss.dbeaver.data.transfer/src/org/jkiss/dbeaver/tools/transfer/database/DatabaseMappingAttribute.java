@@ -148,7 +148,7 @@ public class DatabaseMappingAttribute implements DatabaseMappingObject {
                 mappingType = DatabaseMappingType.unspecified;
                 if (parent.getTarget() instanceof DBSEntity) {
                     if (CommonUtils.isEmpty(targetName)) {
-                        targetName = source.getName();
+                        targetName = getSourceLabelOrName(source);
                     }
                     DBSEntity targetEntity = (DBSEntity) parent.getTarget();
                     List<? extends DBSEntityAttribute> targetAttributes = targetEntity.getAttributes(monitor);
@@ -217,10 +217,17 @@ public class DatabaseMappingAttribute implements DatabaseMappingObject {
             if (container != null) {
                 targetName = DBObjectNameCaseTransformer.transformName(container.getDataSource(), targetName);
             }
+        } else if (mappingType == DatabaseMappingType.unspecified && source != null && targetName != null) {
+            String sourceLabelOrName = getSourceLabelOrName(source);
+            if (sourceLabelOrName != null && sourceLabelOrName.equalsIgnoreCase(targetName) && !sourceLabelOrName.equals(targetName)) {
+                // Here we change the target name if we switched from target container with identifier case X to container with identifier case Y
+                // See https://github.com/dbeaver/dbeaver/issues/13236
+                targetName = sourceLabelOrName;
+            }
         }
     }
 
-    private String getSourceLabelOrName(DBSAttributeBase source) {
+    String getSourceLabelOrName(DBSAttributeBase source) {
         String name = null;
         if (source instanceof DBDAttributeBinding) {
             name = ((DBDAttributeBinding) source).getLabel();
