@@ -22,6 +22,7 @@ import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.jface.action.IContributionManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.swt.widgets.Composite;
+import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
@@ -32,6 +33,7 @@ import org.jkiss.dbeaver.erd.ui.internal.ERDUIActivator;
 import org.jkiss.dbeaver.erd.ui.model.DiagramLoader;
 import org.jkiss.dbeaver.erd.ui.model.EntityDiagram;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
+import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.load.DatabaseLoadService;
@@ -184,6 +186,12 @@ public class ERDEditorEmbedded extends ERDEditorPart implements IDatabaseEditor,
         diagramLoadingJob.schedule();
     }
 
+    @NotNull
+    @Override
+    public DBPProject getDiagramProject() {
+        return getEditorInput().getNavigatorNode().getOwnerProject();
+    }
+
     @Override
     public DBCExecutionContext getExecutionContext()
     {
@@ -193,11 +201,14 @@ public class ERDEditorEmbedded extends ERDEditorPart implements IDatabaseEditor,
     private EntityDiagram loadFromDatabase(DBRProgressMonitor monitor)
         throws DBException
     {
+        monitor.beginTask("Load database entities", 1);
+
         DBSObject dbObject = getRootObject();
         if (dbObject == null) {
             log.error("Database object must be entity container to render ERD diagram");
             return null;
         }
+        EntityDiagram oldDiagram = getDiagram();
         EntityDiagram diagram;
         if (!dbObject.isPersisted()) {
             diagram = new EntityDiagram(dbObject, "New Object", getContentProvider(), getDecorator());
@@ -236,6 +247,8 @@ public class ERDEditorEmbedded extends ERDEditorPart implements IDatabaseEditor,
             diagram.setLayoutManualAllowed(true);
             diagram.setNeedsAutoLayout(!hasPersistedState);
         }
+
+        monitor.done();
 
         return diagram;
     }
