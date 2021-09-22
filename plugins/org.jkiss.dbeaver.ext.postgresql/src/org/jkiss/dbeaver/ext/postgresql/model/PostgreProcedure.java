@@ -131,12 +131,16 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
     }
 
     private void loadInfo(DBRProgressMonitor monitor, ResultSet dbResult) {
-        this.oid = JDBCUtils.safeGetLong(dbResult, "oid");
+        PostgreDataSource dataSource = getDataSource();
+
+        this.oid = JDBCUtils.safeGetLong(dbResult, "poid");
         setName(JDBCUtils.safeGetString(dbResult, "proname"));
         this.ownerId = JDBCUtils.safeGetLong(dbResult, "proowner");
         this.languageId = JDBCUtils.safeGetLong(dbResult, "prolang");
-        this.execCost = JDBCUtils.safeGetFloat(dbResult, "procost");
-        this.estRows = JDBCUtils.safeGetFloat(dbResult, "prorows");
+        if (dataSource.isServerVersionAtLeast(8, 3)) {
+            this.execCost = JDBCUtils.safeGetFloat(dbResult, "procost");
+            this.estRows = JDBCUtils.safeGetFloat(dbResult, "prorows");
+        }
 
         Long[] allArgTypes = JDBCUtils.safeGetArray(dbResult, "proallargtypes");
         String[] argNames = JDBCUtils.safeGetArray(dbResult, "proargnames");
@@ -224,17 +228,23 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
 
         this.overloadedName = makeOverloadedName(getSchema(), getName(), params, false, false);
 
-        {
+        if (dataSource.isServerVersionAtLeast(8, 4)) {
             final long varTypeId = JDBCUtils.safeGetLong(dbResult, "provariadic");
             if (varTypeId != 0) {
                 varArrayType = container.getDatabase().getDataType(monitor, varTypeId);
             }
         }
-        this.procTransform = JDBCUtils.safeGetString(dbResult, "protransform");
+        if (dataSource.isServerVersionAtLeast(9, 2)) {
+            this.procTransform = JDBCUtils.safeGetString(dbResult, "protransform");
+        }
         this.isAggregate = JDBCUtils.safeGetBoolean(dbResult, "proisagg");
-        this.isWindow = JDBCUtils.safeGetBoolean(dbResult, "proiswindow");
+        if (dataSource.isServerVersionAtLeast(8, 4)) {
+            this.isWindow = JDBCUtils.safeGetBoolean(dbResult, "proiswindow");
+        }
         this.isSecurityDefiner = JDBCUtils.safeGetBoolean(dbResult, "prosecdef");
-        this.leakproof = JDBCUtils.safeGetBoolean(dbResult, "proleakproof");
+        if (dataSource.isServerVersionAtLeast(9, 2)) {
+            this.leakproof = JDBCUtils.safeGetBoolean(dbResult, "proleakproof");
+        }
         this.isStrict = JDBCUtils.safeGetBoolean(dbResult, "proisstrict");
         this.returnsSet = JDBCUtils.safeGetBoolean(dbResult, "proretset");
         try {
@@ -254,9 +264,11 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
 
         this.acl = JDBCUtils.safeGetObject(dbResult, "proacl");
 
-        this.config = JDBCUtils.safeGetArray(dbResult, "proconfig");
+        if (dataSource.isServerVersionAtLeast(8, 3)) {
+            this.config = JDBCUtils.safeGetArray(dbResult, "proconfig");
+        }
 
-        if (getDataSource().getServerType().supportsStoredProcedures()) {
+        if (dataSource.getServerType().supportsStoredProcedures()) {
             String proKind = JDBCUtils.safeGetString(dbResult, "prokind");
             kind = CommonUtils.valueOf(PostgreProcedureKind.class, proKind, PostgreProcedureKind.f);
         } else {
@@ -456,6 +468,9 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
         if (language != null) {
             decl.append("\tLANGUAGE ").append(language).append(lineSeparator);
         }
+        if (isSecurityDefiner()) {
+            decl.append("\tSECURITY DEFINER").append(lineSeparator);
+        }
         if (isWindow()) {
             decl.append("\tWINDOW").append(lineSeparator);
         }
@@ -595,7 +610,8 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
             boolean hasParam = false;
             for (PostgreProcedureParameter param : params) {
                 if (param.getParameterKind() != DBSProcedureParameterKind.IN &&
-                    param.getParameterKind() != DBSProcedureParameterKind.INOUT)
+                    param.getParameterKind() != DBSProcedureParameterKind.INOUT &&
+                    param.getParameterKind() != ArgumentMode.v.getParameterKind())
                 {
                     continue;
                 }
