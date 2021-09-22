@@ -67,6 +67,8 @@ import org.jkiss.dbeaver.runtime.DummyRunnableContext;
 import org.jkiss.dbeaver.runtime.RunnableContextDelegate;
 import org.jkiss.dbeaver.ui.controls.CustomSashForm;
 import org.jkiss.dbeaver.ui.dialogs.EditTextDialog;
+import org.jkiss.dbeaver.ui.dialogs.MessageBoxBuilder;
+import org.jkiss.dbeaver.ui.dialogs.Reply;
 import org.jkiss.dbeaver.ui.internal.UIActivator;
 import org.jkiss.dbeaver.ui.internal.UIMessages;
 import org.jkiss.dbeaver.utils.GeneralUtils;
@@ -78,9 +80,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.text.DecimalFormatSymbols;
 import java.text.MessageFormat;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.SortedMap;
+import java.util.*;
 
 /**
  * UI Utils
@@ -429,41 +429,62 @@ public class UIUtils {
         }
     }
 
-    public static void showMessageBox(final Shell shell, final String title, final String info, final int messageType)
-    {
-        Runnable runnable = () -> {
-            Shell activeShell = shell != null ? shell : getActiveWorkbenchShell();
-            MessageBox messageBox = new MessageBox(activeShell, messageType | SWT.OK);
-            messageBox.setMessage(info);
-            messageBox.setText(title);
-            messageBox.open();
-        };
-        syncExec(runnable);
+    public static void showMessageBox(final Shell shell, final String title, final String info, final int messageType) {
+        DBPImage icon = null;
+        if (messageType == SWT.ICON_ERROR) {
+            icon = DBIcon.STATUS_ERROR;
+        } else if (messageType == SWT.ICON_WARNING) {
+            icon = DBIcon.STATUS_WARNING;
+        } else if (messageType == SWT.ICON_QUESTION) {
+            icon = DBIcon.STATUS_QUESTION;
+        } else if (messageType == SWT.ICON_INFORMATION) {
+            icon = DBIcon.STATUS_INFO;
+        }
+
+        Runnable messageBoxRunnable;
+        if (icon != null)  {
+            final DBPImage finalIcon = icon;
+            messageBoxRunnable = () -> MessageBoxBuilder.builder(shell != null ? shell : getActiveWorkbenchShell())
+                .setTitle(title)
+                .setMessage(info)
+                .setReplies(Reply.OK)
+                .setDefaultReply(Reply.OK)
+                .setPrimaryImage(finalIcon)
+                .showMessageBox();
+        } else {
+            //show legacy message box
+            messageBoxRunnable = () -> {
+                Shell activeShell = shell != null ? shell : getActiveWorkbenchShell();
+                MessageBox messageBox = new MessageBox(activeShell, messageType | SWT.OK);
+                messageBox.setMessage(info);
+                messageBox.setText(title);
+                messageBox.open();
+            };
+        }
+
+        syncExec(messageBoxRunnable);
     }
 
-    public static boolean confirmAction(final String title, final String question)
-    {
+    public static boolean confirmAction(final String title, final String question) {
         return confirmAction(null, title, question);
     }
 
-    public static boolean confirmAction(final Shell shell, final String title, final String question)
-    {
-        return confirmAction(shell, title, question, SWT.ICON_QUESTION);
+    public static boolean confirmAction(@Nullable Shell shell, final String title, final String question) {
+        return confirmAction(shell, title, question, DBIcon.STATUS_QUESTION);
     }
 
-    public static boolean confirmAction(final Shell shell, final String title, final String question, int iconType)
-    {
-        return new UIConfirmation() {
-            @Override
-            public Boolean runTask() {
-                Shell activeShell = shell != null ? shell : getActiveWorkbenchShell();
-                MessageBox messageBox = new MessageBox(activeShell, iconType | SWT.YES | SWT.NO);
-                messageBox.setMessage(question);
-                messageBox.setText(title);
-                int response = messageBox.open();
-                return (response == SWT.YES);
-            }
-        }.confirm();
+    public static boolean confirmAction(@Nullable Shell shell, String title, String message, @NotNull DBPImage image) {
+        final Reply[] reply = {null};
+        syncExec(() -> reply[0] = MessageBoxBuilder.builder(shell != null ? shell : getActiveWorkbenchShell())
+            .setTitle(title)
+            .setMessage(message)
+            .setReplies(Reply.YES, Reply.NO)
+            .setDefaultReply(Reply.NO)
+            .setPrimaryImage(image)
+            .showMessageBox()
+        );
+
+        return reply[0] == Reply.YES;
     }
 
     public static int getFontHeight(Control control) {
@@ -1422,12 +1443,6 @@ public class UIUtils {
         }
     }
 
-    public static boolean launchProgram(String path)
-    {
-        return Program.launch(path);
-    }
-
-
     public static void createTableContextMenu(@NotNull final Table table, @Nullable DBRCreator<Boolean, IContributionManager> menuCreator) {
         MenuManager menuMgr = new MenuManager();
         menuMgr.addMenuListener(manager -> {
@@ -1633,6 +1648,7 @@ public class UIUtils {
         return null;
     }
 
+    @Nullable
     public static Shell getActiveWorkbenchShell() {
         IWorkbench workbench = PlatformUI.getWorkbench();
         IWorkbenchWindow window = workbench.getActiveWorkbenchWindow();
