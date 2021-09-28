@@ -50,5 +50,10 @@ public class <@{serviceImpl.simpleName}@> implements <@{service.simpleName}@> {
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{component.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
+	
+	@Override
+	public Integer deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s){
+		return <@{component.paramName}@>.deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>s);
+	}
 <@endIf@>
 }

@@ -17,21 +17,21 @@ public interface <@{dao.simpleName}@> {
 	 * @param <@{entity.paramName}@>
 	 * @return
 	 */
-	public Integer insert(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	 Integer insert(<@{entity.simpleName}@> <@{entity.paramName}@>);
 	
 	/**
 	 * 获取列表
-	 * @param selectItem
+	 * @param queryVO
 	 * @return
 	 */
-	public List<<@{entity.simpleName}@>> queryList(Map<String,Object> selectItem);
+	 List<<@{entity.simpleName}@>> queryList(Map<String,Object> queryVO);
 	
 	/**
 	 * 获取分页列表
-	 * @param selectItem
+	 * @param queryVO
 	 * @return
 	 */
-	public List<<@{entity.simpleName}@>> queryListPage(Map<String,Object> selectItem);
+	 List<<@{entity.simpleName}@>> queryListPage(Map<String,Object> queryVO);
 	
 	<@if:"{primaryColumn}!=null"@>
 	/**
@@ -39,22 +39,28 @@ public interface <@{dao.simpleName}@> {
 	 * @param <@{entity.paramName}@>
 	 * @return
 	 */
-	public Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	 Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
 	
 	/**
 	 * 根据<@{primaryColumn.paramName}@>删除
 	 * @param <@{primaryColumn.paramName}@>
 	 * @return
 	 */
-	public Integer deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	 Integer deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
 	
 	/**
 	 * 根据<@{primaryColumn.paramName}@>查找
 	 * @param <@{primaryColumn.paramName}@>
 	 * @return
 	 */
-	public <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	 <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
 
+   /**
+     * 根据id批量删除
+     * @param ids
+     * @return
+     */
+     Integer deleteBatchBy<@{primaryColumn.codeName}@> (List<<@{primaryColumn.javaType}@>> list);
 
 <@endIf@>
 }

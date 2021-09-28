@@ -56,5 +56,10 @@ public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{dao.paramName}@>.findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
+	
+	@Override
+	public Integer deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s){
+		return <@{dao.paramName}@>.deleteBatchBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>s);
+	}
 <@endIf@>
 }
