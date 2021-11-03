@@ -65,7 +65,7 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBNLazyNode, DB
     void registerNode() {
         DBNModel model = getModel();
         if (model != null) {
-            model.addNode(this);
+            model.addNode(this, false);
         }
     }
 
@@ -650,14 +650,15 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBNLazyNode, DB
                 // Check that new object is a replacement of old one
                 for (DBNDatabaseNode oldChild : oldList) {
                     if (oldChild.getMeta() == meta && equalObjects(oldChild.getObject(), object)) {
-                        oldChild.reloadObject(monitor, object);
+                        boolean updated = oldChild.reloadObject(monitor, object);
 
                         if (oldChild.hasChildren(false) && !oldChild.needsInitialization()) {
                             // Refresh children recursive
                             oldChild.reloadChildren(monitor, source, reflect);
                         }
-                        if (reflect) {
-                            getModel().fireNodeUpdate(source, oldChild, DBNEvent.NodeChange.REFRESH);
+                        if (updated && reflect) {
+                            // FIXME: do not update all refreshed items in (it is too expensive)
+                            //getModel().fireNodeUpdate(source, oldChild, DBNEvent.NodeChange.REFRESH);
                         }
 
                         toList.add(oldChild);
@@ -818,7 +819,7 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBNLazyNode, DB
         }
     }
 
-    private static boolean equalObjects(DBSObject object1, DBSObject object2) {
+    protected static boolean equalObjects(DBSObject object1, DBSObject object2) {
         if (object1 == object2) {
             return true;
         }
@@ -864,7 +865,7 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBNLazyNode, DB
         return null;
     }
 
-    protected abstract void reloadObject(DBRProgressMonitor monitor, DBSObject object);
+    protected abstract boolean reloadObject(DBRProgressMonitor monitor, DBSObject object);
 
     public List<Class<?>> getChildrenTypes(DBXTreeNode useMeta) {
         List<DBXTreeNode> childMetas = useMeta == null ? getMeta().getChildren(this) : Collections.singletonList(useMeta);
