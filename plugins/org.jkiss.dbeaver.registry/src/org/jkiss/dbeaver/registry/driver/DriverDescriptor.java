@@ -1016,6 +1016,28 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         this.loadDriver(monitor, false);
     }
 
+    @Override
+    public DBPDriver createOriginalCopy() {
+        DriverDescriptor driverCopy = getProviderDescriptor().createDriver(this);
+        for (DBPDriverLibrary lib : this.origFiles) {
+            if (lib instanceof DriverLibraryLocal && !lib.isCustom()) {
+                DBPDriverLibrary libCopy = ((DriverLibraryLocal) lib).copyLibrary(this);
+                libCopy.setDisabled(false);
+                driverCopy.libraries.add(libCopy);
+            }
+        }
+
+        driverCopy.setName(this.getOrigName());
+        driverCopy.setDescription(this.getOrigDescription());
+        driverCopy.setDriverClassName(this.getOrigClassName());
+        driverCopy.setSampleURL(this.getOrigSampleURL());
+        driverCopy.setDriverDefaultPort(this.getDefaultPort());
+        driverCopy.setDriverDefaultDatabase(this.getDefaultDatabase());
+        driverCopy.setDriverDefaultUser(this.getDefaultUser());
+
+        return driverCopy;
+    }
+
     private void loadDriver(DBRProgressMonitor monitor, boolean forceReload)
             throws DBException {
         if (isLoaded && !forceReload) {

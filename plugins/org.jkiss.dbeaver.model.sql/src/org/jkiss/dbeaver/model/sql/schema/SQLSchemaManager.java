@@ -19,6 +19,7 @@ package org.jkiss.dbeaver.model.sql.schema;
 
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
+import org.jkiss.dbeaver.model.impl.jdbc.exec.JDBCTransaction;
 import org.jkiss.dbeaver.model.impl.preferences.SimplePreferenceStore;
 import org.jkiss.dbeaver.model.impl.sql.BasicSQLDialect;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
@@ -81,31 +82,29 @@ public final class SQLSchemaManager {
     public void updateSchema(DBRProgressMonitor monitor) throws DBException {
         try {
             Connection dbCon = connectionProvider.getDatabaseConnection(monitor);
-            boolean switchToAC = false;
-            try {
-                if (dbCon.getAutoCommit()) {
-                    dbCon.setAutoCommit(false);
-                    switchToAC = true;
-                }
+            try (JDBCTransaction txn = new JDBCTransaction(dbCon)) {
                 int currentSchemaVersion = versionManager.getCurrentSchemaVersion(monitor, dbCon, targetDatabaseName);
+                // Do rollback in case some error happened during version check (makes sense for PG)
+                txn.rollback();
                 if (currentSchemaVersion < 0) {
                     createNewSchema(monitor, dbCon);
+
+                    // Update schema version
+                    versionManager.updateCurrentSchemaVersion(monitor, dbCon, targetDatabaseName);
                 } else if (schemaVersionObsolete > 0 && currentSchemaVersion < schemaVersionObsolete) {
                     dropSchema(monitor, dbCon);
                     createNewSchema(monitor, dbCon);
+
+                    // Update schema version
+                    versionManager.updateCurrentSchemaVersion(monitor, dbCon, targetDatabaseName);
                 } else if (schemaVersionActual > currentSchemaVersion) {
                     upgradeSchemaVersion(monitor, dbCon, currentSchemaVersion);
                 }
 
-                dbCon.commit();
-            } catch (IOException e) {
-                throw new DBException("IO error while updating " + schemaId + " schema version", e);
-            }
-            if (switchToAC) {
-                dbCon.setAutoCommit(true);
+                txn.commit();
             }
         }
-        catch (SQLException e) {
+        catch (IOException | SQLException e) {
             throw new DBException("Error updating " + schemaId + " schema version", e);
         }
     }
@@ -117,15 +116,16 @@ public final class SQLSchemaManager {
             if (ddlStream != null) {
                 log.debug("Update schema " + schemaId + " version from " + curVer + " to " + updateToVer);
                 try {
-                    executeScript(monitor, connection, ddlStream);
+                    executeScript(monitor, connection, ddlStream, true);
                 } catch (Exception e) {
                     log.warn("Error updating " + schemaId + " schema version from " + curVer + " to " + updateToVer, e);
+                    throw e;
                 } finally {
                     ContentUtils.close(ddlStream);
                 }
                 // Update schema version
                 versionManager.updateCurrentSchemaVersion(
-                    monitor, connection, targetDatabaseName, updateToVer);
+                    monitor, connection, targetDatabaseName);
             }
         }
     }
@@ -133,16 +133,17 @@ public final class SQLSchemaManager {
     private void createNewSchema(DBRProgressMonitor monitor, Connection connection) throws IOException, DBException, SQLException {
         log.debug("Create new schema " + schemaId);
         try (Reader ddlStream = scriptSource.openSchemaCreateScript(monitor)) {
-            executeScript(monitor, connection, ddlStream);
+            executeScript(monitor, connection, ddlStream, false);
         }
+        versionManager.fillInitialSchemaData(monitor, connection);
     }
 
     private void dropSchema(DBRProgressMonitor monitor, Connection connection) throws DBException, SQLException, IOException {
         log.debug("Drop schema " + schemaId);
-        executeScript(monitor, connection, new StringReader("DROP ALL OBJECTS"));
+        executeScript(monitor, connection, new StringReader("DROP ALL OBJECTS"), true);
     }
 
-    private void executeScript(DBRProgressMonitor monitor, Connection connection, Reader ddlStream) throws SQLException, IOException, DBException {
+    private void executeScript(DBRProgressMonitor monitor, Connection connection, Reader ddlStream, boolean logQueries) throws SQLException, IOException, DBException {
         // Read DDL script
         String ddlText = IOUtils.readToString(ddlStream);
 
@@ -163,8 +164,12 @@ public final class SQLSchemaManager {
         String[] ddl = ddlText.split(";");
         for (String line : ddl) {
             line = line.trim();
+
             if (line.isEmpty()) {
                 continue;
+            }
+            if (logQueries) {
+                log.debug("Process [" + line + "]");
             }
             try (Statement dbStat = connection.createStatement()) {
                 dbStat.execute(line);
