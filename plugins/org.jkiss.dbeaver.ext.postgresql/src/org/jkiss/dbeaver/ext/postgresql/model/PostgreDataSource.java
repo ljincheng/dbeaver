@@ -65,7 +65,7 @@ import java.util.regex.Pattern;
 /**
  * PostgreDataSource
  */
-public class PostgreDataSource extends JDBCDataSource implements DBPDataTypeMapper, DBSInstanceContainer, IAdaptable, DBPObjectStatisticsCollector {
+public class PostgreDataSource extends JDBCDataSource implements DBSInstanceContainer, IAdaptable, DBPObjectStatisticsCollector {
 
     private static final Log log = Log.getLog(PostgreDataSource.class);
     private static final PostgrePrivilegeType[] SUPPORTED_PRIVILEGE_TYPES = new PostgrePrivilegeType[]{
@@ -481,8 +481,14 @@ public class PostgreDataSource extends JDBCDataSource implements DBPDataTypeMapp
             return adapter.cast(new PostgreSessionManager(this));
         } else if (adapter == DBCQueryPlanner.class) {
             return adapter.cast(new PostgreQueryPlaner(this));
-        } else if (getServerType().supportsAlterUserChangePassword() && adapter == DBAUserChangePassword.class) {
-            return adapter.cast(new PostgresUserChangePassword(this));
+        } else if (adapter == DBSDataBulkLoader.class) {
+            if (getDataSource().getServerType().supportsCopyFromStdIn()) {
+                return adapter.cast(new PostgreCopyLoader(this));
+            }
+        } else if (adapter == DBAUserChangePassword.class) {
+            if (getServerType().supportsAlterUserChangePassword()) {
+                return adapter.cast(new PostgresUserChangePassword(this));
+            }
         }
         return super.getAdapter(adapter);
     }
@@ -513,57 +519,6 @@ public class PostgreDataSource extends JDBCDataSource implements DBPDataTypeMapp
     @Override
     public String getDefaultDataTypeName(@NotNull DBPDataKind dataKind) {
         return getDefaultInstance().getDefaultDataTypeName(dataKind);
-    }
-
-    @Override
-    public String mapExternalDataType(@NotNull DBPDataSource externalDataSource, @NotNull DBSTypedObject typedObject) {
-        String externalTypeName = typedObject.getTypeName().toLowerCase(Locale.ENGLISH);
-        String localDataType = null, dataTypeModifies = null;
-
-        switch (externalTypeName) {
-            case "xml":
-            case "xmltype":
-            case "sys.xmltype":
-                localDataType = "xml";
-                break;
-            case "varchar2":
-            case "nchar":
-            case "nvarchar":
-                localDataType = "varchar";
-                dataTypeModifies = String.valueOf(typedObject.getMaxLength());
-                break;
-            case "json":
-            case "jsonb":
-                localDataType = "jsonb";
-                break;
-            case "geometry":
-            case "sdo_geometry":
-            case "mdsys.sdo_geometry":
-                localDataType = "geometry";
-                break;
-            case "number":
-                localDataType = "numeric";
-                if (typedObject.getPrecision() != null) {
-                    dataTypeModifies = typedObject.getPrecision().toString();
-                    if (typedObject.getScale() != null) {
-                        dataTypeModifies += "," + typedObject.getScale();
-                    }
-                }
-                break;
-        }
-        if (localDataType == null) {
-            return null;
-        }
-        PostgreDataType dataType = getLocalDataType(localDataType);
-        if (dataType == null) {
-            return null;
-
-        }
-        String targetTypeName = dataType.getFullyQualifiedName(DBPEvaluationContext.DDL);
-        if (dataTypeModifies != null) {
-            targetTypeName += "(" + dataTypeModifies + ")";
-        }
-        return targetTypeName;
     }
 
     @NotNull

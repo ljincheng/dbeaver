@@ -130,7 +130,7 @@ public class PostgreServerCockroachDB extends PostgreServerExtensionBase {
 
     @Override
     public boolean supportsResultSetLimits() {
-        return false;
+        return true;
     }
 
     @Override
@@ -249,6 +249,11 @@ public class PostgreServerCockroachDB extends PostgreServerExtensionBase {
 
     @Override
     public boolean supportsAlterUserChangePassword() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsCopyFromStdIn() {
         return true;
     }
 

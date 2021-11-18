@@ -30,6 +30,9 @@ import org.jkiss.dbeaver.model.exec.*;
 import org.jkiss.dbeaver.model.impl.AbstractExecutionSource;
 import org.jkiss.dbeaver.model.impl.struct.AbstractAttribute;
 import org.jkiss.dbeaver.model.meta.DBSerializable;
+import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
+import org.jkiss.dbeaver.model.navigator.DBNEvent;
+import org.jkiss.dbeaver.model.navigator.DBNUtils;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.model.sql.registry.SQLInsertReplaceMethodDescriptor;
@@ -65,6 +68,7 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
     private DBCExecutionContext targetContext;
     private DBCSession targetSession;
     private DBSDataManipulator.ExecuteBatch executeBatch;
+    private DBSDataBulkLoader.BulkLoadManager bulkLoadManager;
     private long rowsExported = 0;
     private boolean ignoreErrors = false;
 
@@ -254,15 +258,28 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         options.put(DBSDataManipulator.OPTION_SKIP_BIND_VALUES, settings.isSkipBindValues());
 
         if (!isPreview) {
-            if (targetObject instanceof DBSDataManipulatorExt) {
-                ((DBSDataManipulatorExt) targetObject).beforeDataChange(targetSession, DBSManipulationType.INSERT, attributes, executionSource);
+            if (settings.isUseBulkLoad()) {
+                DBSDataBulkLoader bulkLoader = DBUtils.getAdapter(DBSDataBulkLoader.class, targetContext.getDataSource());
+                if (targetObject != null && bulkLoader != null) {
+                    try {
+                        bulkLoadManager = bulkLoader.createBulkLoad(
+                            targetSession, targetObject, attributes, executionSource, settings.getCommitAfterRows(), options);
+                    } catch (Exception e) {
+                        throw new DBCException("Error creating bulk loader", e);
+                    }
+                }
             }
-            executeBatch = targetObject.insertData(
-                targetSession,
-                attributes,
-                null,
-                executionSource,
-                options);
+            if (bulkLoadManager == null) {
+                if (targetObject instanceof DBSDataManipulatorExt) {
+                    ((DBSDataManipulatorExt) targetObject).beforeDataChange(targetSession, DBSManipulationType.INSERT, attributes, executionSource);
+                }
+                executeBatch = targetObject.insertData(
+                    targetSession,
+                    attributes,
+                    null,
+                    executionSource,
+                    options);
+            }
         } else {
             previewRows = new ArrayList<>();
             executeBatch = new PreviewBatch();
@@ -330,8 +347,11 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
             }
         }
 
-
-        executeBatch.add(rowValues);
+        if (bulkLoadManager != null) {
+            bulkLoadManager.addRow(targetSession, rowValues);
+        } else {
+            executeBatch.add(rowValues);
+        }
 
         rowsExported++;
         // No need. monitor is incremented in data reader
@@ -345,67 +365,82 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
             return;
         }
         boolean needCommit = force || ((rowsExported % settings.getCommitAfterRows()) == 0);
-        Map<String, Object> options = new HashMap<>();
-        boolean disableUsingBatches = settings.isDisableUsingBatches();
-        boolean onDuplicateKeyCaseOn = settings.getOnDuplicateKeyInsertMethodId() != null && !settings.getOnDuplicateKeyInsertMethodId().equals(DBSDataManipulator.INSERT_NONE_METHOD);
-        options.put(DBSDataManipulator.OPTION_DISABLE_BATCHES, disableUsingBatches);
-        options.put(DBSDataManipulator.OPTION_MULTI_INSERT_BATCH_SIZE, settings.getMultiRowInsertBatch());
-        options.put(DBSDataManipulator.OPTION_SKIP_BIND_VALUES, settings.isSkipBindValues());
-        if (onDuplicateKeyCaseOn) {
-            String insertMethodId = settings.getOnDuplicateKeyInsertMethodId();
-            SQLInsertReplaceMethodDescriptor insertReplaceMethod = SQLInsertReplaceMethodRegistry.getInstance().getInsertMethod(insertMethodId);
-            if (insertReplaceMethod != null) {
-                try {
-                    DBDInsertReplaceMethod insertMethod = insertReplaceMethod.createInsertMethod();
-                    options.put(DBSDataManipulator.OPTION_INSERT_REPLACE_METHOD, insertMethod);
-                } catch (DBException e) {
-                    log.debug("Can't get insert replace method", e);
+        if (bulkLoadManager != null) {
+            if (needCommit) {
+                bulkLoadManager.flushRows(targetSession);
+            }
+            return;
+        } else {
+            boolean disableUsingBatches = settings.isDisableUsingBatches();
+            if ((needCommit || disableUsingBatches) && executeBatch != null) {
+                if (DBFetchProgress.monitorFetchProgress(rowsExported)) {
+                    targetSession.getProgressMonitor().subTask("Insert rows (" + rowsExported + ")");
                 }
+
+                Map<String, Object> options = new HashMap<>();
+                options.put(DBSDataManipulator.OPTION_DISABLE_BATCHES, disableUsingBatches);
+                options.put(DBSDataManipulator.OPTION_MULTI_INSERT_BATCH_SIZE, settings.getMultiRowInsertBatch());
+                options.put(DBSDataManipulator.OPTION_SKIP_BIND_VALUES, settings.isSkipBindValues());
+
+                boolean onDuplicateKeyCaseOn = settings.getOnDuplicateKeyInsertMethodId() != null &&
+                    !settings.getOnDuplicateKeyInsertMethodId().equals(DBSDataManipulator.INSERT_NONE_METHOD);
+                if (onDuplicateKeyCaseOn) {
+                    String insertMethodId = settings.getOnDuplicateKeyInsertMethodId();
+                    if (!CommonUtils.isEmpty(insertMethodId)) {
+                        SQLInsertReplaceMethodDescriptor insertReplaceMethod = SQLInsertReplaceMethodRegistry.getInstance().getInsertMethod(insertMethodId);
+                        if (insertReplaceMethod != null) {
+                            try {
+                                DBDInsertReplaceMethod insertMethod = insertReplaceMethod.createInsertMethod();
+                                options.put(DBSDataManipulator.OPTION_INSERT_REPLACE_METHOD, insertMethod);
+                            } catch (DBException e) {
+                                log.debug("Can't get insert replace method", e);
+                            }
+                        }
+                    }
+                }
+
+                boolean retryInsert;
+                do {
+                    retryInsert = false;
+                    try {
+                        DBExecUtils.tryExecuteRecover(targetSession, targetSession.getDataSource(), param -> {
+                            try {
+                                executeBatch.execute(targetSession, options);
+                            } catch (Throwable e) {
+                                throw new InvocationTargetException(e);
+                            }
+                        });
+                    } catch (Throwable e) {
+                        log.error("Error inserting row", e);
+                        if (ignoreErrors) {
+                            break;
+                        }
+                        String message;
+                        if (disableUsingBatches) {
+                            message = DTMessages.database_transfer_consumer_task_error_occurred_during_data_load;
+                        } else {
+                            message = DTMessages.database_transfer_consumer_task_error_occurred_during_batch_insert;
+                        }
+                        DBPPlatformUI.UserResponse response = DBWorkbench.getPlatformUI().showErrorStopRetryIgnore(message, e, true);
+                        switch (response) {
+                            case STOP:
+                                throw new DBCException("Can't insert row", e);
+                            case RETRY:
+                                retryInsert = true;
+                                break;
+                            case IGNORE:
+                                retryInsert = false;
+                                break;
+                            case IGNORE_ALL:
+                                ignoreErrors = true;
+                                retryInsert = false;
+                                break;
+                        }
+                    }
+                } while (retryInsert);
             }
         }
-        if ((needCommit || disableUsingBatches) && executeBatch != null) {
-            targetSession.getProgressMonitor().subTask("Insert rows (" + rowsExported + ")");
-            boolean retryInsert;
-            do {
-                retryInsert = false;
-                try {
-                    DBExecUtils.tryExecuteRecover(targetSession, targetSession.getDataSource(), param -> {
-                        try {
-                            executeBatch.execute(targetSession, options);
-                        } catch (Throwable e) {
-                            throw new InvocationTargetException(e);
-                        }
-                    });
-                } catch (Throwable e) {
-                    log.error("Error inserting row", e);
-                    if (ignoreErrors) {
-                        break;
-                    }
-                    String message;
-                    if (disableUsingBatches) {
-                        message = DTMessages.database_transfer_consumer_task_error_occurred_during_data_load;
-                    } else {
-                        message = DTMessages.database_transfer_consumer_task_error_occurred_during_batch_insert;
-                    }
-                    DBPPlatformUI.UserResponse response = DBWorkbench.getPlatformUI().showErrorStopRetryIgnore(message, e, true);
-                    switch (response) {
-                        case STOP:
-                            throw new DBCException("Can't insert row", e);
-                        case RETRY:
-                            retryInsert = true;
-                            break;
-                        case IGNORE:
-                            retryInsert = false;
-                            break;
-                        case IGNORE_ALL:
-                            ignoreErrors = true;
-                            retryInsert = false;
-                            break;
-                    }
-                }
-            } while (retryInsert);
-        }
-        if (settings.isUseTransactions() && needCommit) {
+        if (settings.isUseTransactions() && needCommit && !targetSession.getProgressMonitor().isCanceled()) {
             DBCTransactionManager txnManager = DBUtils.getTransactionManager(targetSession.getExecutionContext());
             if (txnManager != null && txnManager.isSupportsTransactions() && !txnManager.isAutoCommit()) {
                 targetSession.getProgressMonitor().subTask("Commit changes");
@@ -420,7 +455,9 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
             if (rowsExported > 0) {
                 insertBatch(true);
             }
-            if (executeBatch != null) {
+            if (bulkLoadManager != null) {
+                bulkLoadManager.finishBulkLoad(targetSession);
+            } else if (executeBatch != null) {
                 executeBatch.close();
                 executeBatch = null;
             }
@@ -476,7 +513,7 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         }
     }
 
-    DBSObject checkTargetContainer(DBRProgressMonitor monitor) throws DBException {
+    private DBSObject checkTargetContainer(DBRProgressMonitor monitor) throws DBException {
         DBSDataManipulator targetObject = getTargetObject();
         if (targetObject == null) {
             if (settings.getContainerNode() != null && settings.getContainerNode().getDataSource() == null) {
@@ -514,6 +551,11 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         if (targetContext != null && useIsolatedConnection) {
             targetContext.close();
             targetContext = null;
+        }
+
+        if (bulkLoadManager != null) {
+            bulkLoadManager.close();
+            bulkLoadManager = null;
         }
     }
 
@@ -621,8 +663,19 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         }
 
         if (!last && settings.isOpenTableOnFinish()) {
-            if (getTargetObject() != null) {
-                DBWorkbench.getPlatformUI().openEntityEditor(getTargetObject());
+            DBSDataManipulator targetObject = getTargetObject();
+            if (targetObject != null) {
+                // Refresh node first (this will refresh table data as well)
+                try {
+                    DBNDatabaseNode objectNode = DBNUtils.getNodeByObject(targetObject);
+                    if (objectNode != null) {
+                        objectNode.refreshNode(monitor, DBNEvent.FORCE_REFRESH);
+                    }
+                } catch (Exception e) {
+                    log.error("Error refreshing object '" + targetObject.getName() + "'", e);
+                }
+
+                DBWorkbench.getPlatformUI().openEntityEditor(targetObject);
             }
         }
     }
@@ -707,6 +760,15 @@ public class DatabaseTransferConsumer implements IDataTransferConsumer<DatabaseC
         }
         DBPDataSourceContainer container = getDataSourceContainer();
         return container != null ? container.getDriver().getIcon() : null;
+    }
+
+    @Override
+    public boolean isConfigurationComplete() {
+        if (localTargetObject != null) {
+            return true;
+        }
+        return containerMapping != null &&
+            (containerMapping.getTarget() != null || !CommonUtils.isEmpty(containerMapping.getTargetName()));
     }
 
     DBPDataSourceContainer getDataSourceContainer() {

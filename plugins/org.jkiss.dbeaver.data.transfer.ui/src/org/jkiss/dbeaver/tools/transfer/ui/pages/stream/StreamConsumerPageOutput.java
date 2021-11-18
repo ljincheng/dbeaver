@@ -30,13 +30,12 @@ import org.jkiss.dbeaver.tools.transfer.internal.DTMessages;
 import org.jkiss.dbeaver.tools.transfer.stream.StreamConsumerSettings;
 import org.jkiss.dbeaver.tools.transfer.stream.StreamTransferConsumer;
 import org.jkiss.dbeaver.tools.transfer.ui.internal.DTUIMessages;
-import org.jkiss.dbeaver.tools.transfer.ui.wizard.DataTransferWizard;
+import org.jkiss.dbeaver.tools.transfer.ui.pages.DataTransferPageNodeSettings;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.contentassist.ContentAssistUtils;
 import org.jkiss.dbeaver.ui.contentassist.SmartTextContentAdapter;
 import org.jkiss.dbeaver.ui.contentassist.StringContentProposalProvider;
 import org.jkiss.dbeaver.ui.controls.VariablesHintLabel;
-import org.jkiss.dbeaver.ui.dialogs.ActiveWizardPage;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
@@ -44,8 +43,9 @@ import org.jkiss.utils.CommonUtils;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class StreamConsumerPageOutput extends ActiveWizardPage<DataTransferWizard> {
+public class StreamConsumerPageOutput extends DataTransferPageNodeSettings {
 
     private Combo encodingCombo;
     private Button encodingBOMCheckbox;
@@ -341,19 +341,9 @@ public class StreamConsumerPageOutput extends ActiveWizardPage<DataTransferWizar
 
     @NotNull
     private String[] getAvailableVariables() {
-        final Set<String> variables = new LinkedHashSet<>(Arrays.asList(
-            StreamTransferConsumer.VARIABLE_DATASOURCE,
-            StreamTransferConsumer.VARIABLE_CATALOG,
-            StreamTransferConsumer.VARIABLE_SCHEMA,
-            StreamTransferConsumer.VARIABLE_TABLE,
-            StreamTransferConsumer.VARIABLE_TIMESTAMP,
-            StreamTransferConsumer.VARIABLE_DATE,
-            StreamTransferConsumer.VARIABLE_INDEX,
-            StreamTransferConsumer.VARIABLE_PROJECT,
-            StreamTransferConsumer.VARIABLE_CONN_TYPE,
-            StreamTransferConsumer.VARIABLE_FILE,
-            StreamTransferConsumer.VARIABLE_SCRIPT_FILE
-        ));
+        final Set<String> variables = Arrays.stream(StreamTransferConsumer.VARIABLES)
+            .map(x -> x[0])
+            .collect(Collectors.toCollection(LinkedHashSet::new));
 
         final List<DataTransferPipe> pipes = getWizard().getSettings().getDataPipes();
         if (pipes.size() == 1) {
@@ -365,5 +355,10 @@ public class StreamConsumerPageOutput extends ActiveWizardPage<DataTransferWizar
         }
 
         return variables.toArray(new String[0]);
+    }
+
+    @Override
+    public boolean isPageApplicable() {
+        return isConsumerOfType(StreamTransferConsumer.class);
     }
 }

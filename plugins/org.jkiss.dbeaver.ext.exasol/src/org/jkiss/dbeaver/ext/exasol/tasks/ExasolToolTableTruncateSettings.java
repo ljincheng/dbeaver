@@ -14,18 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jkiss.dbeaver.ext.exasol.tasks;
 
-package org.jkiss.dbeaver.model;
+import org.jkiss.dbeaver.ext.exasol.model.ExasolTable;
+import org.jkiss.dbeaver.model.sql.task.SQLToolExecuteSettings;
 
-import org.jkiss.code.NotNull;
-import org.jkiss.dbeaver.model.struct.DBSTypedObject;
-
-/**
- * Data type mapper.
- * Finds data type in owner datasource which corresponds to external datasource data type.
- */
-public interface DBPDataTypeMapper {
-
-    String mapExternalDataType(@NotNull DBPDataSource externalDataSource, @NotNull DBSTypedObject typedObject);
-
+class ExasolToolTableTruncateSettings extends SQLToolExecuteSettings<ExasolTable> {
 }
