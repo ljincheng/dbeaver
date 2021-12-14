@@ -22,6 +22,7 @@ import org.jkiss.dbeaver.model.DBPExternalFileManager;
 import org.jkiss.dbeaver.model.connection.DBPDataSourceProviderRegistry;
 import org.jkiss.dbeaver.model.data.DBDRegistry;
 import org.jkiss.dbeaver.model.edit.DBERegistry;
+import org.jkiss.dbeaver.model.fs.DBFRegistry;
 import org.jkiss.dbeaver.model.navigator.DBNModel;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.qm.QMController;
@@ -30,6 +31,7 @@ import org.jkiss.dbeaver.model.runtime.OSDescriptor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * DBPPlatform
@@ -66,6 +68,9 @@ public interface DBPPlatform
     @NotNull
     DBERegistry getEditorsRegistry();
 
+    @NotNull
+    DBFRegistry getFileSystemRegistry();
+
     DBPGlobalEventManager getGlobalEventManager();
 
     @NotNull
@@ -93,7 +98,7 @@ public interface DBPPlatform
     File getConfigurationFile(String fileName);
 
     @NotNull
-    File getCustomDriversHome();
+    Path getCustomDriversHome();
 
     boolean isReadOnly();
 

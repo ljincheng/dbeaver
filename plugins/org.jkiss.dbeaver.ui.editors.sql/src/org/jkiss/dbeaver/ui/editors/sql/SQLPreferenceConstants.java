@@ -60,8 +60,8 @@ public class SQLPreferenceConstants
         }
 
     }
-
     public static final String INSERT_SINGLE_PROPOSALS_AUTO            = "SQLEditor.ContentAssistant.insert.single.proposal";
+    public static final String ENABLE_HIPPIE                           = "SQLEditor.ContentAssistant.activate.hippie";
     public static final String ENABLE_AUTO_ACTIVATION                  = "SQLEditor.ContentAssistant.auto.activation.enable";
     public static final String ENABLE_KEYSTROKE_ACTIVATION             = "SQLEditor.ContentAssistant.auto.keystrokes.activation";
     public static final String AUTO_ACTIVATION_DELAY                   = "SQLEditor.ContentAssistant.auto.activation.delay";
@@ -127,6 +127,16 @@ public class SQLPreferenceConstants
     public static final String SCRIPT_AUTO_FOLDERS                      = "script.auto.folders"; //$NON-NLS-1$
     public static final String SCRIPT_CREATE_CONNECTION_FOLDERS         = "script.auto.connection.folders"; //$NON-NLS-1$
     public static final String SCRIPT_TITLE_PATTERN                     = "script.title.pattern"; //$NON-NLS-1$
+    public static final String SCRIPT_FILE_NAME_PATTERN                 = "script.file.name.pattern";
+
+    public static final String VAR_CONNECTION_NAME = "connectionName";
+    public static final String VAR_FILE_NAME = "fileName";
+    public static final String VAR_FILE_EXT = "fileExt";
+    public static final String VAR_DRIVER_NAME = "driverName";
+    public static final String VAR_ACTIVE_DATABASE = "database";
+    public static final String VAR_ACTIVE_SCHEMA = "schema";
+    public static final String VAR_ACTIVE_PROJECT = "project.name";
+
 
     public static final String SCRIPT_COMMIT_TYPE                       = "script.commit.type"; //$NON-NLS-1$
     public static final String SCRIPT_COMMIT_LINES                      = "script.commit.lines"; //$NON-NLS-1$

@@ -699,11 +699,7 @@ public final class SQLUtils {
             case STRING:
             case ROWID:
                 if (sqlDialect != null) {
-                    if (!sqlDialect.isQuotedString(strValue)) {
-                        return sqlDialect.getQuotedString(strValue);
-                    } else {
-                        return strValue;
-                    }
+                    return sqlDialect.getQuotedString(strValue);
                 }
                 return strValue;
             case BOOLEAN:
@@ -896,10 +892,16 @@ public final class SQLUtils {
      * We can remove double whitespaces and any whitespaces between special chars (*-+,: etc).
      */
     public static boolean compareAliases(String str1, String str2) {
+        if (str1 == null && str2 == null) {
+            return true;
+        }
+        if (str1 == null || str2 == null) {
+            return false;
+        }
         return removeExtraSpaces(str1).equals(removeExtraSpaces(str2));
     }
 
-    public static String removeExtraSpaces(String str) {
+    public static String removeExtraSpaces(@NotNull String str) {
         if (str.indexOf(' ') == -1) {
             return str;
         }

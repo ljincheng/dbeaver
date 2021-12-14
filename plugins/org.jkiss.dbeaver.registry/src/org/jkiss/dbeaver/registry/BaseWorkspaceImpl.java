@@ -16,20 +16,14 @@
  */
 package org.jkiss.dbeaver.registry;
 
-import com.sun.security.auth.module.NTSystem;
-import com.sun.security.auth.module.UnixSystem;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 import org.jkiss.code.NotNull;
-import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBConstants;
 import org.jkiss.dbeaver.model.DBPExternalFileManager;
-import org.jkiss.dbeaver.model.access.DBASession;
-import org.jkiss.dbeaver.model.access.DBASessionPrincipal;
 import org.jkiss.dbeaver.model.app.*;
-import org.jkiss.dbeaver.model.auth.DBAAuthSpace;
 import org.jkiss.dbeaver.model.auth.DBASessionContext;
 import org.jkiss.dbeaver.model.impl.auth.SessionContextImpl;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
@@ -41,13 +35,13 @@ import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.runtime.resource.DBeaverNature;
 import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
-import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 import org.jkiss.utils.SecurityUtils;
-import org.jkiss.utils.StandardConstants;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 /**
@@ -81,7 +75,7 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
         this.platform = platform;
         this.eclipseWorkspace = eclipseWorkspace;
         this.workspaceAuthContext = new SessionContextImpl(null);
-        this.workspaceAuthContext.addSession(new WorkspaceSession());
+        this.workspaceAuthContext.addSession(acquireWorkspaceSession());
 
         String activeProjectName = platform.getPreferenceStore().getString(PROP_PROJECT_ACTIVE);
 
@@ -121,6 +115,11 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
         loadExternalFileProperties();
     }
 
+    @NotNull
+    protected BasicWorkspaceSession acquireWorkspaceSession() {
+        return new BasicWorkspaceSession(this);
+    }
+
     public void initializeProjects() {
         if (DBWorkbench.getPlatform().getApplication().isStandalone() && CommonUtils.isEmpty(projects)) {
             try {
@@ -136,12 +135,12 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
         }
     }
 
-    public static Properties readWorkspaceInfo(File metadataFolder) {
+    public static Properties readWorkspaceInfo(Path metadataFolder) {
         Properties props = new Properties();
 
-        File versionFile = new File(metadataFolder, DBConstants.WORKSPACE_PROPS_FILE);
-        if (versionFile.exists()) {
-            try (InputStream is = new FileInputStream(versionFile)) {
+        Path versionFile = metadataFolder.resolve(DBConstants.WORKSPACE_PROPS_FILE);
+        if (Files.exists(versionFile)) {
+            try (InputStream is = Files.newInputStream(versionFile)) {
                 props.load(is);
             } catch (Exception e) {
                 log.error(e);
@@ -150,10 +149,10 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
         return props;
     }
 
-    public static void writeWorkspaceInfo(File metadataFolder, Properties props) {
-        File versionFile = new File(metadataFolder, DBConstants.WORKSPACE_PROPS_FILE);
+    public static void writeWorkspaceInfo(Path metadataFolder, Properties props) {
+        Path versionFile = metadataFolder.resolve(DBConstants.WORKSPACE_PROPS_FILE);
 
-        try (OutputStream os = new FileOutputStream(versionFile)) {
+        try (OutputStream os = Files.newOutputStream(versionFile)) {
             props.store(os, "DBeaver workspace version");
         } catch (Exception e) {
             log.error(e);
@@ -323,14 +322,14 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
 
     @NotNull
     @Override
-    public File getAbsolutePath() {
-        return eclipseWorkspace.getRoot().getLocation().toFile();
+    public Path getAbsolutePath() {
+        return eclipseWorkspace.getRoot().getLocation().toFile().toPath();
     }
 
     @NotNull
     @Override
-    public File getMetadataFolder() {
-        return GeneralUtils.getMetadataFolder(getAbsolutePath());
+    public Path getMetadataFolder() {
+        return getAbsolutePath().resolve(METADATA_FOLDER);
     }
 
     public void save(DBRProgressMonitor monitor) throws DBException {
@@ -577,11 +576,9 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
     private void loadExternalFileProperties() {
         synchronized (externalFileProperties) {
             externalFileProperties.clear();
-            File propsFile = new File(
-                GeneralUtils.getMetadataFolder(),
-                EXT_FILES_PROPS_STORE);
-            if (propsFile.exists()) {
-                try (InputStream is = new FileInputStream(propsFile)) {
+            Path propsFile = GeneralUtils.getMetadataFolder().resolve(EXT_FILES_PROPS_STORE);
+            if (Files.exists(propsFile)) {
+                try (InputStream is = Files.newInputStream(propsFile)) {
                     try (ObjectInputStream ois = new ObjectInputStream(is)) {
                         final Object object = ois.readObject();
                         if (object instanceof Map) {
@@ -714,10 +711,8 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
         @Override
         protected IStatus run(DBRProgressMonitor monitor) {
             synchronized (externalFileProperties) {
-                File propsFile = new File(
-                    GeneralUtils.getMetadataFolder(),
-                    EXT_FILES_PROPS_STORE);
-                try (OutputStream os = new FileOutputStream(propsFile)) {
+                Path propsFile = GeneralUtils.getMetadataFolder().resolve(EXT_FILES_PROPS_STORE);
+                try (OutputStream os = Files.newOutputStream(propsFile)) {
                     try (ObjectOutputStream oos = new ObjectOutputStream(os)) {
                         oos.writeObject(externalFileProperties);
                     }
@@ -726,79 +721,6 @@ public abstract class BaseWorkspaceImpl implements DBPWorkspace, DBPExternalFile
                 }
             }
             return Status.OK_STATUS;
-        }
-    }
-
-    private class WorkspaceSession implements DBASession, DBASessionPrincipal {
-        private String userName;
-        private String domainName;
-
-        public WorkspaceSession() {
-            try {
-                if (RuntimeUtils.isWindows()) {
-                    NTSystem ntSystem = new NTSystem();
-                    userName = ntSystem.getName();
-                    domainName = ntSystem.getDomain();
-                } else {
-                    UnixSystem unixSystem = new UnixSystem();
-                    userName = unixSystem.getUsername();
-                }
-            } catch (Exception e) {
-                // Not supported on this system
-            }
-            if (CommonUtils.isEmpty(userName)) {
-                userName = System.getProperty(StandardConstants.ENV_USER_NAME);
-            }
-            if (CommonUtils.isEmpty(userName)) {
-                userName = "unknown";
-            }
-
-            if (CommonUtils.isEmpty(domainName)) {
-                if (RuntimeUtils.isWindows()) {
-                    domainName = System.getenv("USERDOMAIN");
-                }
-                if (CommonUtils.isEmpty(domainName)) {
-                    domainName = DBConstants.LOCAL_DOMAIN_NAME;
-                }
-            }
-        }
-
-        @NotNull
-        @Override
-        public DBAAuthSpace getSessionSpace() {
-            return BaseWorkspaceImpl.this;
-        }
-
-        @Override
-        public DBASessionPrincipal getSessionPrincipal() {
-            return this;
-        }
-
-        @NotNull
-        @Override
-        public String getSessionId() {
-            return getWorkspaceId();
-        }
-
-        @Override
-        public boolean isApplicationSession() {
-            return true;
-        }
-
-        @Nullable
-        @Override
-        public DBPProject getSingletonProject() {
-            return null;
-        }
-
-        @Override
-        public String getUserDomain() {
-            return domainName;
-        }
-
-        @Override
-        public String getUserName() {
-            return userName;
         }
     }
 

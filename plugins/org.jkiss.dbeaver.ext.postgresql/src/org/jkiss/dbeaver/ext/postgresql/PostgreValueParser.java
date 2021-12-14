@@ -21,10 +21,12 @@ import org.jkiss.dbeaver.ext.postgresql.model.PostgreDataType;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreTypeType;
 import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.DBUtils;
+import org.jkiss.dbeaver.model.data.DBDCollection;
 import org.jkiss.dbeaver.model.data.DBDValueHandler;
 import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCSession;
 import org.jkiss.dbeaver.model.impl.jdbc.data.JDBCCollection;
+import org.jkiss.dbeaver.model.impl.jdbc.data.JDBCComposite;
 import org.jkiss.dbeaver.model.struct.DBSDataType;
 import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 import org.jkiss.dbeaver.model.struct.DBSTypedObjectEx;
@@ -179,13 +181,18 @@ public class PostgreValueParser {
     public static String generateObjectString(Object[] values) {
         String[] line = new String[values.length];
         for (int i = 0; i < values.length; i++) {
-            final Object value = values[i];
+            Object value = values[i];
+            if (value instanceof DBDCollection) {
+                value = ((DBDCollection) value).getRawValue();
+            }
             if (value instanceof Object[]) {
                 String arrayPostgreStyle = Arrays.deepToString((Object[]) value)
                         .replace("[", "{")
                         .replace("]", "}")
                         .replace(" ", "");
                 line[i] = arrayPostgreStyle; //Strings are not quoted
+            } else if (value instanceof JDBCComposite) {
+                line[i] = generateObjectString(((JDBCComposite) value).getValues());
             } else if (value != null) {
                 // Values are simply skipped if they're NULL.
                 // https://www.postgresql.org/docs/current/rowtypes.html#id-1.5.7.24.6

@@ -32,8 +32,8 @@ import org.jkiss.dbeaver.utils.SystemVariablesResolver;
 import java.io.File;
 import java.util.Arrays;
 
-public class DBeaverPreferencesInitializer extends AbstractPreferenceInitializer {
-    public DBeaverPreferencesInitializer() {
+public class DesktopPreferencesInitializer extends AbstractPreferenceInitializer {
+    public DesktopPreferencesInitializer() {
     }
 
     @Override
@@ -67,7 +67,8 @@ public class DBeaverPreferencesInitializer extends AbstractPreferenceInitializer
         PrefUtils.setDefaultPreferenceValue(store, QMConstants.PROP_QUERY_TYPES,
             DBCExecutionPurpose.USER + "," + DBCExecutionPurpose.USER_FILTERED + "," + DBCExecutionPurpose.USER_SCRIPT);
         PrefUtils.setDefaultPreferenceValue(store, QMConstants.PROP_STORE_LOG_FILE, false);
-        PrefUtils.setDefaultPreferenceValue(store, QMConstants.PROP_LOG_DIRECTORY, GeneralUtils.getMetadataFolder().getAbsolutePath());
+        PrefUtils.setDefaultPreferenceValue(store, QMConstants.PROP_LOG_DIRECTORY,
+            GeneralUtils.getMetadataFolder().toAbsolutePath().toString());
 
         // Logs
         PrefUtils.setDefaultPreferenceValue(store, DBeaverPreferences.LOGS_DEBUG_ENABLED, true);
