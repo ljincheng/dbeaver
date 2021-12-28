@@ -11,6 +11,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,7 +53,8 @@ public class CodeMetadata  {
  	    }  
 	   
 	    public File getAbsolutePath() {
-	    	File metadataFolder = DBWorkbench.getPlatform().getWorkspace().getMetadataFolder();
+	    	Path path=DBWorkbench.getPlatform().getWorkspace().getMetadataFolder();
+	    	File metadataFolder = path.toFile();
 			File tplDir = new File(metadataFolder, WORKSPACE_DIR);
 			if (!tplDir.exists() && !tplDir.mkdirs()) {
 				return null;

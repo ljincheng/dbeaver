@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Path;
 
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.data.json.JSONUtils;
@@ -48,7 +49,8 @@ public class TemplateUtils {
 	private static final Object metadataSync = new Object();
 
 	public static File getAbsolutePath() {
-		File metadataFolder = DBWorkbench.getPlatform().getWorkspace().getMetadataFolder();
+		Path path=DBWorkbench.getPlatform().getWorkspace().getMetadataFolder();
+		File metadataFolder = path.toFile();
 		File tplDir = new File(metadataFolder, WORKSPACE_DIR);
 		if (!tplDir.exists() && !tplDir.mkdirs()) {
 			return null;
