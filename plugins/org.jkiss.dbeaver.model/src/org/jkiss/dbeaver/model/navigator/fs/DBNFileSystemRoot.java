@@ -16,6 +16,7 @@
  */
 package org.jkiss.dbeaver.model.navigator.fs;
 
+import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBConstants;
@@ -23,9 +24,7 @@ import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.model.DBPImage;
 import org.jkiss.dbeaver.model.fs.DBFVirtualFileSystemRoot;
 import org.jkiss.dbeaver.model.meta.Property;
-import org.jkiss.dbeaver.model.navigator.DBNContainer;
 import org.jkiss.dbeaver.model.navigator.DBNLazyNode;
-import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 
 import java.nio.file.Path;
@@ -33,7 +32,7 @@ import java.nio.file.Path;
 /**
  * DBNFileSystemRoot
  */
-public class DBNFileSystemRoot extends DBNPathBase implements DBNLazyNode, DBNContainer
+public class DBNFileSystemRoot extends DBNPathBase implements DBNLazyNode
 {
     private static final Log log = Log.getLog(DBNFileSystemRoot.class);
 
@@ -41,9 +40,14 @@ public class DBNFileSystemRoot extends DBNPathBase implements DBNLazyNode, DBNCo
     private DBNPath[] children;
     private Path path;
 
-    public DBNFileSystemRoot(DBNNode parentNode, DBFVirtualFileSystemRoot root) {
+    public DBNFileSystemRoot(DBNFileSystem parentNode, DBFVirtualFileSystemRoot root) {
         super(parentNode);
         this.root = root;
+    }
+
+    @NotNull
+    public DBFVirtualFileSystemRoot getRoot() {
+        return root;
     }
 
     @Override
@@ -97,18 +101,4 @@ public class DBNFileSystemRoot extends DBNPathBase implements DBNLazyNode, DBNCo
         return path;
     }
 
-    @Override
-    public Object getValueObject() {
-        return path;
-    }
-
-    @Override
-    public String getChildrenType() {
-        return "Folder";
-    }
-
-    @Override
-    public Class<?> getChildrenClass() {
-        return DBNPath.class;
-    }
 }
