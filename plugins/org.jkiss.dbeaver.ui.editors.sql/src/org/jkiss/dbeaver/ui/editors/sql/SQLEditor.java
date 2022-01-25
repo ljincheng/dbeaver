@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,6 +131,7 @@ public class SQLEditor extends SQLEditorBase implements
     ISaveablePart2,
     DBPDataSourceTask,
     DBPDataSourceHandler,
+    IResultSetProvider,
     ISmartTransactionManager
 {
     private static final long SCRIPT_UI_UPDATE_PERIOD = 100;
@@ -726,10 +727,28 @@ public class SQLEditor extends SQLEditorBase implements
 
     @Nullable
     @Override
+    public IResultSetController getResultSetController() {
+        if (resultTabs != null && !resultTabs.isDisposed()) {
+            CTabItem activeResultsTab = getActiveResultsTab();
+            if (activeResultsTab != null && UIUtils.isUIThread()) {
+                Object tabControl = activeResultsTab.getData();
+                if (tabControl instanceof QueryResultsContainer) {
+                    return ((QueryResultsContainer) tabControl).viewer;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    @Override
     public <T> T getAdapter(Class<T> required)
     {
         if (required == INavigatorModelView.class) {
             return null;
+        }
+        if (required == IResultSetController.class || required == ResultSetViewer.class) {
+            return required.cast(getResultSetController());
         }
 
         if (resultTabs != null && !resultTabs.isDisposed()) {
@@ -747,9 +766,6 @@ public class SQLEditor extends SQLEditorBase implements
                     if (adapter != null) {
                         return adapter;
                     }
-                }
-                if (tabControl instanceof ResultSetViewer && (required == IResultSetController.class || required == ResultSetViewer.class)) {
-                    return required.cast(tabControl);
                 }
             }
         }
@@ -2295,8 +2311,8 @@ public class SQLEditor extends SQLEditorBase implements
             SQLQuery query = (SQLQuery) queries.get(0);
             if (query.isDeleteUpdateDangerous()) {
                 String targetName = "multiple tables";
-                if (query.getSingleSource() != null) {
-                    targetName = query.getSingleSource().getEntityName();
+                if (query.getEntityMetadata(false) != null) {
+                    targetName = query.getEntityMetadata(false).getEntityName();
                 }
                 if (ConfirmationDialog.showConfirmDialogEx(
                     ResourceBundle.getBundle(SQLEditorMessages.BUNDLE_NAME),
@@ -3422,18 +3438,19 @@ public class SQLEditor extends SQLEditorBase implements
         }
 
         @Override
-        public int getSupportedFeatures()
+        public String[] getSupportedFeatures()
         {
             if (dataContainer != null) {
                 return dataContainer.getSupportedFeatures();
             }
-            int features = DATA_SELECT;
-            features |= DATA_COUNT;
+            List<String> features = new ArrayList<>(3);
+            features.add(FEATURE_DATA_SELECT);
+            features.add(FEATURE_DATA_COUNT);
 
             if (getQueryResultCounts() <= 1) {
-                features |= DATA_FILTER;
+                features.add(FEATURE_DATA_FILTER);
             }
-            return features;
+            return features.toArray(new String[0]);
         }
 
         @NotNull
@@ -3496,7 +3513,7 @@ public class SQLEditor extends SQLEditorBase implements
         }
 
         @Override
-        public long countData(@NotNull DBCExecutionSource source, @NotNull DBCSession session, DBDDataFilter dataFilter, long flags)
+        public long countData(@NotNull DBCExecutionSource source, @NotNull DBCSession session, @Nullable DBDDataFilter dataFilter, long flags)
             throws DBCException
         {
             if (dataContainer != null) {

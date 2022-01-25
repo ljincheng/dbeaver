@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
  */
 package org.jkiss.dbeaver.model.net.ssh;
 
-import com.jcraft.jsch.Identity;
-import com.jcraft.jsch.IdentityRepository;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.*;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.model.app.DBPPlatform;
@@ -64,4 +61,21 @@ class SSHUtils {
         }
         return false;
     }
+
+
+    public static boolean isKeyEncrypted(byte[] privKeyValue) {
+        // Check whether this key is encrypted
+        if (privKeyValue != null) {
+            try {
+                JSch testSch = new JSch();
+                KeyPair keyPair = KeyPair.load(testSch, privKeyValue, null);
+                return keyPair.isEncrypted();
+            } catch (JSchException e) {
+                // Something went wrong
+                log.debug("Can't check private key encryption: " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
 }

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -305,6 +305,13 @@ public interface SQLDialect {
     boolean isQuotedIdentifier(String identifier);
 
     String getQuotedIdentifier(String identifier, boolean forceCaseSensitive, boolean forceQuotes);
+
+    /**
+     * @param str - string that must be unquoted for this check - otherwise method will return true
+     * @param forceCaseSensitive the level of case sensitivity
+     * @return true if incoming string must be quoted
+     */
+    boolean mustBeQuoted(@NotNull String str, boolean forceCaseSensitive);
 
     String getUnquotedIdentifier(String identifier);
 

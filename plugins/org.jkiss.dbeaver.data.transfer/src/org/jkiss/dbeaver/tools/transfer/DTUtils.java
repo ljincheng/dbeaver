@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.jkiss.dbeaver.tools.transfer;
 
 import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.osgi.util.NLS;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
@@ -32,6 +33,7 @@ import org.jkiss.dbeaver.model.sql.SQLQuery;
 import org.jkiss.dbeaver.model.sql.SQLQueryContainer;
 import org.jkiss.dbeaver.model.sql.SQLScriptElement;
 import org.jkiss.dbeaver.model.struct.*;
+import org.jkiss.dbeaver.tools.transfer.internal.DTMessages;
 import org.jkiss.dbeaver.tools.transfer.registry.DataTransferProcessorDescriptor;
 import org.jkiss.utils.CommonUtils;
 
@@ -54,7 +56,7 @@ public class DTUtils {
     }
 
     public static void addSummary(StringBuilder summary, DataTransferProcessorDescriptor processor, Map<?, ?> props) {
-        summary.append(processor.getName()).append(" settings:\n");
+        summary.append(NLS.bind(DTMessages.data_transfer_summary_title, processor.getName())).append(":\n");
         for (DBPPropertyDescriptor prop : processor.getProperties()) {
             Object propValue = props.get(prop.getId());
             if (propValue == null) {
@@ -101,7 +103,7 @@ public class DTUtils {
     public static String getTableNameFromQuery(DBPDataSource dataSource, SQLQueryContainer queryContainer, boolean shortName) {
         SQLScriptElement query = queryContainer.getQuery();
         if (query instanceof SQLQuery) {
-            DBCEntityMetaData singleSource = ((SQLQuery) query).getSingleSource();
+            DBCEntityMetaData singleSource = ((SQLQuery) query).getEntityMetadata(true);
             if (singleSource != null) {
                 SQLDialect dialect = dataSource.getSQLDialect();
                 String entity = transformName(dialect, singleSource.getEntityName());

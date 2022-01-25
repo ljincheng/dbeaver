@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,13 +60,13 @@ public class SQLQueryParameterBindDialog extends StatusDialog {
 
     private static final Log log = Log.getLog(SQLQueryParameterBindDialog.class);
 
-    private IWorkbenchPartSite site;
-    private SQLScriptContext queryContext;
-    private SQLQuery query;
-    private List<SQLQueryParameter> parameters;
+    private final IWorkbenchPartSite site;
+    private final SQLScriptContext queryContext;
+    private final SQLQuery query;
+    private final List<SQLQueryParameter> parameters;
     private final Map<String, List<SQLQueryParameter>> dupParameters = new HashMap<>();
 
-    private static Map<String, SQLQueryParameterRegistry.ParameterInfo> savedParamValues = new HashMap<>();
+    private final Map<String, SQLQueryParameterRegistry.ParameterInfo> savedParamValues = new HashMap<>();
     private Button hideIfSetCheck;
     private Table paramTable;
     private Object queryPreviewPanel;
@@ -188,7 +188,7 @@ public class SQLQueryParameterBindDialog extends StatusDialog {
                                 dup.setVariableSet(!CommonUtils.isEmpty(newValue));
                             }
                         }
-                        queryContext.setVariable(param.getVarName(), param.getValue());
+                        queryContext.setVariable(param.getName(), param.getValue());
                     }
 
                     savedParamValues.put(

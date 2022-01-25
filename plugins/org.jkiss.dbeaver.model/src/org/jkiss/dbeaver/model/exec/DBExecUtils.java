@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -640,7 +640,7 @@ public class DBExecUtils {
                         Object sourceDescriptor = executionSource.getSourceDescriptor();
                         if (sourceDescriptor instanceof SQLQuery) {
                             sqlQuery = (SQLQuery) sourceDescriptor;
-                            entityMeta = sqlQuery.getSingleSource();
+                            entityMeta = sqlQuery.getEntityMetadata(false);
                         }
                         if (entityMeta != null) {
                             entity = DBUtils.getEntityFromMetaData(monitor, session.getExecutionContext(), entityMeta);
@@ -728,7 +728,7 @@ public class DBExecUtils {
                     {
                         SQLSelectItem selectItem = sqlQuery.getSelectItem(attrMeta.getOrdinalPosition());
                         if (selectItem.isPlainColumn()) {
-                            if (DBUtils.isQuotedIdentifier(dataSource, columnName)) {
+                            if (DBUtils.isQuotedIdentifier(dataSource, columnName) || dataSource.getSQLDialect().mustBeQuoted(columnName, true)) {
                                 columnName = DBUtils.getUnQuotedIdentifier(dataSource, selectItem.getName());
                             } else {
                                 // #12008
@@ -846,7 +846,7 @@ public class DBExecUtils {
             return true;
         }
         DBSDataManipulator dataContainer = (DBSDataManipulator) rowIdentifier.getEntity();
-        return (dataContainer.getSupportedFeatures() & DBSDataManipulator.DATA_UPDATE) == 0;
+        return !dataContainer.isFeatureSupported(DBSDataManipulator.FEATURE_DATA_UPDATE);
     }
 
     public static String getAttributeReadOnlyStatus(@NotNull DBDAttributeBinding attribute) {
@@ -865,7 +865,7 @@ public class DBExecUtils {
         if (!(dataContainer instanceof DBSDataManipulator)) {
             return "Underlying entity doesn't support data modification";
         }
-        if ((((DBSDataManipulator) dataContainer).getSupportedFeatures() & DBSDataManipulator.DATA_UPDATE) == 0) {
+        if (!((DBSDataManipulator) dataContainer).isFeatureSupported(DBSDataManipulator.FEATURE_DATA_UPDATE)) {
             return "Underlying entity doesn't support data update";
         }
         return null;

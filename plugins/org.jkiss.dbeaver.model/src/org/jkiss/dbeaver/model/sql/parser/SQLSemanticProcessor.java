@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -308,7 +308,7 @@ public class SQLSemanticProcessor {
             if (fromItem instanceof Table && equalTables((Table) fromItem, tableName)) {
                 return (Table) fromItem;
             }
-            for (Join join : ((PlainSelect) selectBody).getJoins()) {
+            for (Join join : CommonUtils.safeCollection(((PlainSelect) selectBody).getJoins())) {
                 if (join.getRightItem() instanceof Table && equalTables((Table) join.getRightItem(), tableName)) {
                     return (Table) join.getRightItem();
                 }

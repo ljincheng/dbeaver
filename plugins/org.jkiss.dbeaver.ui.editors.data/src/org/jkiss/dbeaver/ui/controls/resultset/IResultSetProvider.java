@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.access;
 
-import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+package org.jkiss.dbeaver.ui.controls.resultset;
 
-public interface DBAUserChangePassword {
+import org.jkiss.code.Nullable;
 
-    void changeUserPassword(DBRProgressMonitor monitor, String userName, String newPassword, String oldPassword) throws DBException;
+/**
+ * Result set provider
+ */
+public interface IResultSetProvider {
+
+    /**
+     * Hosted results controller
+     * @return controller or null
+     */
+    @Nullable
+    IResultSetController getResultSetController();
 
 }

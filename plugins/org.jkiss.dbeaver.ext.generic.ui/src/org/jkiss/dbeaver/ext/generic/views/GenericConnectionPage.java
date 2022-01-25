@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,7 +218,7 @@ public class GenericConnectionPage extends ConnectionPageWithAuth implements IDi
                     public void widgetSelected(SelectionEvent e)
                     {
                         if (metaURL.getAvailableProperties().contains(JDBCConstants.PROP_FILE)) {
-                            FileDialog dialog = new FileDialog(getShell(), SWT.OPEN | SWT.SINGLE);
+                            FileDialog dialog = new FileDialog(getShell(), SWT.SAVE | SWT.SINGLE);
                             dialog.setFileName(pathText.getText());
                             dialog.setText(GenericMessages.dialog_connection_db_file_chooser_text);
                             String file = dialog.open();

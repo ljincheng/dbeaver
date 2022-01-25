@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,11 @@ public class EditorsMessages extends NLS {
 	public static String database_editor_command_revert_tip;
 	public static String database_editor_command_refresh_name;
 	public static String database_editor_command_refresh_tip;
+
+	public static String  file_dialog_select_files;
+	public static String file_dialog_save_failed;
+	public static String file_dialog_save_as_file;
+	public static String file_dialog_cannot_load_file;
 
 	static {
 		// initialize resource bundle

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -180,6 +180,12 @@ public class DTUIMessages extends NLS {
 	public static String stream_producer_page_preview_error_message_set_mappings_for_all_columns;
 	public static String database_consumer_page_mapping_error_message_set_target_container;
 	public static String database_consumer_page_mapping_error_message_set_all_tables_mappings;
+	public static String database_consumer_page_mapping_error_no_schema_changes_title;
+	public static String database_consumer_page_mapping_error_no_schema_changes_info;
+	public static String database_consumer_page_mapping_error_schema_save_title;
+	public static String database_consumer_page_mapping_error_schema_save_info;
+	public static String database_consumer_page_mapping_create_target_object_confirmation_title;
+	public static String database_consumer_page_mapping_create_target_object_confirmation_question;
 	public static String sql_script_task_page_settings_error_message_you_must_select_script_execute;
 	public static String sql_script_task_page_settings_error_message_you_must_select_connection;
 

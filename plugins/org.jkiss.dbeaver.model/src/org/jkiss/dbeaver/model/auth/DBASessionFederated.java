@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-package org.jkiss.dbeaver.model.access;
+package org.jkiss.dbeaver.model.auth;
 
 /**
- * Session principal (user)
+ * Federated session
  */
-public interface DBASessionPrincipal {
+public interface DBASessionFederated extends DBASession {
 
-    String getUserDomain();
-
-    String getUserName();
 
 }

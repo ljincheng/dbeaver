@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.utils.CommonUtils;
 import org.xml.sax.InputSource;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
@@ -61,6 +62,7 @@ public class XMLFormattingStrategy extends ContextBasedFormattingStrategy {
 
             SAXParserFactory spf = SAXParserFactory.newInstance();
             spf.setNamespaceAware(true);
+            spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             Source src = new SAXSource(spf.newSAXParser().getXMLReader(), new InputSource(new StringReader(content)));
 
             StreamResult result = new StreamResult(new StringWriter());

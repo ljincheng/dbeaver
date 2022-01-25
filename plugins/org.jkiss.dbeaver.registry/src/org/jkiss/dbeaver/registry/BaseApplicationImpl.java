@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
  */
 package org.jkiss.dbeaver.registry;
 
+import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.Log;
-import org.jkiss.dbeaver.model.app.DBASecureStorage;
-import org.jkiss.dbeaver.model.app.DBPApplication;
-import org.jkiss.dbeaver.model.app.DBPProject;
+import org.jkiss.dbeaver.model.app.*;
 import org.jkiss.dbeaver.model.impl.app.DefaultSecureStorage;
 
 /**
@@ -46,6 +45,12 @@ public abstract class BaseApplicationImpl implements IApplication, DBPApplicatio
             INSTANCE = new EclipseApplicationImpl();
         }
         return INSTANCE;
+    }
+
+    @NotNull
+    @Override
+    public DBPWorkspace createWorkspace(@NotNull DBPPlatform platform, @NotNull IWorkspace eclipseWorkspace) {
+        return new BasicWorkspace(platform, eclipseWorkspace);
     }
 
     @Override

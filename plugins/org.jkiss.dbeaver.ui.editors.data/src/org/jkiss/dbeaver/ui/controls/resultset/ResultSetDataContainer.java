@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,8 +70,8 @@ public class ResultSetDataContainer implements DBSDataContainer, DBPContextProvi
     }
 
     @Override
-    public int getSupportedFeatures() {
-        return DATA_SELECT | DATA_COUNT;
+    public String[] getSupportedFeatures() {
+        return new String[] {FEATURE_DATA_SELECT, FEATURE_DATA_COUNT};
     }
 
     public ResultSetDataContainerOptions getOptions() {
@@ -134,7 +134,7 @@ public class ResultSetDataContainer implements DBSDataContainer, DBPContextProvi
     }
 
     @Override
-    public long countData(DBCExecutionSource source, DBCSession session, DBDDataFilter dataFilter, long flags) throws DBCException {
+    public long countData(@NotNull DBCExecutionSource source, @NotNull DBCSession session, @Nullable DBDDataFilter dataFilter, long flags) throws DBCException {
         if (proceedSelectedRowsOnly(flags)) {
             return options.getSelectedRows().size();
         } else if (proceedSelectedColumnsOnly(flags)) {

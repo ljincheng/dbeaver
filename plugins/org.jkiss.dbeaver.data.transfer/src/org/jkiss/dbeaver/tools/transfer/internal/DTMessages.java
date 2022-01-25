@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,6 +116,8 @@ public class DTMessages extends NLS {
 	public static String data_transfer_db_consumer_up_tooltip;
 	public static String data_transfer_db_consumer_down_label;
 	public static String data_transfer_db_consumer_down_tooltip;
+	public static String data_transfer_wizard_export_target_title;
+	public static String data_transfer_wizard_import_source_title;
 
 	public static String sql_script_task_title;
 	public static String sql_script_task_page_settings_title;
@@ -159,6 +161,8 @@ public class DTMessages extends NLS {
 	public static String data_transfer_task_handler_unexpected_error_message;
 	public static String data_transfer_task_handler_resoring_referential_integrity_unexpected_error_title;
 	public static String data_transfer_task_handler_resoring_referential_integrity_unexpected_error_message;
+
+	public static String data_transfer_summary_title;
 
 	static {
 		// initialize resource bundle

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2021 DBeaver Corp and others
+ * Copyright (C) 2010-2022 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1048,7 +1048,8 @@ public final class SQLUtils {
             return name.split(Pattern.quote(nameSeparator));
         }
         if (!name.contains(nameSeparator)) {
-            return new String[] { DBUtils.getUnQuotedIdentifier(name, quoteStrings) };
+            name = keepQuotes ? name : DBUtils.getUnQuotedIdentifier(name, quoteStrings);
+            return new String[]{name};
         }
         List<String> nameList = new ArrayList<>();
         while (!name.isEmpty()) {
