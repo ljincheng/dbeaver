@@ -174,6 +174,11 @@ public class ResultSetMessages extends NLS {
     public static String dialog_value_view_context_name;
     public static String dialog_value_view_dialog_error_updating_message;
     public static String dialog_value_view_dialog_error_updating_title;
+
+    public static String dialog_value_view_error_parsing_date_title;
+    public static String dialog_value_view_error_parsing_date_message;
+
+
     public static String dialog_value_view_job_selector_name;
     public static String dialog_value_view_label_dictionary;
 
@@ -258,6 +263,13 @@ public class ResultSetMessages extends NLS {
     public static String pref_page_data_format_label_settingt;
     public static String pref_page_data_format_label_type;
     public static String pref_page_data_format_link_patterns;
+
+    public static String pref_page_data_viewer_reference_panel_group;
+    public static String pref_page_data_viewer_reference_panel_desc_column_keywords_label;
+    public static String pref_page_data_viewer_reference_panel_desc_column_keywords_prompt_title;
+    public static String pref_page_data_viewer_reference_panel_desc_column_keywords_add_button;
+    public static String pref_page_data_viewer_reference_panel_desc_column_keywords_remove_button;
+    public static String pref_page_data_viewer_reference_panel_desc_column_keywords_edit_button;
 
     public static String dialog_data_format_profiles_button_delete_profile;
     public static String dialog_data_format_profiles_button_new_profile;

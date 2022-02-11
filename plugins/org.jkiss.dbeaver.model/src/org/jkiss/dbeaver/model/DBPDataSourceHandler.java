@@ -17,12 +17,18 @@
 
 package org.jkiss.dbeaver.model;
 
+import org.jkiss.code.NotNull;
+import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+
 /**
  * DBPDataSourceHandler
  */
-public interface DBPDataSourceHandler extends DBPDataSourceTask
+public interface DBPDataSourceHandler
 {
-    void beforeConnect();
+    void beforeConnect(DBRProgressMonitor monitor, @NotNull DBPDataSourceContainer dataSourceContainer)
+        throws DBException;
 
-    void beforeDisconnect();
+    void beforeDisconnect(DBRProgressMonitor monitor, @NotNull DBPDataSourceContainer dataSourceContainer)
+        throws DBException;
 }

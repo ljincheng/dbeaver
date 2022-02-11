@@ -21,6 +21,7 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.qm.*;
+import org.jkiss.dbeaver.model.qm.filters.QMEventCriteria;
 import org.jkiss.dbeaver.model.qm.meta.*;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.utils.GeneralUtils;
@@ -228,7 +229,7 @@ public class QMControllerImpl implements QMController {
         }
 
         private boolean matchesObjectType(QMMObject object, QMObjectType[] objectTypes) {
-            if (object instanceof QMMSessionInfo)
+            if (object instanceof QMMConnectionInfo)
                 return ArrayUtils.contains(objectTypes, QMObjectType.session);
             else if (object instanceof QMMTransactionInfo || object instanceof QMMTransactionSavepointInfo)
                 return ArrayUtils.contains(objectTypes, QMObjectType.txn);

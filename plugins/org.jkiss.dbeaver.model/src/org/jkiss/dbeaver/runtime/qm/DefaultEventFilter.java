@@ -18,7 +18,11 @@
 package org.jkiss.dbeaver.runtime.qm;
 
 import org.jkiss.dbeaver.ModelPreferences;
-import org.jkiss.dbeaver.model.qm.*;
+import org.jkiss.dbeaver.model.qm.QMEventFilter;
+import org.jkiss.dbeaver.model.qm.QMMetaEvent;
+import org.jkiss.dbeaver.model.qm.QMObjectType;
+import org.jkiss.dbeaver.model.qm.QMUtils;
+import org.jkiss.dbeaver.model.qm.filters.QMEventCriteria;
 import org.jkiss.dbeaver.model.qm.meta.*;
 
 /**
@@ -47,7 +51,7 @@ public class DefaultEventFilter implements QMEventFilter {
                 eventCriteria.hasQueryType(((QMMStatementExecuteInfo) object).getStatement().getPurpose());
         } else if (object instanceof QMMTransactionInfo || object instanceof QMMTransactionSavepointInfo) {
             return eventCriteria.hasObjectType(QMObjectType.txn);
-        } else if (object instanceof QMMSessionInfo) {
+        } else if (object instanceof QMMConnectionInfo) {
             return eventCriteria.hasObjectType(QMObjectType.session);
         }
         return true;

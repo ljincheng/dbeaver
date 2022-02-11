@@ -31,7 +31,7 @@ public interface QMEventCursor extends AutoCloseable {
 
     boolean hasNextEvent(DBRProgressMonitor monitor) throws DBException;
 
-    QMMetaEvent nextEvent(DBRProgressMonitor monitor) throws DBException;
+    QMMetaEventEntity nextEvent(DBRProgressMonitor monitor) throws DBException;
 
     void close();
 }

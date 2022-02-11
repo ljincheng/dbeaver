@@ -33,7 +33,7 @@ import java.util.Properties;
 /**
  * Oracle database native auth model.
  */
-public class OracleAuthModelDatabaseNative extends AuthModelDatabaseNative {
+public class OracleAuthModelDatabaseNative extends AuthModelDatabaseNative<AuthModelDatabaseNativeCredentials> {
 
     public static final String ID = "oracle_native";
 

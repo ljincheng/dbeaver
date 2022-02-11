@@ -130,7 +130,7 @@ public class SQLEditor extends SQLEditorBase implements
     DBPEventListener,
     ISaveablePart2,
     DBPDataSourceTask,
-    DBPDataSourceHandler,
+    DBPDataSourceAcquirer,
     IResultSetProvider,
     ISmartTransactionManager
 {
@@ -3905,6 +3905,7 @@ public class SQLEditor extends SQLEditorBase implements
                             if (CommonUtils.isEmpty(resultSetName)) {
                                 resultSetName = getResultsTabName(results.resultSetNumber, queryIndex, executeResult.getResultSetName());
                                 results.updateResultsName(resultSetName, null);
+                                resultTabs.setSelection(results.resultsTab);
                             }
                             ResultSetViewer resultSetViewer = results.getResultSetController();
                             if (resultSetViewer != null) {

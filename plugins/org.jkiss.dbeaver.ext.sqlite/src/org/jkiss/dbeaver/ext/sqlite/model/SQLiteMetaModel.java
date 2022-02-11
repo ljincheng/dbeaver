@@ -172,24 +172,24 @@ public class SQLiteMetaModel extends GenericMetaModel implements DBCQueryTransfo
     }
 
     @Override
-    public List<GenericSequence> loadSequences(@NotNull DBRProgressMonitor monitor, @NotNull GenericStructContainer container) throws DBException {
-        try (JDBCSession session = DBUtils.openMetaSession(monitor, container, "Read sequences")) {
-            try (JDBCPreparedStatement dbStat = session.prepareStatement("SELECT * FROM sqlite_sequence")) {
-                List<GenericSequence> result = new ArrayList<>();
-                try (JDBCResultSet dbResult = dbStat.executeQuery()) {
-                    while (dbResult.next()) {
-                        String name = JDBCUtils.safeGetString(dbResult, 1);
-                        long value = JDBCUtils.safeGetLong(dbResult, 2);
-                        result.add(new GenericSequence(container, name, null, value, 0, Long.MAX_VALUE, 1));
-                    }
-                }
-                return result;
-            }
+    public JDBCStatement prepareSequencesLoadStatement(@NotNull JDBCSession session, @NotNull GenericStructContainer container) throws SQLException {
+        // The sqlite_sequence table is created and initialized automatically whenever a normal table that contains an AUTOINCREMENT column is created. Not earlier
+        try {
+            JDBCUtils.queryString(session, "SELECT 1 FROM sqlite_sequence");
         } catch (SQLException e) {
-            // Most likely sqlite_sequence doesn't exist, this means jsut empty sequence list
-            log.debug("Error loading SQLite sequences", e);
-            return new ArrayList<>();
+            throw new SQLException("Error loading SQLite sequences. Probably sqlite_sequence info table doesn't exist yet. Please create table with AUTOINCREMENT column first.", e);
         }
+        return session.prepareStatement("SELECT * FROM sqlite_sequence");
+    }
+
+    @Override
+    public GenericSequence createSequenceImpl(@NotNull JDBCSession session, @NotNull GenericStructContainer container, @NotNull JDBCResultSet dbResult) {
+        String name = JDBCUtils.safeGetString(dbResult, 1);
+        if (CommonUtils.isEmpty(name)) {
+            return null;
+        }
+        long value = JDBCUtils.safeGetLong(dbResult, 2);
+        return new GenericSequence(container, name, null, value, 0, Long.MAX_VALUE, 1);
     }
 
     @Override
