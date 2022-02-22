@@ -174,6 +174,10 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
         return super.refreshObject(monitor);
     }
 
+    void resetStatistics() {
+        hasStatistics = false;
+    }
+
     @Override
     public void collectObjectStatistics(DBRProgressMonitor monitor, boolean totalSizeOnly, boolean forceRefresh) throws DBException {
         try (DBCSession session = DBUtils.openMetaSession(monitor, this, "Read relation statistics")) {
@@ -214,7 +218,7 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
         ProjectionCache()
         {
             super("projection_name");
-            setListOrderComparator(DBUtils.nameComparator());
+            setListOrderComparator(DBUtils.nameComparatorIgnoreCase());
         }
 
         @NotNull
@@ -266,7 +270,7 @@ public class VerticaSchema extends GenericSchema implements DBPSystemObject, DBP
         UDFCache()
         {
             super();
-            setListOrderComparator(DBUtils.nameComparator());
+            setListOrderComparator(DBUtils.nameComparatorIgnoreCase());
         }
 
         @NotNull

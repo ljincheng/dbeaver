@@ -43,5 +43,15 @@ public class PostgreServerEdb extends PostgreServerExtensionBase {
     public String getServerTypeName() {
         return "EnterpriseDB";
     }
+
+    @Override
+    public boolean supportsEventTriggers() {
+        return dataSource.isServerVersionAtLeast(9, 3);
+    }
+
+    @Override
+    public boolean supportsPGConstraintExpressionColumn() {
+        return !dataSource.isServerVersionAtLeast(12, 0);
+    }
 }
 

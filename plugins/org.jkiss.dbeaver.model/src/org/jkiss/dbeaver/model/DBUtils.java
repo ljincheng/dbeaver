@@ -1822,6 +1822,10 @@ public final class DBUtils {
         return null;
     }
 
+    public static boolean isDynamicAttribute(DBSAttributeBase attr) {
+        return attr instanceof DBSAttributeDynamic && ((DBSAttributeDynamic) attr).isDynamicAttribute();
+    }
+
     public static boolean isRowIdAttribute(DBSEntityAttribute attr) {
         DBDPseudoAttribute rowIdAttribute = getRowIdAttribute(attr.getParentObject());
         return rowIdAttribute != null && rowIdAttribute.getName().equals(attr.getName());
@@ -1925,7 +1929,9 @@ public final class DBUtils {
             return null;
         }
         DBSInstance instance = getObjectOwnerInstance(object);
-        return instance == null || (instance instanceof DBSInstanceLazy && !((DBSInstanceLazy) instance).isInstanceConnected()) ?
+        return instance == null ||
+            (instance instanceof DBSInstanceLazy && !((DBSInstanceLazy) instance).isInstanceConnected())/* ||
+            !instance.getDataSource().getContainer().isConnected()*/ ?
             null :
             instance.getDefaultContext(new VoidProgressMonitor(), meta);
     }
