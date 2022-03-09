@@ -68,6 +68,7 @@ import org.jkiss.dbeaver.model.sql.DBSQLException;
 import org.jkiss.dbeaver.model.sql.SQLQueryContainer;
 import org.jkiss.dbeaver.model.sql.SQLScriptElement;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
+import org.jkiss.dbeaver.model.sql.parser.SQLSemanticProcessor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.virtual.*;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
@@ -594,7 +595,13 @@ public class ResultSetViewer extends Viewer
                     enableFilters = false;
                 } else {
                     StringBuilder where = new StringBuilder();
-                    SQLUtils.appendConditionString(model.getDataFilter(), context.getDataSource(), null, where, true);
+                    SQLUtils.appendConditionString(
+                        model.getDataFilter(),
+                        context.getDataSource(),
+                        null,
+                        where,
+                        true,
+                        SQLSemanticProcessor.isForceFilterSubQuery(context.getDataSource()));
                     String whereCondition = where.toString().trim();
                     if (resetFilterValue) {
                         filtersPanel.setFilterValue(whereCondition);
@@ -3657,7 +3664,7 @@ public class ResultSetViewer extends Viewer
 
     @Override
     public boolean refreshData(@Nullable Runnable onSuccess) {
-        if (!checkForChanges()) {
+        if (!verifyQuerySafety() || !checkForChanges()) {
             return false;
         }
 
@@ -3714,6 +3721,9 @@ public class ResultSetViewer extends Viewer
     }
 
     public void readNextSegment() {
+        if (!verifyQuerySafety()) {
+            return;
+        }
         if (awaitsSavingData || awaitsReadNextSegment || !dataReceiver.isHasMoreData()) {
             return;
         }
@@ -3744,8 +3754,18 @@ public class ResultSetViewer extends Viewer
         }
     }
 
+    private boolean verifyQuerySafety() {
+        if (container.getDataContainer() == null || !container.getDataContainer().isFeatureSupported(DBSDataContainer.FEATURE_DATA_MODIFIED_ON_REFRESH) ) {
+            return true;
+        }
+        return UIUtils.confirmAction(null, ResultSetMessages.confirm_modifying_query_title, ResultSetMessages.confirm_modifying_query_message, DBIcon.STATUS_WARNING);
+    }
+
     @Override
     public void readAllData() {
+        if (!verifyQuerySafety()) {
+            return;
+        }
         if (!dataReceiver.isHasMoreData()) {
             return;
         }
@@ -4046,6 +4066,7 @@ public class ResultSetViewer extends Viewer
                         log.error("Error refreshing rows after update", e);
                     }
                 }
+                UIUtils.syncExec(() -> autoRefreshControl.scheduleAutoRefresh(!success));
             };
 
             return persister.applyChanges(monitor, false, settings, applyListener);
@@ -4061,6 +4082,7 @@ public class ResultSetViewer extends Viewer
         if (!isDirty()) {
             return;
         }
+        UIUtils.syncExec(() -> getActivePresentation().rejectChanges());
         try {
             createDataPersister(true).rejectChanges();
             if (model.getAllRows().isEmpty()) {

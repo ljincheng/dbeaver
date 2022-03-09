@@ -129,8 +129,7 @@ public class SQLSemanticProcessor {
     // Solution - always wrap query in subselect + add patched WHERE and ORDER
     // It is configurable
     public static String addFiltersToQuery(DBRProgressMonitor monitor, final DBPDataSource dataSource, String sqlQuery, final DBDDataFilter dataFilter) {
-        boolean supportSubqueries = dataSource.getSQLDialect().supportsSubqueries();
-        if (supportSubqueries && dataSource.getContainer().getPreferenceStore().getBoolean(ModelPreferences.SQL_FILTER_FORCE_SUBSELECT)) {
+        if (isForceFilterSubQuery(dataSource)) {
             return wrapQuery(dataSource, sqlQuery, dataFilter);
         }
         String newQuery = injectFiltersToQuery(monitor, dataSource, sqlQuery, dataFilter);
@@ -139,6 +138,10 @@ public class SQLSemanticProcessor {
             return wrapQuery(dataSource, sqlQuery, dataFilter);
         }
         return newQuery;
+    }
+
+    public static boolean isForceFilterSubQuery(DBPDataSource dataSource) {
+        return dataSource.getSQLDialect().supportsSubqueries() && dataSource.getContainer().getPreferenceStore().getBoolean(ModelPreferences.SQL_FILTER_FORCE_SUBSELECT);
     }
 
     public static String injectFiltersToQuery(DBRProgressMonitor monitor, final DBPDataSource dataSource, String sqlQuery, final DBDDataFilter dataFilter) {
@@ -164,11 +167,11 @@ public class SQLSemanticProcessor {
         modifiedQuery.append("\n) ").append(NESTED_QUERY_AlIAS);
         if (dataFilter.hasConditions()) {
             modifiedQuery.append(" WHERE ");
-            SQLUtils.appendConditionString(dataFilter, dataSource, NESTED_QUERY_AlIAS, modifiedQuery, true);
+            SQLUtils.appendConditionString(dataFilter, dataSource, NESTED_QUERY_AlIAS, modifiedQuery, true, true);
         }
         if (dataFilter.hasOrdering()) {
             modifiedQuery.append(" ORDER BY "); //$NON-NLS-1$
-            SQLUtils.appendOrderString(dataFilter, dataSource, NESTED_QUERY_AlIAS, modifiedQuery);
+            SQLUtils.appendOrderString(dataFilter, dataSource, NESTED_QUERY_AlIAS, true, modifiedQuery);
         }
         return modifiedQuery.toString();
     }
@@ -177,7 +180,7 @@ public class SQLSemanticProcessor {
         // WHERE
         if (filter.hasConditions()) {
             for (DBDAttributeConstraint co : filter.getConstraints()) {
-                if (co.hasCondition()) {
+                if (co.hasCondition() && !isDynamicAttribute(co.getAttribute())) {
                     Table table = getConstraintTable(select, co);
                     if (!isValidTableColumn(monitor, dataSource, table, co)) {
                         return false;
@@ -234,11 +237,25 @@ public class SQLSemanticProcessor {
         return true;
     }
 
+    private static boolean isDynamicAttribute(@Nullable DBSAttributeBase attribute) {
+        if (!(attribute instanceof DBDAttributeBinding)) {
+            return DBUtils.isDynamicAttribute(attribute);
+        }
+        DBDAttributeBinding attributeBinding = ((DBDAttributeBinding) attribute);
+        return DBUtils.isDynamicAttribute(attributeBinding.getAttribute());
+    }
+
     private static boolean isValidTableColumn(DBRProgressMonitor monitor, DBPDataSource dataSource, Table table, DBDAttributeConstraint co) throws DBException {
         DBSAttributeBase attribute = co.getAttribute();
+
+        if (isDynamicAttribute(attribute)) {
+            return true;
+        }
+
         if (attribute instanceof DBDAttributeBinding) {
             attribute = ((DBDAttributeBinding) attribute).getMetaAttribute();
         }
+
         if (table != null && attribute instanceof DBCAttributeMetaData) {
             DBSEntityAttribute entityAttribute = null;
             DBCEntityMetaData entityMetaData = ((DBCAttributeMetaData) attribute).getEntityMetaData();
