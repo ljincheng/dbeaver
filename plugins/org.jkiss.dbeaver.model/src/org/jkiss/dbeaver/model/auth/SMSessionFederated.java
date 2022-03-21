@@ -18,24 +18,9 @@
 package org.jkiss.dbeaver.model.auth;
 
 /**
- * Auth token.
- * Can be used by services to authenticate automatically.
+ * Federated session
  */
-public class DBAAuthToken {
+public interface SMSessionFederated extends SMSession {
 
-    private final DBASession session;
-    private final DBAAuthSpace space;
 
-    public DBAAuthToken(DBASession session, DBAAuthSpace space) {
-        this.session = session;
-        this.space = space;
-    }
-
-    public DBASession getSession() {
-        return session;
-    }
-
-    public DBAAuthSpace getSpace() {
-        return space;
-    }
 }

@@ -723,12 +723,18 @@ public class ResultSetViewer extends Viewer
             isUIUpdateRunning = true;
             if (resultSet instanceof StatResultSet) {
                 // Statistics - let's use special presentation for it
+                if (filtersPanel != null) {
+                    filtersPanel.setVisible(false);
+                }
                 availablePresentations = Collections.emptyList();
                 setActivePresentation(new StatisticsPresentation());
                 activePresentationDescriptor = null;
                 changed = true;
             } else {
                 // Regular results
+                if (filtersPanel != null) {
+                    filtersPanel.setVisible(true);
+                }
                 IResultSetContext context = new ResultSetContextImpl(this, resultSet);
                 final List<ResultSetPresentationDescriptor> newPresentations;
 
@@ -3568,7 +3574,7 @@ public class ResultSetViewer extends Viewer
             switch (checkResult) {
                 case ISaveablePart2.CANCEL:
                     dataReceiver.setHasMoreData(false);
-                    updatePanelsContent(true);
+                    UIUtils.asyncExec(() -> updatePanelsContent(true));
                     return false;
                 case ISaveablePart2.YES:
                     // Apply changes
@@ -3665,6 +3671,7 @@ public class ResultSetViewer extends Viewer
     @Override
     public boolean refreshData(@Nullable Runnable onSuccess) {
         if (!verifyQuerySafety() || !checkForChanges()) {
+            autoRefreshControl.scheduleAutoRefresh(false);
             return false;
         }
 
@@ -4058,6 +4065,8 @@ public class ResultSetViewer extends Viewer
                 if (listener != null) {
                     listener.onUpdate(success);
                 }
+                //fire selection change to update selection statistics in ResultSetStatListener
+                fireResultSetSelectionChange(new SelectionChangedEvent(ResultSetViewer.this, getSelection()));
                 if (success && getPreferenceStore().getBoolean(ResultSetPreferences.RS_EDIT_REFRESH_AFTER_UPDATE)) {
                     // Refresh updated rows
                     try {
@@ -4083,6 +4092,9 @@ public class ResultSetViewer extends Viewer
             return;
         }
         UIUtils.syncExec(() -> getActivePresentation().rejectChanges());
+
+        //fire selection change to update selection statistics in ResultSetStatListener
+        fireResultSetSelectionChange(new SelectionChangedEvent(ResultSetViewer.this, getSelection()));
         try {
             createDataPersister(true).rejectChanges();
             if (model.getAllRows().isEmpty()) {
@@ -4922,11 +4934,16 @@ public class ResultSetViewer extends Viewer
                             // Restore original position
                             restorePresentationState(presentationState);
                         }
-                        if (focusRow >= 0 && focusRow < model.getRowCount() && model.getVisibleAttributeCount() > 0) {
-                            if (getCurrentRow() == null) {
+                        /*
+                        We allow zero length row list for the situations when we load new an empty resultSet and the last resultSet
+                        wasn't empty. Previously we didn't update the selected row count which caused a problem described in #15767
+                        Now we call the ResultSetStatListener even if the resultSet is empty.
+                         */
+                        if (focusRow >= 0 && (focusRow < model.getRowCount() || model.getRowCount() == 0) && model.getVisibleAttributeCount() > 0) {
+                            if (getCurrentRow() == null && model.getRowCount() > 0) {
                                 setCurrentRow(getModel().getRow(focusRow));
                             }
-                            if (getActivePresentation().getCurrentAttribute() == null) {
+                            if (getActivePresentation().getCurrentAttribute() == null || model.getRowCount() == 0) {
                                 getActivePresentation().setCurrentAttribute(model.getVisibleAttribute(0));
                                 panelUpdated = true; // Attribute viewer refreshed
                             }

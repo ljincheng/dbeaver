@@ -14,17 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jkiss.dbeaver.model.qm.filters;
 
-package org.jkiss.dbeaver.model.auth;
+import org.jkiss.code.Nullable;
 
-import java.util.Map;
+import java.time.LocalDateTime;
 
-public interface DBASessionPersistent {
-    Map<String, Object> getAttributes();
+public class QMDateRange {
+    @Nullable
+    private final LocalDateTime from;
+    @Nullable
+    private final LocalDateTime to;
 
-    <T> T getAttribute(String name);
+    public QMDateRange(@Nullable LocalDateTime from, @Nullable LocalDateTime to) {
+        this.from = from;
+        this.to = to;
+    }
 
-    void setAttribute(String name, Object value);
+    @Nullable
+    public LocalDateTime getFrom() {
+        return from;
+    }
 
-    Object removeAttribute(String name);
+    @Nullable
+    public LocalDateTime getTo() {
+        return to;
+    }
 }

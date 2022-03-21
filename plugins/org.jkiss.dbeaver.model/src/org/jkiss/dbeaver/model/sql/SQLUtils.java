@@ -528,9 +528,10 @@ public final class SQLUtils {
 
         if (!CommonUtils.isEmpty(filter.getWhere())) {
             if (constraints.length > 0) {
-                query.append(operator);
+                query.append(operator).append('(').append(filter.getWhere()).append(')');
+            } else {
+                query.append(filter.getWhere());
             }
-            query.append(filter.getWhere());
         }
     }
 
@@ -644,9 +645,13 @@ public final class SQLUtils {
                 }
                 if (hasNull) {
                     conString.append("IS NULL OR ");
-                    if (conditionTable != null) {
-                        conString.append(conditionTable).append('.');
+                    
+                    if (constraint.getEntityAlias() != null) {
+                    	conString.append(constraint.getEntityAlias()).append('.');
+                    } else if (conditionTable != null) {
+                    	conString.append(conditionTable).append('.');
                     }
+                    
                     conString.append(DBUtils.getObjectFullName(dataSource, constraint.getAttribute(), DBPEvaluationContext.DML)).append(" ");
                 }
 

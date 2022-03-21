@@ -14,16 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.jkiss.dbeaver.model.auth;
 
+import org.jkiss.code.NotNull;
+import org.jkiss.dbeaver.model.DBPImage;
+
+import java.util.List;
+import java.util.Set;
+
 /**
- * Session principal (user)
+ * Auth provider descriptor
  */
-public interface DBASessionPrincipal {
+public interface SMAuthProviderDescriptor {
 
-    String getUserDomain();
+    String getId();
 
-    String getUserName();
+    String getLabel();
+
+    String getDescription();
+
+    DBPImage getIcon();
+
+    List<SMAuthCredentialsProfile> getCredentialProfiles();
+
+    List<AuthPropertyDescriptor> getCredentialParameters(Set<String> keySet);
+
+    @NotNull
+    SMAuthProvider<?> getInstance();
 
 }

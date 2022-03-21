@@ -14,30 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.qm.filters;
 
-import org.jkiss.code.Nullable;
+package org.jkiss.dbeaver.model.auth;
 
-import java.time.LocalDateTime;
+/**
+ * Session principal (user)
+ */
+public interface SMSessionPrincipal {
 
-public class DateRange {
-    @Nullable
-    private final LocalDateTime from;
-    @Nullable
-    private final LocalDateTime to;
+    String getUserDomain();
 
-    public DateRange(@Nullable LocalDateTime from, @Nullable LocalDateTime to) {
-        this.from = from;
-        this.to = to;
-    }
+    String getUserName();
 
-    @Nullable
-    public LocalDateTime getFrom() {
-        return from;
-    }
-
-    @Nullable
-    public LocalDateTime getTo() {
-        return to;
-    }
 }
