@@ -27,12 +27,12 @@ import java.util.Map;
  */
 public interface SMAuthCredentialsManager {
 
-    /**
-     * Find user with matching credentials.
-     * It doesn't check credentials like passwords, just searches user id by identifying credentials.
-     */
-    @Nullable
-    String getUserByCredentials(String authProviderId, Map<String, Object> authParameters) throws DBCException;
+//    /**
+//     * Find user with matching credentials.
+//     * It doesn't check credentials like passwords, just searches user id by identifying credentials.
+//     */
+//    @Nullable
+//    String getUserByCredentials(String authProviderId, Map<String, Object> authParameters) throws DBCException;
 
     /**
      * Get user credentials for specified provider
