@@ -29,6 +29,7 @@ import org.jkiss.dbeaver.model.DBConstants;
 import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.DBPImage;
+import org.jkiss.dbeaver.model.app.DBPPlatformEclipse;
 import org.jkiss.dbeaver.model.app.DBPResourceHandler;
 import org.jkiss.dbeaver.model.fs.nio.NIOResource;
 import org.jkiss.dbeaver.model.meta.Property;
@@ -36,6 +37,7 @@ import org.jkiss.dbeaver.model.runtime.AbstractJob;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.ArrayUtils;
+import org.jkiss.utils.ByteNumberFormat;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.File;
@@ -56,6 +58,7 @@ public class DBNResource extends DBNNode implements DBNNodeWithResource// implem
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(DBConstants.DEFAULT_TIMESTAMP_FORMAT);
 
+    private final ByteNumberFormat numberFormat = new ByteNumberFormat(ByteNumberFormat.BinaryPrefix.ISO);
     private IResource resource;
     private DBPResourceHandler handler;
     private DBNNode[] children;
@@ -231,7 +234,7 @@ public class DBNResource extends DBNNode implements DBNNodeWithResource// implem
                 // Sub folder
                 return handler.makeNavigatorNode(this, resource);
             }
-            DBPResourceHandler resourceHandler = getModel().getPlatform().getWorkspace().getResourceHandler(resource);
+            DBPResourceHandler resourceHandler = DBPPlatformEclipse.getInstance().getWorkspace().getResourceHandler(resource);
             if (resourceHandler == null) {
                 log.debug("Skip resource '" + resource.getName() + "'");
                 return null;
@@ -459,7 +462,7 @@ public class DBNResource extends DBNNode implements DBNNodeWithResource// implem
     }
 
     public void refreshResourceState(Object source) {
-        DBPResourceHandler newHandler = getModel().getPlatform().getWorkspace().getResourceHandler(resource);
+        DBPResourceHandler newHandler = DBPPlatformEclipse.getInstance().getWorkspace().getResourceHandler(resource);
         if (newHandler != handler) {
             handler = newHandler;
         }
@@ -534,8 +537,9 @@ public class DBNResource extends DBNNode implements DBNNodeWithResource// implem
     }
 
     @Property(viewable = true, order = 11)
-    public long getResourceSize() {
-        return resource == null ? 0 : resource.getLocation().toFile().length();
+    public String getResourceSize() {
+        long size = resource == null ? 0 : resource.getLocation().toFile().length();
+        return numberFormat.format(size);
     }
 
     @Property(viewable = true, order = 11)

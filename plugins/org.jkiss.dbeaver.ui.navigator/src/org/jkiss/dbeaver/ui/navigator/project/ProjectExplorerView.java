@@ -26,6 +26,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.jkiss.dbeaver.model.DBConstants;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
+import org.jkiss.dbeaver.model.app.DBPPlatformEclipse;
 import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.app.DBPProjectListener;
 import org.jkiss.dbeaver.model.navigator.*;
@@ -34,9 +35,9 @@ import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.controls.ViewerColumnController;
 import org.jkiss.dbeaver.ui.internal.UINavigatorMessages;
 import org.jkiss.dbeaver.ui.project.PrefPageProjectResourceSettings;
+import org.jkiss.utils.ByteNumberFormat;
 import org.jkiss.utils.CommonUtils;
 
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -51,10 +52,10 @@ public class ProjectExplorerView extends DecoratedProjectView implements DBPProj
 
     public static final String VIEW_ID = "org.jkiss.dbeaver.core.projectExplorer";
     private ViewerColumnController columnController;
-    private final NumberFormat sizeFormat = new DecimalFormat();
+    private final NumberFormat sizeFormat = new ByteNumberFormat(ByteNumberFormat.BinaryPrefix.ISO);
 
     public ProjectExplorerView() {
-        DBWorkbench.getPlatform().getWorkspace().addProjectListener(this);
+        DBPPlatformEclipse.getInstance().getWorkspace().addProjectListener(this);
     }
 
     @Override
@@ -222,7 +223,7 @@ public class ProjectExplorerView extends DecoratedProjectView implements DBPProj
                 UINavigatorMessages.navigator_project_explorer_columns_modified_description,
                 SWT.LEFT, false, false,
                 new ColumnLabelProvider() {
-                    private SimpleDateFormat sdf = new SimpleDateFormat(DBConstants.DEFAULT_TIMESTAMP_FORMAT);
+                    private final SimpleDateFormat sdf = new SimpleDateFormat(DBConstants.DEFAULT_TIMESTAMP_FORMAT);
 
                     @Override
                     public String getText(Object element) {
@@ -265,7 +266,7 @@ public class ProjectExplorerView extends DecoratedProjectView implements DBPProj
 
     @Override
     public void dispose() {
-        DBWorkbench.getPlatform().getWorkspace().removeProjectListener(this);
+        DBPPlatformEclipse.getInstance().getWorkspace().removeProjectListener(this);
         super.dispose();
     }
 

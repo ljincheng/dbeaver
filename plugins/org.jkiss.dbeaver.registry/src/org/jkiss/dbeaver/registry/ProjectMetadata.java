@@ -31,10 +31,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.*;
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.Log;
-import org.jkiss.dbeaver.model.app.DBASecureStorage;
-import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
-import org.jkiss.dbeaver.model.app.DBPProject;
-import org.jkiss.dbeaver.model.app.DBPWorkspace;
+import org.jkiss.dbeaver.model.app.*;
 import org.jkiss.dbeaver.model.auth.SMSessionContext;
 import org.jkiss.dbeaver.model.data.json.JSONUtils;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
@@ -346,11 +343,23 @@ public class ProjectMetadata implements DBPProject {
     }
 
     private void saveProperties() {
+        if (isInMemory()) {
+            return;
+        }
+
         Path settingsFile = getMetadataPath().resolve(SETTINGS_STORAGE_FILE);
         String settingsString = METADATA_GSON.toJson(properties);
-        try (Writer settingsWriter = new OutputStreamWriter(Files.newOutputStream(settingsFile), StandardCharsets.UTF_8)) {
-            settingsWriter.write(settingsString);
-        } catch (Throwable e) {
+
+        try {
+            Path configFolder = settingsFile.getParent();
+            if (!Files.exists(configFolder)) {
+                Files.createDirectories(configFolder);
+            }
+
+            try (Writer settingsWriter = new OutputStreamWriter(Files.newOutputStream(settingsFile), StandardCharsets.UTF_8)) {
+                settingsWriter.write(settingsString);
+            }
+        } catch (Exception e) {
             log.error("Error writing project '" + getName() + "' setting to "  + settingsFile.toAbsolutePath(), e);
         }
     }
@@ -557,8 +566,14 @@ public class ProjectMetadata implements DBPProject {
     private Map<String, Map<String, Object>> extractProjectResourceProperties() {
         Map<String, Map<String, Object>> result = new LinkedHashMap<>();
 
+        DBPWorkspaceEclipse workspaceEclipse;
+        if (workspace instanceof DBPWorkspaceEclipse) {
+            workspaceEclipse = (DBPWorkspaceEclipse) workspace;
+        } else {
+            return result;
+        }
         try {
-            BucketTree bucketTree = new BucketTree((Workspace) workspace.getEclipseWorkspace(), new PropertyBucket());
+            BucketTree bucketTree = new BucketTree((Workspace) workspaceEclipse.getEclipseWorkspace(), new PropertyBucket());
             try {
                 final IPath projectPath = project.getFullPath();
                 bucketTree.accept(new Bucket.Visitor() {
