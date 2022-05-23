@@ -66,7 +66,7 @@ public class PrefPageSourceCodeGeneral extends AbstractPrefPage implements IWork
     }
 
     @Override
-    protected Control createContents(Composite parent)
+    protected Control createPreferenceContent(Composite parent)
     {
         Composite composite = UIUtils.createPlaceholder(parent, 1, 5);
 
