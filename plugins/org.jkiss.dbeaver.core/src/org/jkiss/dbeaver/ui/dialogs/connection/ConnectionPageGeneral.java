@@ -129,6 +129,11 @@ public class ConnectionPageGeneral extends ConnectionWizardPage implements Navig
         }
     }
 
+    
+    protected boolean wasActivated() {
+        return this.activated;
+    }
+
     @Override
     public void dispose()
     {

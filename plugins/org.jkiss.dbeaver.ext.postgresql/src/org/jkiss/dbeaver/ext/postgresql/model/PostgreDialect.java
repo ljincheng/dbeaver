@@ -371,6 +371,7 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider, SQ
         "TO_HEX",
         "TRANSLATE",
         "TREAT",
+        "UNACCENT"
     };
 
     public static String[] POSTGRE_FUNCTIONS_DATETIME = new String[]{
@@ -867,6 +868,11 @@ public class PostgreDialect extends JDBCSQLDialect implements TPRuleProvider, SQ
     @Override
     public boolean supportsAliasInSelect() {
         return true;
+    }
+
+    @Override
+    public boolean supportsAliasInConditions() {
+        return false;
     }
 
     @Override
