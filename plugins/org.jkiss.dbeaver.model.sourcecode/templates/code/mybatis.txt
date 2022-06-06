@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="<@{dao.name}@>">
 
-	<resultMap id="BaseResultMap" type="<@{entity.paramName}@>" >
+	<resultMap id="<@{entity.paramName}@>Map" type="<@{entity.paramName}@>" >
 		<@each:{columns} item:"item"@><result column="<@{item.columnName}@>" property="<@{item.paramName}@>" /><@{system.lf}@><@endEach@>
 	</resultMap>
 
@@ -12,19 +12,31 @@
 	</insert>
 
 	<select id="queryList" parameterType="map" resultType="<@{entity.paramName}@>">
-	SELECT * FROM  <@{tableName}@>  WHERE 1=1 
+	SELECT * FROM  <@{tableName}@> 
+	<where> 
 	<@each:{columns} item:"item" separator:"		" @><if test="<@{item.paramName}@> != null<@if:"{item.javaType} ==String"@> and <@{item.paramName}@> !='' <@endIf@>"> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
+	</where>
 	</select>
 
 	<select id="queryListPage" parameterType="map" resultType="<@{entity.paramName}@>">
-	SELECT * FROM  <@{tableName}@> WHERE 1=1 
+	SELECT * FROM  <@{tableName}@> 
+	<where> 
 	<@each:{columns} item:"item" separator:"		"  @><if test="<@{item.paramName}@> != null<@if:"{item.javaType} ==String"@> and <@{item.paramName}@> !='' <@endIf@>"> and <@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
+	</where>
 	</select>
 	
 	<@if:"{primaryColumn}!=null"@>
 	
 	<update id="updateBy<@{primaryColumn.codeName}@>" parameterType="<@{entity.paramName}@>"> 
 	 UPDATE <@{tableName}@> SET <@each:{mybatisInsertColumns} item:"item" separator:"," @><@{item.columnName}@> = #{<@{item.paramName}@>}<@endEach@>
+	  WHERE <@{primaryColumn.columnName}@> = #{<@{primaryColumn.paramName}@>} 
+	</update>
+	
+	<update id="updateHasValueBy<@{primaryColumn.codeName}@>" parameterType="<@{entity.paramName}@>"> 
+	 UPDATE <@{tableName}@> 
+	 <set>
+	 <@each:{mybatisInsertColumns} item:"item" separator:"		"  @><if test="<@{item.paramName}@> != null<@if:"{item.javaType} ==String"@> and <@{item.paramName}@> !='' <@endIf@>"> ,<@{item.columnName}@> = #{<@{item.paramName}@>} </if><@{system.lf}@><@endEach@>
+	 </set>
 	  WHERE <@{primaryColumn.columnName}@> = #{<@{primaryColumn.paramName}@>} 
 	</update>
 	
@@ -35,6 +47,13 @@
 	
 	<select id="findBy<@{primaryColumn.codeName}@>" parameterType="<@{primaryColumn.javaType}@>" resultType="<@{entity.paramName}@>">
 	 SELECT * FROM <@{tableName}@> WHERE <@{primaryColumn.columnName}@> = #{<@{primaryColumn.paramName}@>}
+	</select>
+	
+	<select id="findBy<@{primaryColumn.codeName}@>List" parameterType="list" resultType="<@{entity.paramName}@>">
+	 SELECT * FROM <@{tableName}@> WHERE <@{primaryColumn.columnName}@> in
+		<foreach collection="list" item="id" separator="," open="(" close=")" >
+            #{id}
+        </foreach>
 	</select>
 	
 	<delete id="deleteBatchBy<@{primaryColumn.codeName}@>" parameterType="list">

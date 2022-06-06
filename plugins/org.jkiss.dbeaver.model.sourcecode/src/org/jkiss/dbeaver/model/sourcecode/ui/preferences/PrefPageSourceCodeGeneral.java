@@ -17,7 +17,10 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
+import org.jkiss.dbeaver.model.sourcecode.core.CodeTemplate;
 import org.jkiss.dbeaver.model.sourcecode.internal.UIMessages;
+import org.jkiss.dbeaver.model.sourcecode.utils.CodeHelper;
+import org.jkiss.dbeaver.model.sourcecode.utils.TemplateUtils;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
@@ -69,10 +72,12 @@ public class PrefPageSourceCodeGeneral extends AbstractPrefPage implements IWork
     protected Control createPreferenceContent(Composite parent)
     {
         Composite composite = UIUtils.createPlaceholder(parent, 1, 5);
+        String tplPath=TemplateUtils.getTemplateFolder(true).getAbsolutePath();
+        UIUtils.createInfoLabel(composite, "模板缓存位置:"+tplPath);
 
         {
             Group groupObjects = UIUtils.createControlGroup(composite, org.jkiss.dbeaver.model.sourcecode.internal.UIMessages.dbeaver_generate_sourcecode_preferences_generalSetting, 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
-            
+           
             
             sourceCodeOutPutDir=DialogUtils.createOutputFolderChooser(groupObjects, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder, null,null);
             sourceCodePackagePath= UIUtils.createLabelText(groupObjects, UIMessages.dbeaver_generate_sourcecode_packageName, null,2);

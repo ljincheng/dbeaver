@@ -16,14 +16,14 @@ public interface <@{component.simpleName}@> {
 	 * @param <@{entity.paramName}@>
 	 * @return
 	 */
-	 Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	 Integer insert(<@{entity.simpleName}@> <@{entity.paramName}@>);
 
 	/**
 	 * 获取列表
 	 * @param selectItem
 	 * @return
 	 */
-	 List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem);
+	 List<<@{entity.simpleName}@>> queryList(Map<String,Object> selectItem);
 
 	/**
 	 * 获取分页列表
@@ -32,7 +32,7 @@ public interface <@{component.simpleName}@> {
 	 * @param selectItem 过滤条件
 	 * @return
 	 */
-	 <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem);
+	 <@{pageDo.simpleName}@><<@{entity.simpleName}@>> queryListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem);
 
 <@if:"{primaryColumn}!=null"@>
 	/**
@@ -40,27 +40,42 @@ public interface <@{component.simpleName}@> {
 	 * @param <@{entity.paramName}@>
 	 * @return
 	 */
-	 Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	 Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+
+ 	/**
+	 * 根据<@{primaryColumn.paramName}@>修改
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	 Integer updateHasValueBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	
 
 	/**
 	 * 根据<@{primaryColumn.paramName}@>删除
 	 * @param <@{primaryColumn.paramName}@>
 	 * @return
 	 */
-	 Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	 Integer deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
 
 	/**
 	 * 根据<@{primaryColumn.paramName}@>查找
 	 * @param <@{primaryColumn.paramName}@>
 	 * @return
 	 */
-	 <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	 <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+	 
+	 /**
+	 * 根据<@{primaryColumn.paramName}@>查找
+	 * @param <@{primaryColumn.paramName}@>s
+	 * @return
+	 */
+	 <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>List(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s);
 	 
 	 /**
 	 * 根据<@{primaryColumn.paramName}@>批量删除
 	 * @param <@{primaryColumn.paramName}@>s
 	 * @return
 	 */
-	 Integer deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s);
+	 Integer deleteBatchBy<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s);
 <@endIf@>
 }

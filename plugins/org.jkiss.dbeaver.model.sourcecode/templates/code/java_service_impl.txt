@@ -22,38 +22,38 @@ public class <@{serviceImpl.simpleName}@> implements <@{service.simpleName}@> {
 
 	@Override
 	public Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
-		return <@{component.paramName}@>.insert<@{tableCodeName}@>(<@{entity.paramName}@>);
+		return <@{component.paramName}@>.insert(<@{entity.paramName}@>);
 	}
 
 	@Override
 	public List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem){
-		return <@{component.paramName}@>.query<@{tableCodeName}@>List(selectItem);
+		return <@{component.paramName}@>.queryList(selectItem);
 	}
 
 	@Override
 	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem){
-		return <@{component.paramName}@>.query<@{tableCodeName}@>ListPage(pageIndex,pageSize,selectItem);
+		return <@{component.paramName}@>.queryListPage(pageIndex,pageSize,selectItem);
 	}
 
 <@if:"{primaryColumn}!=null"@>
 	@Override
 	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
-		return <@{component.paramName}@>.update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
+		return <@{component.paramName}@>.updateBy<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
 	}
 
 	@Override
 	public Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
-		return <@{component.paramName}@>.delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+		return <@{component.paramName}@>.deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
 
 	@Override
 	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
-		return <@{component.paramName}@>.find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
+		return <@{component.paramName}@>.findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
 	
 	@Override
 	public Integer deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s){
-		return <@{component.paramName}@>.deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>s);
+		return <@{component.paramName}@>.deleteBatchBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>s);
 	}
 <@endIf@>
 }

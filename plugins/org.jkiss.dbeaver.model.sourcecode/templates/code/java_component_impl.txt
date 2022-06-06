@@ -21,17 +21,17 @@ public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@
 	private <@{dao.simpleName}@> <@{dao.paramName}@>;
 
 	@Override
-	public Integer insert<@{tableCodeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+	public Integer insert(<@{entity.simpleName}@> <@{entity.paramName}@>){
 		return <@{dao.paramName}@>.insert(<@{entity.paramName}@>);
 	}
 
 	@Override
-	public List<<@{entity.simpleName}@>> query<@{tableCodeName}@>List(Map<String,Object> selectItem){
+	public List<<@{entity.simpleName}@>> queryList(Map<String,Object> selectItem){
 		return <@{dao.paramName}@>.queryList(selectItem);
 	}
 
 	@Override
-	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> query<@{tableCodeName}@>ListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem){
+	public <@{pageDo.simpleName}@><<@{entity.simpleName}@>> queryListPage(Long pageIndex,Integer pageSize,Map<String,Object> selectItem){
 		if(selectItem==null){
 			selectItem=new HashMap<String,Object>();
 		}
@@ -43,22 +43,32 @@ public class <@{componentImpl.simpleName}@> implements <@{component.simpleName}@
 
 <@if:"{primaryColumn}!=null"@>
 	@Override
-	public Integer update<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+	public Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
 		return <@{dao.paramName}@>.updateBy<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
+	}
+	
+	@Override
+	public Integer updateHasValueBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>){
+		return <@{dao.paramName}@>.updateHasValueBy<@{primaryColumn.codeName}@>(<@{entity.paramName}@>);
 	}
 
 	@Override
-	public Integer delete<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+	public Integer deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{dao.paramName}@>.deleteBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
 
 	@Override
-	public <@{entity.simpleName}@> find<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
+	public <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>){
 		return <@{dao.paramName}@>.findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>);
 	}
 	
 	@Override
-	public Integer deleteBatch<@{tableCodeName}@>By<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s){
+	public <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>List(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>s){
+		return <@{dao.paramName}@>.findBy<@{primaryColumn.codeName}@>List(<@{primaryColumn.paramName}@>s);
+	}
+	
+	@Override
+	public Integer deleteBatchBy<@{primaryColumn.codeName}@>(List<<@{primaryColumn.javaType}@>> <@{primaryColumn.paramName}@>s){
 		return <@{dao.paramName}@>.deleteBatchBy<@{primaryColumn.codeName}@>(<@{primaryColumn.paramName}@>s);
 	}
 <@endIf@>

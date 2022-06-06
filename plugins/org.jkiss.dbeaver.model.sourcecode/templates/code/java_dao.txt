@@ -40,6 +40,13 @@ public interface <@{dao.simpleName}@> {
 	 * @return
 	 */
 	 Integer updateBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
+	 
+	 /**
+	 * 根据<@{primaryColumn.paramName}@>修改
+	 * @param <@{entity.paramName}@>
+	 * @return
+	 */
+	 Integer updateHasValueBy<@{primaryColumn.codeName}@>(<@{entity.simpleName}@> <@{entity.paramName}@>);
 	
 	/**
 	 * 根据<@{primaryColumn.paramName}@>删除
@@ -54,6 +61,14 @@ public interface <@{dao.simpleName}@> {
 	 * @return
 	 */
 	 <@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>(<@{primaryColumn.javaType}@> <@{primaryColumn.paramName}@>);
+
+	/**
+	 * 根据<@{primaryColumn.paramName}@>查找
+	 * @param <@{primaryColumn.paramName}@>
+	 * @return
+	 */
+	<@{entity.simpleName}@> findBy<@{primaryColumn.codeName}@>List(List<<@{primaryColumn.javaType}@>> list);
+
 
    /**
      * 根据id批量删除
