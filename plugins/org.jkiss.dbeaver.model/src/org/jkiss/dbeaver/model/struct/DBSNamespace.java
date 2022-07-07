@@ -14,27 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.model.qm;
+
+package org.jkiss.dbeaver.model.struct;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
-import java.sql.SQLException;
-import java.util.Collection;
+import java.util.List;
 
-
-public interface QMService extends QMEventBrowser {
-    void saveEvent(QMMetaEvent event, DBRProgressMonitor monitor) throws DBException, SQLException;
+/**
+ * Namespace contains different types of objects which must have unique names.
+ * For example tables and data types in PostgreSQL.
+ */
+public interface DBSNamespace {
 
     @NotNull
-    Collection<String> getQueryFilterHistory(@NotNull String query) throws DBException;
+    DBSObjectType[] getNamespaceObjectTypes();
 
-    void saveQueryFilterValue(@NotNull String query, @NotNull String filterValue) throws DBException;
+    @Nullable
+    DBSObject getObjectByName(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull String name) throws DBException;
 
-    void deleteQueryFilterValue(@NotNull String query, String filterValue) throws DBException;
+    @NotNull
+    List<? extends DBSObject> getObjectsByType(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull DBSObjectType objectType) throws DBException;
 
-    String openSession(@NotNull QMSessionInfo sessionInfo, @NotNull DBRProgressMonitor monitor) throws DBException;
-
-    void closeSession(String appSessionId, DBRProgressMonitor monitor);
 }
