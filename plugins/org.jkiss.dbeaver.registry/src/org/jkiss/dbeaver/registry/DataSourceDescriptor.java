@@ -733,7 +733,7 @@ public class DataSourceDescriptor
 
     @Override
     public void persistConfiguration() {
-        registry.flushConfig();
+        registry.updateDataSource(this);
     }
 
     @Override
@@ -940,6 +940,9 @@ public class DataSourceDescriptor
     }
 
     public void openDataSource(DBRProgressMonitor monitor, boolean initialize) throws DBException {
+        if (this.getDriver().isSingleConnection()) {
+            this.setForceUseSingleConnection(true);
+        }
         this.dataSource = getDriver().getDataSourceProvider().openDataSource(monitor, this);
         this.connectTime = new Date();
         monitor.worked(1);

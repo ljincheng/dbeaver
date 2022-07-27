@@ -45,7 +45,7 @@ import java.util.*;
  * LightGrid
  * initially based on Nebula grid. Refactored and mostly redone.
  *
- * @author serge@jkiss.org
+ * @author serge@dbeaver.com
  * @author chris.gross@us.ibm.com
  */
 public abstract class LightGrid extends Canvas {
@@ -511,8 +511,9 @@ public abstract class LightGrid extends Canvas {
     }
 
     public boolean hasExpandableRows() {
-        for (IGridRow row : gridRows) {
-            if (getRowState(row) != IGridContentProvider.ElementState.NONE) {
+        final IGridContentProvider provider = getContentProvider();
+        for (GridColumn column : columns) {
+            if (provider.isElementExpandable(column)) {
                 return true;
             }
         }
@@ -3369,14 +3370,8 @@ public abstract class LightGrid extends Canvas {
             return IGridContentProvider.ElementState.EXPANDED;
         }
 
-        if (getContentProvider().hasChildren(row)) {
+        if (getContentProvider().hasChildren(row) || hasExpandableRows()) {
             return IGridContentProvider.ElementState.COLLAPSED;
-        }
-
-        for (GridColumn column : columns) {
-            if (getContentProvider().hasChildren(column)) {
-                return IGridContentProvider.ElementState.COLLAPSED;
-            }
         }
 
         return IGridContentProvider.ElementState.NONE;
