@@ -14,24 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.ui.controls.lightgrid;
+package org.jkiss.dbeaver.model.security.user;
 
-/**
- * Child grid row
- * Differs from nested row by having its own element.
- */
-class GridRowChild extends GridRowNested {
 
-    private final Object element;
+import org.jkiss.code.Nullable;
 
-    public GridRowChild(IGridRow parent, int position, Object element) {
-        super(parent, position);
-        this.element = element;
+import java.util.List;
+
+public class SMProjectPermissions {
+    @Nullable
+    private final String projectId;
+    private final List<SMProjectPermission> permissions;
+
+    public SMProjectPermissions(@Nullable String projectId, List<SMProjectPermission> permissions) {
+        this.projectId = projectId;
+        this.permissions = permissions;
     }
 
-    @Override
-    public Object getElement() {
-        return element;
+    @Nullable
+    public String getProjectId() {
+        return projectId;
     }
 
+    public List<SMProjectPermission> getPermissions() {
+        return permissions;
+    }
 }
