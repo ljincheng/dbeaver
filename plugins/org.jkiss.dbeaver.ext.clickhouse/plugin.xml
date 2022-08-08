@@ -40,6 +40,7 @@
                     <parameter name="supports-truncate" value="false"/>
                     <parameter name="omit-catalog" value="true"/>
                     <parameter name="alter-table-add-column" value="true"/>
+                    <parameter name="supports-multi-insert" value="true"/>
                 </driver>
 
                 <driver
@@ -59,6 +60,7 @@
                     <parameter name="supports-truncate" value="false"/>
                     <parameter name="omit-catalog" value="true"/>
                     <parameter name="alter-table-add-column" value="true"/>
+                    <parameter name="supports-multi-insert" value="true"/>
                 </driver>
             </drivers>
 
@@ -87,6 +89,11 @@
             <type standard="STRUCT"/>
             <type name="ENUM8"/>
             <type name="ENUM16"/>
+            <type name="INT128"/>
+            <type name="INT256"/>
+            <type name="UINT64"/>
+            <type name="UINT128"/>
+            <type name="UINT256"/>
         </provider>
     </extension>
 

@@ -20,6 +20,7 @@ package org.jkiss.dbeaver.model.app;
 import org.eclipse.equinox.security.storage.ISecurePreferences;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
+import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.access.DBAAuthProfile;
 import org.jkiss.dbeaver.model.access.DBACredentialsProvider;
@@ -126,7 +127,17 @@ public interface DBPDataSourceRegistry extends DBPObject {
     void flushConfig();
     void refreshConfig();
 
-    Throwable getLastLoadError();
+    /**
+     * Returns and nullifies last registry save/load error.
+     */
+    Throwable getLastError();
+
+    boolean hasError();
+
+    /**
+     * Throws lasty occured load/save error
+     */
+    void checkForErrors() throws DBException;
 
     void notifyDataSourceListeners(final DBPEvent event);
 

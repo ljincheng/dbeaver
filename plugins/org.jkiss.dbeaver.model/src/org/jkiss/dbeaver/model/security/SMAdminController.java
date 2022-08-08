@@ -75,10 +75,11 @@ public interface SMAdminController extends SMController {
         @NotNull SMObjectType objectType
     ) throws DBException;
 
-    @NotNull
-    SMObjectPermissions getObjectPermissions(
+    /**
+     * Delete all assigned object permissions for subject
+     */
+    void deleteAllSubjectObjectPermissions(
         @NotNull String subjectId,
-        @NotNull String objectId,
         @NotNull SMObjectType objectType
     ) throws DBException;
 
