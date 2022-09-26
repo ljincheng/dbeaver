@@ -182,7 +182,8 @@ public class SourceCodeTemplateStore extends TemplateStore {
 
         private File getConfigurationFile()
         {
-            return DBWorkbench.getPlatform().getConfigurationFile("templates.xml");
+            java.nio.file.Path path= DBWorkbench.getPlatform().getLocalConfigurationFile("templates.xml");
+            return path.toFile();
         }
 
         @Override
