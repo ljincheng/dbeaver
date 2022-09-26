@@ -128,7 +128,9 @@ public class GroupingPanel implements IResultSetPanel {
 
     @Override
     public void activatePanel() {
+        getGroupingResultsContainer();
         refresh(false);
+        groupingPlaceholder.layout(true, true);
     }
 
     @Override
@@ -302,7 +304,7 @@ public class GroupingPanel implements IResultSetPanel {
                 return;
             }
             dataSource.getContainer().getPreferenceStore().setValue(ResultSetPreferences.RS_GROUPING_DEFAULT_SORTING, newValue);
-            dataSource.getContainer().getRegistry().flushConfig();
+            dataSource.getContainer().persistConfiguration();
             try {
                 getGroupingResultsContainer().rebuildGrouping();
             } catch (DBException e) {

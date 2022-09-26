@@ -14,21 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jkiss.dbeaver.ext.clickhouse.model;
 
-package org.jkiss.dbeaver.model.app;
+import org.jkiss.dbeaver.model.impl.net.SSLHandlerImpl;
 
-import org.eclipse.equinox.security.storage.ISecurePreferences;
+public class ClickhouseSSLImpl extends SSLHandlerImpl {
 
-import javax.crypto.SecretKey;
-
-/**
- * Client security manager
- */
-public interface DBASecureStorage {
-
-    boolean useSecurePreferences();
-
-    ISecurePreferences getSecurePreferences();
-
-    SecretKey getLocalSecretKey();
 }

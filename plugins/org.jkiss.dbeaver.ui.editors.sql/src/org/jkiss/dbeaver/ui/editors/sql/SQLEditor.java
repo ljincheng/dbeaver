@@ -74,6 +74,7 @@ import org.jkiss.dbeaver.model.messages.ModelMessages;
 import org.jkiss.dbeaver.model.navigator.DBNUtils;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.qm.QMUtils;
+import org.jkiss.dbeaver.model.rm.RMConstants;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
 import org.jkiss.dbeaver.model.runtime.DBRProgressListener;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
@@ -263,7 +264,7 @@ public class SQLEditor extends SQLEditorBase implements
     }
     
     public void setConsoleViewOutputEnabled(boolean value) {
-        isResultSetAutoFocusEnabled = value;
+        isResultSetAutoFocusEnabled = !value;
     }
 
     @Override
@@ -305,6 +306,24 @@ public class SQLEditor extends SQLEditorBase implements
         IFile file = EditorUtils.getFileFromInput(getEditorInput());
         return file == null ?
             DBWorkbench.getPlatform().getWorkspace().getActiveProject() : DBPPlatformDesktop.getInstance().getWorkspace().getProject(file.getProject());
+    }
+    
+    private boolean isProjectResourceEditable() {
+        if (getEditorInput() instanceof IFileEditorInput) {
+            DBPProject project = this.getProject();
+            return project == null || project.hasRealmPermission(RMConstants.PERMISSION_PROJECT_RESOURCE_EDIT);
+        }
+        return true;
+    }
+
+    @Override
+    protected boolean isReadOnly() {
+        return super.isReadOnly() || !this.isProjectResourceEditable();
+    }
+    
+    @Override
+    public boolean isEditable() {
+        return super.isEditable() && this.isProjectResourceEditable();
     }
 
     @Nullable
@@ -1606,7 +1625,7 @@ public class SQLEditor extends SQLEditorBase implements
     }
     
     private void setResultTabSelection(CTabItem item) {
-        if (!isResultSetAutoFocusEnabled || resultTabs.getItemCount() == 1 || !(item.getData() instanceof QueryResultsContainer)) {
+        if (isResultSetAutoFocusEnabled || !(item.getData() instanceof QueryResultsContainer)) {
             resultTabs.setSelection(item);
         }
     }
@@ -2453,7 +2472,7 @@ public class SQLEditor extends SQLEditorBase implements
             // 1. The user is not executing query in a new tab
             // 2. The user is executing script that may open several result sets
             //    and replace current tab on single query execution option is not set
-            if (!isResultSetAutoFocusEnabled && !newTab && (!isSingleQuery || (isSingleQuery && !replaceCurrentTab))) {
+            if (isResultSetAutoFocusEnabled && !newTab && (!isSingleQuery || (isSingleQuery && !replaceCurrentTab))) {
                 int tabsClosed = closeExtraResultTabs(null, true, false);
                 if (tabsClosed == IDialogConstants.CANCEL_ID) {
                     return false;
@@ -3939,7 +3958,7 @@ public class SQLEditor extends SQLEditorBase implements
                         return;
                     }
                     if (getActivePreferenceStore().getBoolean(SQLPreferenceConstants.MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE)
-                        && !isResultSetAutoFocusEnabled) {
+                        && isResultSetAutoFocusEnabled) {
                         resultsSash.setMaximizedControl(sqlEditorPanel);
                     }
                     clearProblems(null);
