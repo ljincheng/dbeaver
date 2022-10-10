@@ -308,6 +308,7 @@
                     webURL="https://jdbc.postgresql.org/"
                     propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                     description="%driver.postgresql.description"
+                    supportedConfigurationTypes="MANUAL,URL"
                     promoted="1"
                     categories="sql"
                     dialect="postgresql">
@@ -338,6 +339,7 @@
                     defaultPort="5432"
                     webURL="https://jdbc.postgresql.org/"
                     description="PostgreSQL generic driver. Can be used for old (7.x) or non-standard PostgreSQL servers."
+                    supportedConfigurationTypes="MANUAL,URL"
                     categories="sql"
                     dialect="postgresql">
                 </driver>
@@ -353,6 +355,7 @@
                     defaultUser="postgres"
                     propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                     description="Obsolete"
+                    supportedConfigurationTypes="MANUAL,URL"
                     dialect="postgresql">
                     <parameter name="serverType" value="greenplum"/>
                 </driver>
@@ -396,6 +399,7 @@
                     webURL="https://yellowbrick.io/"
                     propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                     description="Yellowbrick JDBC driver"
+                    supportedConfigurationTypes="MANUAL,URL"
                     categories="sql"
                     dialect="postgresql">
                     <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
@@ -422,6 +426,7 @@
                         webURL="https://www.yugabyte.com/yugabytedb/"
                         propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                         description="%driver.yugabytedb.description"
+                        supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
                     <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
 
@@ -446,6 +451,7 @@
                         webURL="https://www.cockroachlabs.com/product/cockroachdb/"
                         propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                         description="%driver.cockroach.description"
+                        supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
                     <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
 
@@ -469,6 +475,7 @@
                     defaultDatabase="dev"
                     defaultUser="awsuser"
                     description="AWS Redshift JDBC driver"
+                    supportedConfigurationTypes="MANUAL,URL"
                     webURL="https://docs.aws.amazon.com/redshift/latest/mgmt/configure-jdbc-connection.html"
                     propertiesURL="https://docs.aws.amazon.com/redshift/latest/mgmt/configure-jdbc-options.html"
                     categories="sql,analytic,bigdata,aws"
@@ -499,6 +506,7 @@
                         webURL="https://enterprisedb.com/"
                         propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                         description="%driver.edb.description"
+                        supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
 
                     <parameter name="serverType" value="edb"/>
@@ -519,6 +527,7 @@
                         webURL="https://cloud.google.com/sql"
                         propertiesURL="https://github.com/GoogleCloudPlatform/cloud-sql-jdbc-socket-factory#postgresql-1"
                         description="%driver.gcloudpg.description"
+                        supportedConfigurationTypes="MANUAL,URL"
                         categories="sql,cloud">
                     <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/com.google.cloud.sql:postgres-socket-factory:RELEASE"/>
@@ -742,6 +751,22 @@ SELECT
             </query>
         </dashboard>
 
+    </extension>
+    
+    <!-- SQL Generators -->
+    <extension point="org.jkiss.dbeaver.sqlGenerator">
+        <generator id="tableInsertOnConflict" class="org.jkiss.dbeaver.ext.postgresql.model.sql.generator.SQLGeneratorInsertOnConflict" label="INSERT ON CONFLICT" description="INSERT into table ON CONFLICT" order="7">
+            <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase"/>
+        </generator>
+        <generator id="tableUpdateFrom" class="org.jkiss.dbeaver.ext.postgresql.model.sql.generator.SQLGeneratorUpdateFrom" label="UPDATE FROM" description="UPDATE FROM (UPDATE with JOIN)" order="8">
+            <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase"/>
+        </generator>
+        <generator id="tableDeleteUsing" class="org.jkiss.dbeaver.ext.postgresql.model.sql.generator.SQLGeneratorDeleteUsing" label="DELETE USING" description="DELETE USING (DELETE with JOIN)" order="9">
+            <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase"/>
+        </generator>
+        <generator id="alterTypeAddValue" class="org.jkiss.dbeaver.ext.postgresql.model.sql.generator.SQLGeneratorTypeAddValue" label="ADD VALUE" description="ALTER TYPE ADD VALUE" order="1002">
+            <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreDataType"/>
+        </generator>
     </extension>
 
 </plugin>

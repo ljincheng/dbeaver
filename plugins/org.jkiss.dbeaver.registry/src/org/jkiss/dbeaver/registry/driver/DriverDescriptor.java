@@ -132,7 +132,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
 
         @Override
         public String toString() {
-            return file.getFileName().toString();
+            return file != null ? file.getFileName().toString() : this.id;
         }
     }
 
@@ -175,6 +175,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
     private DBPImage iconError;
     private DBPImage iconBig;
     private boolean embedded, origEmbedded;
+    private boolean supportsDistributedMode;
     private boolean singleConnection;
     private boolean clientRequired;
     private boolean supportsDriverProperties;
@@ -315,6 +316,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
             this.defaultConnectionProperties.putAll(copyFrom.defaultConnectionProperties);
             this.customConnectionProperties.putAll(copyFrom.customConnectionProperties);
             this.configurationTypes.addAll(copyFrom.configurationTypes);
+            this.supportsDistributedMode = copyFrom.supportsDistributedMode;
         } else {
             this.categories = new ArrayList<>();
             this.name = "";
@@ -352,6 +354,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         this.origAnonymousAccess = this.anonymousAccess = CommonUtils.getBoolean(config.getAttribute(RegistryConstants.ATTR_ANONYMOUS));
         this.origAllowsEmptyPassword = this.allowsEmptyPassword = CommonUtils.getBoolean("allowsEmptyPassword");
         this.licenseRequired = CommonUtils.getBoolean(config.getAttribute(RegistryConstants.ATTR_LICENSE_REQUIRED));
+        this.supportsDistributedMode = CommonUtils.getBoolean(config.getAttribute(RegistryConstants.ATTR_SUPPORTS_DISTRIBUTED_MODE), true);
         this.custom = false;
         this.isLoaded = false;
 
@@ -681,7 +684,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         this.driverClass = null;
         this.isLoaded = false;
 
-        if (!isDistributedMode()) {
+        if (!DBWorkbench.isDistributed()) {
             this.resolvedFiles.clear();
         }
     }
@@ -934,7 +937,19 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
     }
 
     public void setDriverLibraries(List<? extends DBPDriverLibrary> libs) {
+        List<DBPDriverLibrary> deletedLibs = new ArrayList<>();
+        for (DBPDriverLibrary lib : this.libraries) {
+            if (!lib.isCustom() && !libs.contains(lib)) {
+                lib.setDisabled(true);
+                deletedLibs.add(lib);
+            }
+        }
+        for (DBPDriverLibrary lib : libs) {
+            lib.setDisabled(false);
+        }
+
         this.libraries.clear();
+        this.libraries.addAll(deletedLibs);
         this.libraries.addAll(libs);
     }
 
@@ -1076,6 +1091,9 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
 
     @Override
     public boolean isSupportedByLocalSystem() {
+        if (DBWorkbench.isDistributed() || DBWorkbench.getPlatform().getApplication().isMultiuser()) {
+            return supportsDistributedMode;
+        }
         if (supportedSystems.isEmpty()) {
             // Multi-platform
             return true;
@@ -1118,7 +1136,9 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
 
     @Override
     public String getConnectionURL(@NotNull DBPConnectionConfiguration connectionInfo) {
-        if (isSampleURLForced()) {
+        if (connectionInfo.getConfigurationType() == DBPDriverConfigurationType.URL) {
+            return connectionInfo.getUrl();
+        } else if (isSampleURLForced()) {
             // Generate URL by template
             return JDBCURL.generateUrlByTemplate(this, connectionInfo);
         } else {
@@ -1272,7 +1292,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
 
     @NotNull
     private List<Path> validateFilesPresence(boolean resetVersions) {
-        if (isDistributedMode()) {
+        if (DBWorkbench.isDistributed()) {
             // We are in distributed mode
             return syncDistributedDependencies();
         }
@@ -1428,7 +1448,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
                         }
 
                         byte[] fileData = fileController.loadFileData(DBFileController.TYPE_DATABASE_DRIVER, fileInfo.getFile().toString());
-                        Files.write(localDriverFile, fileData, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE_NEW);
+                        Files.write(localDriverFile, fileData, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
 
                         localFilePaths.add(localDriverFile);
                     } catch (Exception e) {
@@ -1779,10 +1799,6 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
             }
         }
         return libraries.toArray(new String[0]);
-    }
-
-    static boolean isDistributedMode() {
-        return DBWorkbench.getPlatform().getApplication().isDistributed();
     }
 
 }

@@ -1064,6 +1064,11 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                     IResultSetController.MENU_GROUP_ADDITIONS,
                     ActionUtils.makeCommandContribution(
                         controller.getSite(),
+                        SpreadsheetCommandHandler.CMD_COLUMNS_HIDE_EMPTY));
+                manager.insertAfter(
+                    IResultSetController.MENU_GROUP_ADDITIONS,
+                    ActionUtils.makeCommandContribution(
+                        controller.getSite(),
                         SpreadsheetCommandHandler.CMD_COLUMNS_FIT_VALUE));
                 manager.insertAfter(
                     IResultSetController.MENU_GROUP_ADDITIONS,
@@ -2414,7 +2419,7 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                 case ResultSetRow.STATE_REMOVED:
                     return backgroundDeleted;
             }
-            if (row.changes != null && row.changes.containsKey(attribute)) {
+            if (row.isChanged(attribute)) {
                 return backgroundModified;
             }
 
@@ -2790,6 +2795,9 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
                     }
                     if (attr == null || row == null) {
                         continue;
+                    }
+                    if (!ArrayUtils.isEmpty(origRowIndexes)) {
+                        attr = ResultSetCellLocation.getLeafAttribute(attr, origRowIndexes);
                     }
                     if (attr.getValueHandler() != origAttr.getValueHandler()) {
                         continue;
