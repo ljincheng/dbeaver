@@ -17,32 +17,41 @@
 package org.jkiss.dbeaver.model.security.user;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class SMUser {
+
     private final String userId;
     private final Map<String, String> metaParameters = new LinkedHashMap<>();
-    private boolean enabled = true;
+    private String[] userTeams;
+    private boolean enabled;
+    private final String authRole;
 
-    public SMUser(@NotNull String userId) {
-        this.userId = userId;
+    public SMUser(
+        @NotNull String userId,
+        boolean enabled,
+        @Nullable String authRole
+    ) {
+        this(userId, null, new String[0], enabled, authRole);
     }
 
-    public SMUser(@NotNull String userId, @NotNull Map<String, String> metaParameters) {
+    public SMUser(
+        @NotNull String userId,
+        @Nullable Map<String, String> metaParameters,
+        @NotNull String[] teams,
+        boolean enabled,
+        @Nullable String authRole
+    ) {
         this.userId = userId;
-        this.metaParameters.putAll(metaParameters);
-    }
-
-    public SMUser(@NotNull String userId, boolean enabled) {
-        this.userId = userId;
+        if (metaParameters != null) {
+            this.metaParameters.putAll(metaParameters);
+        }
+        this.userTeams = teams;
         this.enabled = enabled;
-    }
-    public SMUser(@NotNull String userId, @NotNull Map<String, String> metaParameters, boolean enabled) {
-        this.userId = userId;
-        this.metaParameters.putAll(metaParameters);
-        this.enabled = enabled;
+        this.authRole = authRole;
     }
 
     @NotNull
@@ -55,6 +64,15 @@ public class SMUser {
         return metaParameters;
     }
 
+    @NotNull
+    public String[] getUserTeams() {
+        return userTeams;
+    }
+
+    public void setUserTeams(@NotNull String[] userTeams) {
+        this.userTeams = userTeams;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -65,5 +83,10 @@ public class SMUser {
 
     public void setMetaParameter(String name, String value) {
         metaParameters.put(name, value);
+    }
+
+    @Nullable
+    public String getAuthRole() {
+        return authRole;
     }
 }

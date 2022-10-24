@@ -314,7 +314,7 @@
                     dialect="postgresql">
                     <replace provider="generic" driver="postgresql"/>
                     <replace provider="postgresql" driver="postgresql"/>
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/net.postgis:postgis-jdbc:RELEASE[2.5.0]" ignore-dependencies="true" optional="true" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/net.postgis:postgis-geometry:RELEASE[2.5.0]" ignore-dependencies="true" optional="true" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/com.github.waffle:waffle-jna:RELEASE[1.9.1]" if="properties.gsslib=='sspi'" optional="true" bundle="!drivers.postgresql"/>
@@ -376,7 +376,7 @@
                     description="%driver.timescale.description"
                     categories="timeseries"
                     dialect="postgresql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
                     <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
@@ -402,7 +402,7 @@
                     supportedConfigurationTypes="MANUAL,URL"
                     categories="sql"
                     dialect="postgresql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
                     <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
@@ -428,7 +428,7 @@
                         description="%driver.yugabytedb.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
                     <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
@@ -453,7 +453,7 @@
                         description="%driver.cockroach.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
                     <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
@@ -529,7 +529,7 @@
                         description="%driver.gcloudpg.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql,cloud">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.2.25]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.0]" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/com.google.cloud.sql:postgres-socket-factory:RELEASE"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -665,21 +665,21 @@
     </extension>
 
     <extension point="org.jkiss.dbeaver.task">
-        <category id="postgresql" name="PostgreSQL" description="PostgreSQL database tasks" icon="icons/postgresql_icon.png"/>
-        <category id="postgreTool" parent="postgresql" name="Tools" description="PostgreSQL database tools" icon="icons/postgresql_icon.png"/>
+        <category id="postgresql" name="PostgreSQL" description="%org.jkiss.dbeaver.task.category.postgresql.description" icon="icons/postgresql_icon.png"/>
+        <category id="postgreTool" parent="postgresql" name="%org.jkiss.dbeaver.task.category.postgreTool.name" description="%org.jkiss.dbeaver.task.category.postgreTool.description" icon="icons/postgresql_icon.png"/>
 
-        <task id="pgDatabaseBackup" name="PostgreSQL dump" description="PostgreSQL database dump task" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/export.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreDatabaseBackupHandler">
+        <task id="pgDatabaseBackup" name="%task.pgDatabaseBackup.name" description="%task.pgDatabaseBackup.description" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/export.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreDatabaseBackupHandler">
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreObject"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreSchema"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase"/>
         </task>
-        <task id="pgDatabaseRestore" name="PostgreSQL restore" description="PostgreSQL database restore task" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/import.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreDatabaseRestoreHandler" confirmationMessage="%pgDatabaseRestore.confirmationMessage">
+        <task id="pgDatabaseRestore" name="%task.pgDatabaseRestore.name" description="%task.pgDatabaseRestore.description" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/import.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreDatabaseRestoreHandler" confirmationMessage="%pgDatabaseRestore.confirmationMessage">
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreSchema"/>
         </task>
-        <task id="pgScriptExecute" name="PostgreSQL script" description="PostgreSQL script execute" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_script.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreScriptExecuteHandler">
+        <task id="pgScriptExecute" name="%task.pgScriptExecute.name" description="%task.pgScriptExecute.description" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_script.png" type="postgresql" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreScriptExecuteHandler">
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase"/>
         </task>
@@ -709,11 +709,11 @@
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase"/>
         </task>
-        <task id="pgToolTriggerEnable" name="Enable trigger" description="Enable trigger" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/admin.png" type="postgreTool" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreToolTableTriggerEnable">
+        <task id="pgToolTriggerEnable" name="%task.pgToolTriggerEnable.name" description="%task.pgToolTriggerEnable.name" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/admin.png" type="postgreTool" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreToolTableTriggerEnable">
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTriggerBase" if="object.enabledState == 'D'"/>
         </task>
-        <task id="pgToolTriggerDisable" name="Disable trigger" description="Disable trigger" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/admin.png" type="postgreTool" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreToolTableTriggerDisable">
+        <task id="pgToolTriggerDisable" name="%task.pgToolTriggerDisable.name" description="%task.pgToolTriggerDisable.name" icon="platform:/plugin/org.jkiss.dbeaver.model/icons/tree/admin.png" type="postgreTool" handler="org.jkiss.dbeaver.ext.postgresql.tasks.PostgreToolTableTriggerDisable">
             <datasource id="postgresql"/>
             <objectType name="org.jkiss.dbeaver.ext.postgresql.model.PostgreTriggerBase" if="object.enabledState != 'D'"/>
         </task>
