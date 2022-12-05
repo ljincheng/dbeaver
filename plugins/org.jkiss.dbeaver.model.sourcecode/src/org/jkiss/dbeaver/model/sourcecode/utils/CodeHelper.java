@@ -126,6 +126,18 @@ public class CodeHelper {
         return ret.toString();
     }
 	
+	public static String dropFirstUnderline(String str) {
+        if (isEmpty(str)) {
+            return str;
+        } 
+        int index=str.indexOf("_");
+        if(index>=0) {
+        	return str.substring(index+1);
+        }
+
+        return str;
+    }
+	
 	public static void addCodeLine(StringBuilder sql, String ddl) {
         ddl = ddl.trim();
         if (!CommonUtils.isEmpty(ddl)) {
@@ -424,7 +436,7 @@ public class CodeHelper {
 			}
 
 			try {
-				try (InputStreamReader isr = new InputStreamReader(in)) {
+				try (InputStreamReader isr = new InputStreamReader(in,"UTF-8")) {
 					String viewTemplate = IOUtils.readToString(isr);
 					return viewTemplate;
 				} finally {

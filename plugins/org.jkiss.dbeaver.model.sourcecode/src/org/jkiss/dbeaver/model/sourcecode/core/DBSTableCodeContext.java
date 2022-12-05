@@ -34,7 +34,9 @@ public class DBSTableCodeContext extends EngineContext{
 	public static final String KEY_TABLENAME="tableName";
 	public static final String KEY_TABLEDESCIPTION="tableDesciption";
 	public static final String KEY_TABLECODENAME="tableCodeName";
+	public static final String KEY_TABLECODENAME2="tableCodeName2";
 	public static final String KEY_TABLECODEPARAM="tableCodeParam";
+	public static final String KEY_TABLECODEPARAM2="tableCodeParam2";
 	public static final String KEY_PRIMARYCOLUMN="primaryColumn";
 	public static final String KEY_ENTITY="entity";
 	public static final String KEY_DAO="dao";
@@ -157,7 +159,9 @@ public class DBSTableCodeContext extends EngineContext{
 			dataMap.put(KEY_TABLENAME,tableName);
 			dataMap.put(KEY_TABLEDESCIPTION,CodeHelper.emptyString(mTable.getDescription(), false));
 			dataMap.put(KEY_TABLECODENAME,CodeHelper.toUpperCamelCase(tableName));
+			dataMap.put(KEY_TABLECODENAME2,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName)));
 			dataMap.put(KEY_TABLECODEPARAM,CodeHelper.toLowerCamelCase(tableName));
+			dataMap.put(KEY_TABLECODEPARAM2,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName)));
 			Map<String,String> settingsData=new HashMap<String, String>(); 
 			if(settings!=null)
 			{

@@ -837,8 +837,7 @@ public class UIUtils {
     @Nullable
     public static Shell getActiveShell()
     {
-        IWorkbench workbench = PlatformUI.getWorkbench();
-        return workbench == null ? null : getShell(workbench.getActiveWorkbenchWindow());
+        return getActiveWorkbenchShell();
     }
 
     @Nullable
@@ -1682,13 +1681,28 @@ public class UIUtils {
 
     @Nullable
     public static Shell getActiveWorkbenchShell() {
-        IWorkbench workbench = PlatformUI.getWorkbench();
-        IWorkbenchWindow window = workbench.getActiveWorkbenchWindow();
-        if (window != null) {
-            return window.getShell();
-        } else {
-            return Display.getDefault().getActiveShell();
+        if (PlatformUI.isWorkbenchRunning()) {
+            IWorkbench workbench = PlatformUI.getWorkbench();
+            IWorkbenchWindow window = workbench.getActiveWorkbenchWindow();
+            if (window != null) {
+                Shell shell = window.getShell();
+                if (shell != null && shell.isVisible()) {
+                    return shell;
+                }
+            }
         }
+        Display display = Display.getCurrent();
+        Shell activeShell = display.getActiveShell();
+        if (activeShell != null) {
+            return activeShell;
+        }
+        Shell[] shells = display.getShells();
+        for (Shell shell : shells) {
+            if (shell.isVisible()) {
+                return shell;
+            }
+        }
+        return shells.length > 0 ? shells[0] : null;
     }
 
     public static DBRRunnableContext getDefaultRunnableContext() {
@@ -1946,7 +1960,6 @@ public class UIUtils {
             shellSize.x = Math.max(shellSize.x, compSize.x);
             shellSize.y = Math.max(shellSize.y, compSize.y);
             shell.setSize(shellSize);
-            needsLayout = true;
         }
 
         if (shellLocation.x + shellSize.x > displayArea.width || shellLocation.y + shellSize.y > displayArea.height) {
