@@ -13,3 +13,4 @@ cp -r /Library/Java/JavaVirtualMachines/jdk-17.0.4.1.jdk product/community/targe
 echo "WINDOWS系统中解决源码模板中的中文乱码方法，在dbeaver.ini中添加以下配置项: -Dfile.encoding=utf-8"
 ## WINDOWS版本解决源码模板中的中文乱码方法，在dbeaver.ini中添加以下配置项
 ## -Dfile.encoding = utf-8
+echo "-Dfile.encoding=utf-8" >> product/community/target/products/org.jkiss.dbeaver.core.product/win32/win32/x86_64/dbeaver/dbeaver.ini
