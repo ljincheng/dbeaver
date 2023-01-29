@@ -1,7 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2013-2016 Denis Forveille (titou10.titou10@gmail.com)
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -498,7 +498,14 @@ public class DB2Table extends DB2TableBase
     @Override
     public DBDPseudoAttribute[] getPseudoAttributes() throws DBException
     {
-        if (getDataSource().isAtLeastV9_5()) {
+        // In BigSQL, calling RID_BIT results in a results in an error message indicating that
+        // RID_BIT is not supported.
+        //
+        //   The command or statement was not executed because the following functionality is not
+        //   supported in the current environment: "RID functions".. SQLCODE=-5115, 
+        //   SQLSTATE=56038, DRIVER=4.31.10
+
+        if (getDataSource().isAtLeastV9_5() && !getDataSource().isBigSQL()) {
             return new DBDPseudoAttribute[] { DB2Constants.PSEUDO_ATTR_RID_BIT };
         } else {
             return null;

@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@ import java.util.regex.Pattern;
  */
 public class SQLQueryParameter {
 
+    public static final String VARIABLE_NAME_GROUP_NAME = "pn";
 
-    private static final Pattern VARIABLE_PATTERN_SIMPLE = Pattern.compile("\\$\\{[a-z0-9_]+\\}", Pattern.CASE_INSENSITIVE);
-    private static final Pattern VARIABLE_PATTERN_FULL = Pattern.compile("\\$P?!?\\{[a-z0-9_]+\\}", Pattern.CASE_INSENSITIVE);
+    private static final Pattern VARIABLE_PATTERN_SIMPLE = Pattern.compile("\\$\\{(?<pn>[a-z0-9_]+)\\}", Pattern.CASE_INSENSITIVE);
+    private static final Pattern VARIABLE_PATTERN_FULL = Pattern.compile("\\$P?!?\\{(?<pn>[a-z0-9_]+)\\}", Pattern.CASE_INSENSITIVE);
 
 
     private final SQLSyntaxManager syntaxManager;
@@ -108,15 +109,6 @@ public class SQLQueryParameter {
     }
 
     public String getVarName() {
-        String varName = stripVariablePattern(name);
-        if (!varName.equals(name)) {
-            return varName;
-        }
-        for (String prefix : syntaxManager.getNamedParameterPrefixes()) {
-            if (name.startsWith(prefix)) {
-                return name.substring(prefix.length());
-            }
-        }
         return name;
     }
 

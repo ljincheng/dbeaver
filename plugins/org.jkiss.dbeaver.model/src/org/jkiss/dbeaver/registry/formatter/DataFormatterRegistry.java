@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,10 +129,6 @@ public class DataFormatterRegistry implements DBPDataFormatterRegistry
 
     private void loadProfiles() {
         customProfiles = new ArrayList<>();
-        if (!DBWorkbench.getPlatform().getWorkspace().hasRealmPermission(RMConstants.PERMISSION_PUBLIC)) {
-            log.warn("The user has no permission to load custom data formatter configuration");
-            return;
-        }
         try {
             String content = DBWorkbench.getPlatform().getProductConfigurationController().loadConfigurationFile(CONFIG_FILE_NAME);
             if (CommonUtils.isEmpty(content)) {

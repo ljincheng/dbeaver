@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -581,10 +581,6 @@ public class PrefPageDataFormat extends TargetPrefPage
         }
 
         private void loadProfiles() {
-            if (!DBWorkbench.getPlatform().getWorkspace().hasRealmPermission(RMConstants.PERMISSION_PUBLIC)) {
-                log.warn("The user has no permission to load custom data format profiles configuration");
-                return;
-            }
             profileList.removeAll();
             List<DBDDataFormatterProfile> profiles = DataFormatterRegistry.getInstance().getCustomProfiles();
             for (DBDDataFormatterProfile profile : profiles) {

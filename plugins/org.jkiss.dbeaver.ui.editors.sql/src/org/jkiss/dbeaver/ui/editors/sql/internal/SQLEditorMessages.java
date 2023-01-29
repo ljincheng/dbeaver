@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,6 +98,8 @@ public class SQLEditorMessages extends NLS {
     public static String action_result_tabs_delete_variables;
     public static String action_assign_variables_error_duplicated_title;
     public static String action_assign_variables_error_duplicated_info;
+    public static String action_assign_variables_error_invalid_title;
+    public static String action_assign_variables_error_invalid_info;
 
     public static String action_popup_sqleditor_layout_horizontal;
     public static String action_popup_sqleditor_layout_vertical;
@@ -222,6 +224,8 @@ public class SQLEditorMessages extends NLS {
     public static String pref_page_sql_completion_label_insert_table_alias;
     public static String pref_page_sql_completion_label_show_server_help_topics;
     public static String pref_page_sql_completion_label_show_server_help_topics_tip;
+    public static String pref_page_sql_completion_label_show_values;
+    public static String pref_page_sql_completion_label_show_values_tip;
     public static String pref_page_sql_completion_group_folding;
     public static String pref_page_sql_completion_group_misc;
     public static String pref_page_sql_completion_label_folding_enabled;
@@ -310,6 +314,8 @@ public class SQLEditorMessages extends NLS {
     public static String sql_generator_dialog_button_show_full_DDL;
     public static String sql_generator_dialog_button_separate_fk_constraints_definition;
     public static String sql_generator_dialog_button_show_partitions_DDL;
+
+    public static String sql_generator_dialog_button_show_cast_params;
     public static String action_result_tabs_delete_variables_question;
     public static String script_selector_create_script;
     public static String script_selector_project_scripts;
@@ -334,6 +340,9 @@ public class SQLEditorMessages extends NLS {
     public static String source_viewer_show_partitions_ddl_text;
     public static String source_viewer_show_partitions_ddl_tip;
 
+    public static String source_viewer_cast_params_text;
+
+    public static String source_viewer_cast_params_ddl_tip;
     public static String sql_editor_action_clear;
     public static String sql_editor_title_tooltip_path;
     public static String sql_editor_title_tooltip_connecton;
@@ -357,6 +366,9 @@ public class SQLEditorMessages extends NLS {
     public static String sql_editor_confirm_no_fetch_result_for_big_script_yes;
     public static String sql_editor_confirm_no_fetch_result_for_big_script_no;
     public static String sql_editor_confirm_no_fetch_result_for_big_script_remember;
+
+    public static String sql_editor_panel_output_filter_message;
+    public static String sql_editor_panel_output_filter_hint;
 
     static {
         // initialize resource bundle

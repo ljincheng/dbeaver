@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -262,13 +262,18 @@ public class SQLServerDialect extends JDBCSQLDialect implements TPRuleProvider, 
     }
 
     @Override
-    public void generateStoredProcedureCall(StringBuilder sql, DBSProcedure proc, Collection<? extends DBSProcedureParameter> parameters) {
+    public void generateStoredProcedureCall(
+        StringBuilder sql, 
+        DBSProcedure proc, 
+        Collection<? extends DBSProcedureParameter> parameters,
+        boolean castParams
+    ) {
         List<DBSProcedureParameter> inParameters = new ArrayList<>();
         int maxParamLength = getMaxParameterLength(parameters, inParameters);
         String schemaName = proc.getContainer().getParentObject().getName();
         sql.append("USE [").append(schemaName).append("]\n");
         //sql.append("GO\n\n");
-        sql.append("DECLARE	@return_value int\n\n");
+        sql.append("DECLARE @return_value int\n\n");
         sql.append("EXEC\t@return_value = [").append(proc.getContainer().getName()).append("].[").append(proc.getName()).append("]\n");
         for (int i = 0; i < inParameters.size(); i++) {
             String name = inParameters.get(i).getName();
