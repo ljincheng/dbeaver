@@ -27,6 +27,7 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.model.*;
+import org.jkiss.dbeaver.model.access.DBAAuthCredentials;
 import org.jkiss.dbeaver.model.access.DBACredentialsProvider;
 import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
 import org.jkiss.dbeaver.model.app.DBPProject;
@@ -414,7 +415,17 @@ public class DataSourceDescriptor
             return savePassword;
         }
         resolveSecretsIfNeeded();
-        return secretsResolved && secretsContainsDatabaseCreds;
+
+        if (secretsResolved && secretsContainsDatabaseCreds) {
+            return true;
+        }
+        if (savePassword) {
+            // Check actual credentials
+            // They may be ready if we are in test connection mode
+            DBAAuthCredentials authCreds = getConnectionConfiguration().getAuthModel().loadCredentials(this, getConnectionConfiguration());
+            return authCreds.isComplete();
+        }
+        return false;
     }
 
     @Override
@@ -857,7 +868,7 @@ public class DataSourceDescriptor
             var secret = saveToSecret();
             secretController.setSecretValue(getSecretKeyId(), secret);
             this.secretsContainsDatabaseCreds =
-                isSavePassword() && this.connectionInfo.getAuthModel().isDatabaseCredentialsPresent(getProject(), this.connectionInfo);
+                this.connectionInfo.getAuthModel().isDatabaseCredentialsPresent(getProject(), this.connectionInfo);
         }
         secretsResolved = true;
     }
@@ -869,7 +880,7 @@ public class DataSourceDescriptor
                 String secretValue = secretController.getSecretValue(getSecretKeyId());
                 loadFromSecret(secretValue);
                 this.secretsContainsDatabaseCreds =
-                    isSavePassword() && this.connectionInfo.getAuthModel().isDatabaseCredentialsPresent(getProject(), this.connectionInfo);
+                    this.connectionInfo.getAuthModel().isDatabaseCredentialsPresent(getProject(), this.connectionInfo);
                 if (secretValue == null && !DBWorkbench.isDistributed()) {
                     // Backward compatibility
                     loadFromLegacySecret(secretController);
@@ -1111,6 +1122,10 @@ public class DataSourceDescriptor
 
     private void resolveSecretsIfNeeded() throws DBException {
         if (secretsResolved || !getProject().isUseSecretStorage()) {
+            return;
+        }
+        if (registry.getDataSource(getId()) == null) {
+            // Datasource not saved yet - secrets are unavailable
             return;
         }
         var secretController = DBSSecretController.getProjectSecretController(getProject());
@@ -1658,7 +1673,12 @@ public class DataSourceDescriptor
         return
             CommonUtils.equalOrEmptyStrings(this.name, source.name) &&
                 CommonUtils.equalOrEmptyStrings(this.description, source.description) &&
-                CommonUtils.equalObjects(this.savePassword, source.savePassword) &&
+                equalConfiguration(source);
+    }
+
+    public boolean equalConfiguration(DataSourceDescriptor source) {
+        return
+            CommonUtils.equalObjects(this.savePassword, source.savePassword) &&
                 CommonUtils.equalObjects(this.sharedCredentials, source.sharedCredentials) &&
                 CommonUtils.equalObjects(this.connectionReadOnly, source.connectionReadOnly) &&
                 CommonUtils.equalObjects(this.forceUseSingleConnection, source.forceUseSingleConnection) &&
@@ -1930,7 +1950,7 @@ public class DataSourceDescriptor
         // Primary props
         var dbUserName = JSONUtils.getString(props, RegistryConstants.ATTR_USER);
         var dbPassword = JSONUtils.getString(props, RegistryConstants.ATTR_PASSWORD);
-        var dbAuthProperties = JSONUtils.deserializeStringMap(props, RegistryConstants.TAG_PROPERTIES);
+        var dbAuthProperties = JSONUtils.deserializeStringMapOrNull(props, RegistryConstants.TAG_PROPERTIES);
         connectionInfo.setUserName(dbUserName);
         connectionInfo.setUserPassword(dbPassword);
         // Additional auth props

@@ -2,7 +2,7 @@
 <?eclipse version="3.2"?>
 <!--
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2022 DBeaver Corp and others
+ * Copyright (C) 2010-2023 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1160,7 +1160,7 @@
                         supportedConfigurationTypes="MANUAL,URL"
                         webURL="https://docs.dremio.com/drivers/dremio-jdbc-driver.html"
                         categories="analytic,hadoop,sql">
-                    <file type="jar" path="https://download.dremio.com/jdbc-driver/3.0.6-201812082352540436-1f684f9/dremio-jdbc-driver-3.0.6-201812082352540436-1f684f9.jar"/>
+                    <file type="jar" path="https://download.dremio.com/jdbc-driver/24.0.0-202302100528110223-3a169b7c/dremio-jdbc-driver-24.0.0-202302100528110223-3a169b7c.jar"/>
                     <parameter name="omit-catalog" value="true"/>
                 </driver>
 
