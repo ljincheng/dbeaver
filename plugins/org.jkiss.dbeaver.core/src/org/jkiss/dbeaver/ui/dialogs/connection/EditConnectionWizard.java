@@ -31,12 +31,10 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
 import org.jkiss.dbeaver.model.app.DBPProject;
-import org.jkiss.dbeaver.model.connection.DBPDataSourceProviderDescriptor;
 import org.jkiss.dbeaver.model.connection.DBPDriver;
 import org.jkiss.dbeaver.model.connection.DBPDriverSubstitutionDescriptor;
 import org.jkiss.dbeaver.model.navigator.DBNBrowseSettings;
 import org.jkiss.dbeaver.registry.DataSourceDescriptor;
-import org.jkiss.dbeaver.registry.DataSourceProviderRegistry;
 import org.jkiss.dbeaver.registry.DataSourceViewDescriptor;
 import org.jkiss.dbeaver.registry.DataSourceViewRegistry;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
@@ -72,7 +70,6 @@ public class EditConnectionWizard extends ConnectionWizard {
     //private ConnectionPageNetwork pageNetwork;
     private ConnectionPageInitialization pageInit;
     private ConnectionPageShellCommands pageEvents;
-    private DBPDriverSubstitutionDescriptor driverSubstitution;
 
     /**
      * Constructor for SampleNewWizard.
@@ -81,7 +78,7 @@ public class EditConnectionWizard extends ConnectionWizard {
         this.originalDataSource = dataSource;
         this.dataSource = new DataSourceDescriptor(dataSource, dataSource.getRegistry());
         if (!this.dataSource.isSavePassword()) {
-            this.dataSource.getConnectionConfiguration().setUserPassword(null);
+            this.dataSource.resetPassword();
         }
 
         setWindowTitle(CoreMessages.dialog_connection_wizard_title);
@@ -148,7 +145,7 @@ public class EditConnectionWizard extends ConnectionWizard {
             dataSource.getDriver().getProviderDescriptor(),
             IActionConstants.EDIT_CONNECTION_POINT);
         if (view != null) {
-            pageSettings = new ConnectionPageSettings(this, view, dataSource, driverSubstitution);
+            pageSettings = new ConnectionPageSettings(this, view, dataSource, getDriverSubstitution());
             addPage(pageSettings);
         }
 
@@ -263,11 +260,6 @@ public class EditConnectionWizard extends ConnectionWizard {
         return originalDataSource.persistConfiguration();
     }
 
-    public void setDriverSubstitution(@Nullable DBPDriverSubstitutionDescriptor driverSubstitution) {
-        this.driverSubstitution = driverSubstitution;
-        this.dataSource.setDriverSubstitution(driverSubstitution);
-    }
-
     private boolean isOnlyUserCredentialChanged(DataSourceDescriptor dsCopy, DataSourceDescriptor dsChanged) {
         dsCopy.getConnectionConfiguration().setUserName(null);
         dsCopy.getConnectionConfiguration().setUserPassword(null);
@@ -328,7 +320,7 @@ public class EditConnectionWizard extends ConnectionWizard {
 
         // Reset password if "Save password" was disabled
         if (!dataSource.isSavePassword()) {
-            dataSource.getConnectionConfiguration().setUserPassword(null);
+            dataSource.resetPassword();
         }
     }
 

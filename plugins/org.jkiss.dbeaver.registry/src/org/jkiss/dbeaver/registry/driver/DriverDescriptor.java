@@ -28,6 +28,7 @@ import org.jkiss.dbeaver.model.app.DBPPlatform;
 import org.jkiss.dbeaver.model.connection.*;
 import org.jkiss.dbeaver.model.impl.AbstractDescriptor;
 import org.jkiss.dbeaver.model.impl.PropertyDescriptor;
+import org.jkiss.dbeaver.model.impl.ProviderPropertyDescriptor;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCURL;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.meta.PropertyLength;
@@ -48,6 +49,7 @@ import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
+import org.jkiss.utils.Pair;
 import org.jkiss.utils.StandardConstants;
 
 import java.io.File;
@@ -198,7 +200,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
     private final List<DriverFileSource> fileSources = new ArrayList<>();
     private final List<DBPDriverLibrary> libraries = new ArrayList<>();
     private final List<DBPDriverLibrary> origFiles = new ArrayList<>();
-    private final List<DBPPropertyDescriptor> providerPropertyDescriptors = new ArrayList<>();
+    private final List<ProviderPropertyDescriptor> providerPropertyDescriptors = new ArrayList<>();
     private final List<OSDescriptor> supportedSystems = new ArrayList<>();
 
     private final List<ReplaceInfo> driverReplacements = new ArrayList<>();
@@ -244,6 +246,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         this.customEndpointInformation = false;
         this.instantiable = true;
         this.promoted = 0;
+        this.supportsDistributedMode = true;
 
         this.origName = null;
         this.origDescription = null;
@@ -404,8 +407,8 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
             if (!ArrayUtils.isEmpty(pp)) {
                 this.providerPropertyDescriptors.addAll(
                     Arrays.stream(pp[0].getChildren(PropertyDescriptor.TAG_PROPERTY_GROUP))
-                        .map(PropertyDescriptor::extractProperties)
-                        .flatMap(List<DBPPropertyDescriptor>::stream)
+                        .map(ProviderPropertyDescriptor::extractProviderProperties)
+                        .flatMap(List<ProviderPropertyDescriptor>::stream)
                         .collect(Collectors.toList()));
             }
         }
@@ -493,6 +496,15 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
             }
         }
         return false;
+    }
+    
+    @Override
+    public List<Pair<String,String>> getDriverReplacementsInfo() {
+        List<Pair<String, String>> result = new ArrayList<>();
+        for (ReplaceInfo replaceInfo : driverReplacements) {
+            result.add(new Pair<String, String>(replaceInfo.providerId, replaceInfo.driverId));
+        }
+        return result;
     }
 
     void makeIconExtensions() {
@@ -964,7 +976,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         return filtered;
     }
 
-    DBPDriverLibrary getDriverLibrary(String path) {
+    public DBPDriverLibrary getDriverLibrary(String path) {
         for (DBPDriverLibrary lib : libraries) {
             if (lib.getPath().equals(path)) {
                 return lib;
@@ -1014,11 +1026,11 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
 
     @NotNull
     @Override
-    public DBPPropertyDescriptor[] getProviderPropertyDescriptors() {
-        return providerPropertyDescriptors.toArray(new DBPPropertyDescriptor[0]);
+    public ProviderPropertyDescriptor[] getProviderPropertyDescriptors() {
+        return providerPropertyDescriptors.toArray(new ProviderPropertyDescriptor[0]);
     }
 
-    public void addProviderPropertyDescriptors(Collection<DBPPropertyDescriptor> props) {
+    public void addProviderPropertyDescriptors(Collection<ProviderPropertyDescriptor> props) {
         providerPropertyDescriptors.addAll(props);
     }
 
@@ -1407,7 +1419,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
             List<DriverFileInfo> files = resolvedFiles.get(library);
             if (files != null) {
                 for (DriverFileInfo depFile : files) {
-                    Path driverFolder = getWorkspaceStorageFolder();
+                    Path driverFolder = getWorkspaceDriversStorageFolder();
                     Path localDriverFile = driverFolder.resolve(depFile.getFile());
                     if (!Files.exists(localDriverFile) || depFile.getFileCRC() == 0 ||
                         depFile.getFileCRC() != calculateFileCRC(localDriverFile))
@@ -1428,7 +1440,7 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
                 DBPDriverLibrary library = libEntry.getKey();
                 for (DriverFileInfo fileInfo : libEntry.getValue()) {
                     try {
-                        Path driverFolder = getWorkspaceStorageFolder();
+                        Path driverFolder = getWorkspaceDriversStorageFolder();
                         Path localDriverFile = driverFolder.resolve(fileInfo.getFile());
                         if (!Files.exists(localDriverFile.getParent())) {
                             Files.createDirectories(localDriverFile.getParent());
@@ -1579,6 +1591,14 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         return configurationTypes;
     }
 
+    public boolean isSupportsDistributedMode() {
+        return supportsDistributedMode;
+    }
+
+    public void setSupportsDistributedMode(boolean supportsDistributedMode) {
+        this.supportsDistributedMode = supportsDistributedMode;
+    }
+
     public DBPNativeClientLocation getDefaultClientLocation() {
         DBPNativeClientLocationManager clientManager = getNativeClientManager();
         if (clientManager != null) {
@@ -1688,6 +1708,11 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
         return true;
     }
 
+    public void deleteDriverLibrary(DBPDriverLibrary library) {
+        resolvedFiles.remove(library);
+        libraries.remove(library);
+    }
+
     private void resolveDirectories(Path targetFileLocation, DBPDriverLibrary library, Path srcLocalFile, Path trgLocalFile, List<DriverFileInfo> libraryFiles) throws IOException {
         if (!Files.exists(trgLocalFile)) {
             try {
@@ -1743,7 +1768,9 @@ public class DriverDescriptor extends AbstractDescriptor implements DBPDriver {
     // Static utilities
 
     public static Path getWorkspaceDriversStorageFolder() {
-        return DBWorkbench.getPlatform().getWorkspace().getMetadataFolder().resolve(DBConstants.DEFAULT_DRIVERS_FOLDER);
+        return DBWorkbench.getPlatform().getWorkspace().getAbsolutePath()
+            .resolve(DBFileController.DATA_FOLDER)
+            .resolve(DBFileController.TYPE_DATABASE_DRIVER);
     }
 
     public static Path getDriversContribFolder() throws IOException {
