@@ -694,6 +694,23 @@ class DataSourceSerializerModern implements DataSourceSerializer
                         bootstrap.setIgnoreErrors(JSONUtils.getBoolean(bootstrapCfg, RegistryConstants.ATTR_IGNORE_ERRORS));
                     }
                     bootstrap.setInitQueries(JSONUtils.deserializeStringList(bootstrapCfg, RegistryConstants.TAG_QUERY));
+
+                    if (originalDriver != substitutedDriver) {
+                        final DBPDataSourceProvider dataSourceProvider = substitutedDriver.getDataSourceProvider();
+                        if (dataSourceProvider instanceof DBPConnectionConfigurationMigrator) {
+                            final DBPConnectionConfigurationMigrator migrator = (DBPConnectionConfigurationMigrator) dataSourceProvider;
+                            if (migrator.migrationRequired(config)) {
+                                final DBPConnectionConfiguration migrated = new DBPConnectionConfiguration(config);
+                                try {
+                                    migrator.migrateConfiguration(config, migrated);
+                                    dataSource.setConnectionInfo(migrated);
+                                    log.debug("Connection configuration for data source '" + id + "' was migrated successfully");
+                                } catch (DBException e) {
+                                    log.error("Unable to migrate connection configuration for data source '" + id + "'", e);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Permissions
@@ -710,6 +727,11 @@ class DataSourceSerializerModern implements DataSourceSerializer
                         dataSource.updateObjectFilter(typeName, objectID, filter);
                     }
                 }
+
+                // Properties
+                dataSource.getProperties().putAll(
+                    JSONUtils.deserializeStringMap(conObject, RegistryConstants.TAG_PROPERTIES)
+                );
 
                 // Preferences
                 dataSource.getPreferenceStore().getProperties().putAll(
@@ -1076,6 +1098,9 @@ class DataSourceSerializerModern implements DataSourceSerializer
                 json.endArray();
             }
         }
+
+        // Properties
+        JSONUtils.serializeProperties(json, RegistryConstants.TAG_PROPERTIES, dataSource.getProperties());
 
         // Preferences
         {
