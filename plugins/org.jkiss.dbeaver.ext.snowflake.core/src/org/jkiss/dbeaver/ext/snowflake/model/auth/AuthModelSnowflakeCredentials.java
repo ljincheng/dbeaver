@@ -15,20 +15,25 @@
  * limitations under the License.
  */
 
-package org.jkiss.dbeaver.runtime.serialize;
+package org.jkiss.dbeaver.ext.snowflake.model.auth;
 
-import org.jkiss.dbeaver.model.exec.DBCException;
-import org.jkiss.dbeaver.model.runtime.DBRRunnableContext;
-
-import java.util.Map;
+import org.jkiss.dbeaver.model.impl.auth.AuthModelDatabaseNativeCredentials;
+import org.jkiss.dbeaver.model.meta.Property;
 
 /**
- * Object serializer
+ * Snowflake native credentials.
  */
-public interface DBPObjectSerializer<CONTEXT_TYPE, OBJECT_TYPE> {
+public class AuthModelSnowflakeCredentials extends AuthModelDatabaseNativeCredentials {
 
-    void serializeObject(DBRRunnableContext runnableContext, CONTEXT_TYPE context, OBJECT_TYPE object, Map<String, Object> state);
+    private String role;
 
-    OBJECT_TYPE deserializeObject(DBRRunnableContext runnableContext, CONTEXT_TYPE objectContext, Map<String, Object> state) throws DBCException;
 
+    @Property
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
 }
