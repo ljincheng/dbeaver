@@ -993,7 +993,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
             log.debug("Failed to extract table names from query", e);
             return Collections.emptyList();
         }
-        log.debug("Extracted table names: " + tableRefs);
+        //log.debug("Extracted table names: " + tableRefs);
         if (CommonUtils.isNotEmpty(tableAlias) && tableRefs != null) {
             tableRefs = tableRefs.stream().filter(r -> allowPartialMatch 
                 ? r.getSecond() != null && CommonUtils.startsWithIgnoreCase(r.getSecond(), tableAlias)
@@ -1006,8 +1006,7 @@ public class SQLCompletionAnalyzer implements DBRRunnableParametrized<DBRProgres
     
     private interface TableNameExtractionUtils { 
         public static final Set<String> expandRulesToTableRef = Set.of(
-            STMKnownRuleNames.sqlQuery, 
-            STMKnownRuleNames.directSqlStatement, 
+            STMKnownRuleNames.sqlQuery,
             STMKnownRuleNames.directSqlDataStatement, 
             STMKnownRuleNames.selectStatement, 
             STMKnownRuleNames.queryExpression, 
