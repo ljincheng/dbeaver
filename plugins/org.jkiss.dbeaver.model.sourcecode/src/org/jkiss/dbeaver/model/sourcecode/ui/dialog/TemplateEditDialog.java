@@ -46,7 +46,7 @@ public class TemplateEditDialog extends BaseDialog{
 		Group settings = UIUtils.createControlGroup(composite, UIMessages.dbeaver_generate_sourcecode_settings, 2, GridData.FILL_HORIZONTAL, SWT.DEFAULT);
 		mTextID=UIUtils.createLabelText(settings,UIMessages.dbeaver_generate_sourcecode_name, "TPL-1000");
 		mTextDesc=UIUtils.createLabelText(settings, UIMessages.dbeaver_generate_sourcecode_description, "我的新加模板1000");
-		mTextExportPath=DialogUtils.createOutputFolderChooser(settings,UIMessages.dbeaver_generate_sourcecode_savePosition,"/workspace/temp/code/src/", e->{
+		mTextExportPath=DialogUtils.createOutputFolderChooser(settings,UIMessages.dbeaver_generate_sourcecode_savePosition,"/workspace/temp/code/src/",null,false, e->{
         });
 		mTextErrorTip=UIUtils.createLabel(settings, "");
 		return composite;

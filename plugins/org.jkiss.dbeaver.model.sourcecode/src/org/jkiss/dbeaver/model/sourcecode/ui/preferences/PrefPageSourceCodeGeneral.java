@@ -79,7 +79,7 @@ public class PrefPageSourceCodeGeneral extends AbstractPrefPage implements IWork
             Group groupObjects = UIUtils.createControlGroup(composite, org.jkiss.dbeaver.model.sourcecode.internal.UIMessages.dbeaver_generate_sourcecode_preferences_generalSetting, 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
            
             
-            sourceCodeOutPutDir=DialogUtils.createOutputFolderChooser(groupObjects, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder, null,null);
+            sourceCodeOutPutDir=DialogUtils.createOutputFolderChooser(groupObjects, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder, null,null,false,null);
             sourceCodePackagePath= UIUtils.createLabelText(groupObjects, UIMessages.dbeaver_generate_sourcecode_packageName, null,2);
             sourceCodePageClassFullName= UIUtils.createLabelText(groupObjects, UIMessages.dbeaver_generate_sourcecode_pageClassFullName,null,2);
 //            sourceCodeEntitySuffix= UIUtils.createLabelText(groupObjects, "Entity suffix",null,2);

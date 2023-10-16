@@ -70,7 +70,7 @@ public class FormContext {
 		UIUtils.createTableColumn(mEntityTable, SWT.RIGHT,UIMessages.dbeaver_generate_sourcecode_param).setWidth(100);
         UIUtils.createTableColumn(mEntityTable, SWT.LEFT, UIMessages.dbeaver_generate_sourcecode_value);
         UIUtils.createTableColumn(mEntityTable, SWT.LEFT,UIMessages.dbeaver_generate_sourcecode_description);
-        final CustomTableEditor tableEditor = new CustomTableEditor(mEntityTable) {
+		final CustomTableEditor tableEditor = new CustomTableEditor(mEntityTable) {
             {
                 firstTraverseIndex = 1;
                 lastTraverseIndex = 1;
@@ -128,11 +128,13 @@ public class FormContext {
 	 
 	
 	 	 
-	    public static TextWithOpen createOutputFolderChooser(final Composite parent,  @Nullable String value,TableItem tableItem,int textIndex,FormItemContext formItem)
+	public static TextWithOpen createOutputFolderChooser(final Composite parent,  @Nullable String value,TableItem tableItem,int textIndex,FormItemContext formItem)
 	    {
-	         TextWithOpen directoryText = new TextWithOpen(parent) {
+		 boolean multiFS=false;
+		 
+	         TextWithOpen directoryText = new TextWithOpen(parent,multiFS) {
 	            @Override
-	            protected void openBrowser() {
+	            protected void openBrowser(boolean remoteFS) {
 	                DirectoryDialog dialog = new DirectoryDialog(parent.getShell(), SWT.NONE);
 	                dialog.setMessage("Choose target directory");
 	                String directory = getText();

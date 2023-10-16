@@ -284,9 +284,10 @@ public class SettingsPanel implements UIEventNotifier,UIActionEvent,ContentListe
 	
 	  public static TextWithOpen createOutputFolderChooser(final Composite parent,  @Nullable String value,TableItem tableItem,int textIndex,FormItemContext formItem)
 	    {
-	         TextWithOpen directoryText = new TextWithOpen(parent) {
+		  boolean multiFS=false;
+	         TextWithOpen directoryText = new TextWithOpen(parent,multiFS) {
 	            @Override
-	            protected void openBrowser() {
+	            protected void openBrowser(boolean remoteFS) {
 	                DirectoryDialog dialog = new DirectoryDialog(parent.getShell(), SWT.NONE);
 	                dialog.setMessage("Choose target directory");
 	                String directory = getText();

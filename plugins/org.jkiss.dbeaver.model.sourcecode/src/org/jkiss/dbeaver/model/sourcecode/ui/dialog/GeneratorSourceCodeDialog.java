@@ -60,7 +60,7 @@ public class GeneratorSourceCodeDialog extends ViewSQLDialog {
     	sourceCodeSetting=new SourceCodeSetting();
         Composite composite = super.createDialogArea(parent);
         Group settings = UIUtils.createControlGroup(composite, UIMessages.dbeaver_generate_sourcecode_settings, 2, GridData.FILL_HORIZONTAL, SWT.DEFAULT);
-        directoryText=DialogUtils.createOutputFolderChooser(settings, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder,store.getString(SourceCodePreferences.SOURCECODE_CODEOUTPUTFOLDER), e->{
+        directoryText=DialogUtils.createOutputFolderChooser(settings, UIMessages.dbeaver_generate_sourcecode_codeOutPutFolder,store.getString(SourceCodePreferences.SOURCECODE_CODEOUTPUTFOLDER),null,false, e->{
         	sqlGenerator.setRootPath(directoryText.getText());
         	sourceCodeSetting.setOutPutDir(directoryText.getText());
         });
