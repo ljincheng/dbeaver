@@ -22,9 +22,11 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.DBUtils;
-import org.jkiss.dbeaver.model.ai.completion.DAICompletionRequest;
+import org.jkiss.dbeaver.model.ai.completion.DAICompletionContext;
+import org.jkiss.dbeaver.model.ai.completion.DAICompletionMessage;
 import org.jkiss.dbeaver.model.ai.completion.DAICompletionScope;
 import org.jkiss.dbeaver.model.ai.format.IAIFormatter;
+import org.jkiss.dbeaver.model.ai.openai.GPTModel;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContextDefaults;
 import org.jkiss.dbeaver.model.navigator.DBNUtils;
@@ -44,12 +46,9 @@ public class MetadataProcessor {
     private static final Log log = Log.getLog(MetadataProcessor.class);
 
     private static final boolean SUPPORTS_ATTRS = true;
-    private static final int MAX_RESPONSE_TOKENS = 2000;
-
 
     public String generateObjectDescription(
         @NotNull DBRProgressMonitor monitor,
-        @NotNull DAICompletionRequest request,
         @NotNull DBSObject object,
         @Nullable DBCExecutionContext context,
         @NotNull IAIFormatter formatter,
@@ -67,25 +66,21 @@ public class MetadataProcessor {
                 object,
                 DBPEvaluationContext.DDL
             ) : DBUtils.getQuotedIdentifier(object);
-            description.append("# ").append(name);
-            description.append("(");
+            description.append('\n').append(name).append("(");
             boolean firstAttr = addPromptAttributes(monitor, (DBSEntity) object, description, true);
-            formatter.addPromptExtra(monitor, (DBSEntity) object, description, firstAttr);
-
-            description.append(");\n");
+            formatter.addExtraDescription(monitor, (DBSEntity) object, description, firstAttr);
+            description.append(");");
         } else if (object instanceof DBSObjectContainer) {
             monitor.subTask("Load cache of " + object.getName());
             ((DBSObjectContainer) object).cacheStructure(
                 monitor,
                 DBSObjectContainer.STRUCT_ENTITIES | DBSObjectContainer.STRUCT_ATTRIBUTES);
-            int totalChildren = 0;
             for (DBSObject child : ((DBSObjectContainer) object).getChildren(monitor)) {
                 if (DBUtils.isSystemObject(child) || DBUtils.isHiddenObject(child) || child instanceof DBSTablePartition) {
                     continue;
                 }
                 String childText = generateObjectDescription(
                     monitor,
-                    request,
                     child,
                     context,
                     formatter,
@@ -97,69 +92,81 @@ public class MetadataProcessor {
                     break;
                 }
                 description.append(childText);
-                totalChildren++;
             }
         }
         return description.toString();
     }
 
     /**
-     * Add completion metadata to request
+     * Creates a new message containing completion metadata for the request
      */
-    public String addDBMetadataToRequest(
-        DBRProgressMonitor monitor,
-        DAICompletionRequest request,
-        DBCExecutionContext executionContext,
-        DBSObjectContainer mainObject,
-        IAIFormatter formatter,
-        int maxTokens
+    @NotNull
+    public DAICompletionMessage createMetadataMessage(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull DAICompletionContext context,
+        @Nullable DBSObjectContainer mainObject,
+        @NotNull IAIFormatter formatter,
+        @NotNull GPTModel model,
+        int maxRequestTokens
     ) throws DBException {
-        if (mainObject == null || mainObject.getDataSource() == null || CommonUtils.isEmptyTrimmed(request.getPromptText())) {
+        if (mainObject == null || mainObject.getDataSource() == null) {
             throw new DBException("Invalid completion request");
         }
 
-        StringBuilder additionalMetadata = new StringBuilder();
-        additionalMetadata.append("### ")
-            .append(mainObject.getDataSource().getSQLDialect().getDialectName())
-            .append(" SQL tables, with their properties:\n#\n");
-        String tail = "";
-        if (executionContext != null && executionContext.getContextDefaults() != null) {
-            DBSSchema defaultSchema = executionContext.getContextDefaults().getDefaultSchema();
+        final DBCExecutionContext executionContext = context.getExecutionContext();
+
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Perform SQL completion");
+
+        if (model.isChatAPI()) {
+            sb.append(". Start response with SELECT keyword");
+        }
+
+        final String extraInstructions = formatter.getExtraInstructions(monitor, mainObject, executionContext);
+        if (CommonUtils.isNotEmpty(extraInstructions)) {
+            sb.append(", ").append(extraInstructions);
+        }
+
+        sb.append("\nDialect is ").append(mainObject.getDataSource().getSQLDialect().getDialectName());
+
+        if (executionContext.getContextDefaults() != null) {
+            final DBSSchema defaultSchema = executionContext.getContextDefaults().getDefaultSchema();
             if (defaultSchema != null) {
-                tail += "#\n# Current schema is " + defaultSchema.getName() + "\n";
+                sb.append("\nCurrent schema is ").append(defaultSchema.getName());
             }
         }
-        int maxRequestLength = maxTokens - additionalMetadata.length() - tail.length() - 20 - MAX_RESPONSE_TOKENS;
 
-        if (request.getScope() != DAICompletionScope.CUSTOM) {
-            additionalMetadata.append(MetadataProcessor.INSTANCE.generateObjectDescription(
-                monitor,
-                request,
-                mainObject,
-                executionContext,
-                formatter,
-                maxRequestLength,
-                false
-            ));
-        } else {
-            for (DBSEntity entity : request.getCustomEntities()) {
-                additionalMetadata.append(generateObjectDescription(
+        sb.append("\nSQL tables, with their properties are:");
+
+        final int remainingRequestTokens = maxRequestTokens - sb.length() - 20;
+
+        if (context.getScope() == DAICompletionScope.CUSTOM) {
+            for (DBSEntity entity : context.getCustomEntities()) {
+                sb.append(generateObjectDescription(
                     monitor,
-                    request,
                     entity,
                     executionContext,
                     formatter,
-                    maxRequestLength,
+                    remainingRequestTokens,
                     isRequiresFullyQualifiedName(entity, executionContext)
                 ));
             }
+        } else {
+            sb.append(generateObjectDescription(
+                monitor,
+                mainObject,
+                executionContext,
+                formatter,
+                remainingRequestTokens,
+                false
+            ));
         }
-        String promptText = request.getPromptText().trim();
-        promptText = formatter.postProcessPrompt(monitor, mainObject, executionContext, promptText);
-        additionalMetadata.append(tail).append("#\n###").append(promptText).append("\nSELECT");
-        return additionalMetadata.toString();
-    }
 
+        return new DAICompletionMessage(
+            DAICompletionMessage.Role.SYSTEM,
+            sb.toString()
+        );
+    }
 
     protected boolean addPromptAttributes(
         DBRProgressMonitor monitor,

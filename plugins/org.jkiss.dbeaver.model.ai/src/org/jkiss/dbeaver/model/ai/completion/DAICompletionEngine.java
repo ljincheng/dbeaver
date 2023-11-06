@@ -18,11 +18,8 @@
 package org.jkiss.dbeaver.model.ai.completion;
 
 import org.jkiss.code.NotNull;
-import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.ai.format.IAIFormatter;
-import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
-import org.jkiss.dbeaver.model.logical.DBSLogicalDataSource;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
 import java.util.List;
@@ -44,12 +41,20 @@ public interface DAICompletionEngine<SERVICE> {
     @NotNull
     List<DAICompletionResponse> performQueryCompletion(
         @NotNull DBRProgressMonitor monitor,
-        @Nullable DBSLogicalDataSource dataSource,
-        @NotNull DBCExecutionContext executionContext,
-        @NotNull DAICompletionRequest completionRequest,
-        @NotNull IAIFormatter formatter,
-        boolean returnOnlyCompletion,
-        int maxResults
+        @NotNull DAICompletionContext context,
+        @NotNull DAICompletionMessage message,
+        @NotNull IAIFormatter formatter
+    ) throws DBException;
+
+    /**
+     * Do query completion in a session
+     */
+    @NotNull
+    List<DAICompletionResponse> performQueryCompletion(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull DAICompletionContext context,
+        @NotNull DAICompletionSession session,
+        @NotNull IAIFormatter formatter
     ) throws DBException;
 
     boolean isValidConfiguration();

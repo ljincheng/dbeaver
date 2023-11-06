@@ -32,13 +32,14 @@ import org.jkiss.dbeaver.erd.ui.internal.ERDUIActivator;
 import org.jkiss.dbeaver.erd.ui.internal.ERDUIMessages;
 import org.jkiss.dbeaver.erd.ui.notations.ERDNotationDescriptor;
 import org.jkiss.dbeaver.erd.ui.notations.ERDNotationRegistry;
+import org.jkiss.dbeaver.erd.ui.router.ERDConnectionRouterDescriptor;
+import org.jkiss.dbeaver.erd.ui.router.ERDConnectionRouterRegistry;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.preferences.AbstractPrefPage;
 import org.jkiss.dbeaver.utils.PrefUtils;
 import org.jkiss.utils.ArrayUtils;
-import org.jkiss.utils.CommonUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,14 +71,18 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
 
     private List<Button> visibilityButtons = new ArrayList<>();
     private List<Button> styleButtons = new ArrayList<>();
-
+    private ERDConnectionRouterRegistry routerRegistry = ERDConnectionRouterRegistry.getInstance();
+    private ERDNotationRegistry notationRegistry = ERDNotationRegistry.getInstance();
+    private List<ERDConnectionRouterDescriptor> routerDescriptors = new ArrayList<>();
+    private List<ERDNotationDescriptor> notationDescriptors = new ArrayList<>();
+    
     @NotNull
     @Override
     protected Control createPreferenceContent(@NotNull Composite parent) {
         DBPPreferenceStore store = ERDUIActivator.getDefault().getPreferences();
-
+        routerDescriptors = routerRegistry.getDescriptors();
+        notationDescriptors = notationRegistry.getNotations();
         Composite composite = UIUtils.createPlaceholder(parent, 2, 5);
-
         createContentsGroup(store, composite);
         createColorPrefGroup(store, composite);
         createVisibilityGroup(store, composite);
@@ -89,37 +94,37 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
     }
 
     private void createAdvancedGroup(DBPPreferenceStore store, Composite composite) {
-        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_advanced, 2,
-            GridData.HORIZONTAL_ALIGN_FILL, 0);
+        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_advanced, 2, 0, 0);
         contentsGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 2, 1));
         // routing
         routingType = UIUtils.createLabelCombo(contentsGroup, ERDUIMessages.erd_preference_page_title_routing_combo,
             SWT.DROP_DOWN | SWT.READ_ONLY);
-        routingType.add(ERDUIConstants.ROUTING_SHORTEST_PATH);
-        routingType.add(ERDUIConstants.ROUTING_MIKAMI);
-        if (!CommonUtils.isEmpty(store.getString(ERDUIConstants.PREF_ROUTING_TYPE))) {
-            routingType.setText(store.getString(ERDUIConstants.PREF_ROUTING_TYPE));
+        for (ERDConnectionRouterDescriptor descriptor : routerDescriptors) {
+            routingType.add(descriptor.getName());
+        }
+        ERDConnectionRouterDescriptor defConnectionRouter = routerRegistry.getActiveDescriptor();
+        if (defConnectionRouter != null) {
+            routingType.select(routerDescriptors.indexOf(defConnectionRouter));
         } else {
-            routingType.setText(ERDUIConstants.ROUTING_SHORTEST_PATH);
+            routingType.select(0);
         }
         // notation
         notationType = UIUtils.createLabelCombo(contentsGroup, ERDUIMessages.erd_preference_page_title_notation_combo,
             SWT.DROP_DOWN | SWT.READ_ONLY);
-        List<ERDNotationDescriptor> erdNotations = ERDNotationRegistry.getInstance().getERDNotations();
-        for (ERDNotationDescriptor notation : erdNotations) {
-            notationType.add(notation.getName());
+        for (ERDNotationDescriptor descriptor : notationDescriptors) {
+            notationType.add(descriptor.getName());
         }
-        ERDNotationDescriptor notation = ERDNotationRegistry.getInstance().getNotation(store.getString(ERDUIConstants.PREF_NOTATION_TYPE));
-        if (notation != null) {
-            notationType.select(erdNotations.indexOf(notation));
+        ERDNotationDescriptor defNotation = notationRegistry.getActiveDescriptor();
+        if (defNotation != null) {
+            notationType.select(notationDescriptors.indexOf(defNotation));
         } else {
-            notationType.select(erdNotations.indexOf(ERDNotationRegistry.getInstance().getDefaultNotation()));
+            notationType.select(0);
         }
     }
 
     private void createContentsGroup(DBPPreferenceStore store, Composite composite) {
-        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_diagram_contents, 1,
-            GridData.FILL_BOTH, 0);
+        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_diagram_contents, 1, 0, 0);
+        contentsGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
         contentsShowViews = UIUtils.createCheckbox(contentsGroup, ERDUIMessages.erd_preference_page_title_shows_views,
             store.getBoolean(ERDUIConstants.PREF_DIAGRAM_SHOW_VIEWS));
         contentsShowPartitions = UIUtils.createCheckbox(contentsGroup, ERDUIMessages.erd_preference_page_title_shows_partitions,
@@ -127,8 +132,8 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
     }
 
     private void createColorPrefGroup(DBPPreferenceStore store, Composite composite) {
-        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_color_pref, 1,
-            GridData.FILL_BOTH, 0);
+        Group contentsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_color_pref, 1, 0, 0);
+        contentsGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
         changeBorderColors = UIUtils.createCheckbox(contentsGroup, ERDUIMessages.erd_preference_page_title_change_border_colors,
             store.getBoolean(ERDUIConstants.PREF_DIAGRAM_CHANGE_BORDER_COLORS));
         changeHeaderColors = UIUtils.createCheckbox(contentsGroup, ERDUIMessages.erd_preference_page_title_change_header_colors,
@@ -138,7 +143,8 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
     private void createVisibilityGroup(DBPPreferenceStore store, Composite composite) {
         ERDAttributeVisibility defaultVisibility = ERDAttributeVisibility.getDefaultVisibility(store);
         Group elemsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_attributes_visibility, 1,
-             GridData.FILL_BOTH, 0);
+             0, 0);
+        elemsGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
         for (ERDAttributeVisibility visibility : ERDAttributeVisibility.values()) {
             Button radio = new Button(elemsGroup, SWT.RADIO);
             radio.setData(visibility);
@@ -152,8 +158,8 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
 
     private void createStyleGroup(DBPPreferenceStore store, Composite composite) {
         ERDViewStyle[] enabledStyles = ERDViewStyle.getDefaultStyles(store);
-        Group elemsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_attribute_style, 1,
-            GridData.FILL_BOTH, 0);
+        Group elemsGroup = UIUtils.createControlGroup(composite, ERDUIMessages.erd_preference_page_title_attribute_style, 1, 0, 0);
+        elemsGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
         for (ERDViewStyle style : ERDViewStyle.values()) {
             Button check = new Button(elemsGroup, SWT.CHECK);
             check.setData(style);
@@ -166,8 +172,8 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
     }
 
     private void createGridGroup(DBPPreferenceStore store, Composite composite) {
-        Group gridGroup = UIUtils.createControlGroup(composite, ERDUIMessages.pref_page_erd_group_grid, 2,
-            GridData.FILL_BOTH, 0);
+        Group gridGroup = UIUtils.createControlGroup(composite, ERDUIMessages.pref_page_erd_group_grid, 2, 0, 0);
+        gridGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
         gridCheck = UIUtils.createCheckbox(gridGroup, ERDUIMessages.pref_page_erd_checkbox_grid_enabled, null,
             store.getBoolean(ERDUIConstants.PREF_GRID_ENABLED), 2);
         snapCheck = UIUtils.createCheckbox(gridGroup, ERDUIMessages.pref_page_erd_checkbox_snap_to_grid, null,
@@ -180,7 +186,7 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
 
     private void createPrintGroup(DBPPreferenceStore store, Composite composite)
     {
-        Group printGroup = UIUtils.createControlGroup(composite, ERDUIMessages.pref_page_erd_group_print, 2, GridData.FILL_BOTH, 0);
+        Group printGroup = UIUtils.createControlGroup(composite, ERDUIMessages.pref_page_erd_group_print, 2, 0, 0);
         modeCombo = UIUtils.createLabelCombo(printGroup, ERDUIMessages.pref_page_erd_combo_page_mode, SWT.READ_ONLY | SWT.DROP_DOWN);
         modeCombo.add(ERDUIMessages.pref_page_erd_item_tile);
         modeCombo.add(ERDUIMessages.pref_page_erd_item_fit_page);
@@ -210,10 +216,9 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
         DBPPreferenceStore store = DBWorkbench.getPlatform().getPreferenceStore();
         contentsShowViews.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_DIAGRAM_SHOW_VIEWS));
         contentsShowPartitions.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_DIAGRAM_SHOW_PARTITIONS));
-        routingType.setText(store.getDefaultString(ERDUIConstants.PREF_ROUTING_TYPE));
-        ERDNotationRegistry registry = ERDNotationRegistry.getInstance();
-        notationType.select(registry.getERDNotations().indexOf(registry.getDefaultNotation()));
+        routingType.select(routerDescriptors.indexOf(routerRegistry.getDefaultDescriptor()));
         changeBorderColors.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_DIAGRAM_CHANGE_BORDER_COLORS));
+        notationType.select(notationDescriptors.indexOf(notationRegistry.getDefaultDescriptor()));
         changeHeaderColors.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_DIAGRAM_CHANGE_HEADER_COLORS));
         gridCheck.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_GRID_ENABLED));
         snapCheck.setSelection(store.getDefaultBoolean(ERDUIConstants.PREF_GRID_SNAP_ENABLED));
@@ -240,18 +245,19 @@ public class ERDPreferencePage extends AbstractPrefPage implements IWorkbenchPre
     public boolean performOk()
     {
         DBPPreferenceStore store = ERDUIActivator.getDefault().getPreferences();
-
         store.setValue(ERDUIConstants.PREF_DIAGRAM_SHOW_VIEWS, contentsShowViews.getSelection());
         store.setValue(ERDUIConstants.PREF_DIAGRAM_SHOW_PARTITIONS, contentsShowPartitions.getSelection());
-        store.setValue(ERDUIConstants.PREF_ROUTING_TYPE, routingType.getText());
-        ERDNotationDescriptor erdNotation = ERDNotationRegistry.getInstance().getERDNotationByName(notationType.getText());
+        ERDConnectionRouterDescriptor connectionRouter = ERDConnectionRouterRegistry.getInstance()
+            .getDescriptorById(routingType.getText());
+        if (connectionRouter != null) {
+            ERDConnectionRouterRegistry.getInstance().setActiveDescriptor(connectionRouter);
+        }
+        ERDNotationDescriptor erdNotation = ERDNotationRegistry.getInstance().getDescriptorByName(notationType.getText());
         if (erdNotation != null) {
-            store.setValue(ERDUIConstants.PREF_NOTATION_TYPE, erdNotation.getId());
+            ERDNotationRegistry.getInstance().setActiveDescriptor(erdNotation);
         }
         store.setValue(ERDUIConstants.PREF_DIAGRAM_CHANGE_BORDER_COLORS, changeBorderColors.getSelection());
         store.setValue(ERDUIConstants.PREF_DIAGRAM_CHANGE_HEADER_COLORS, changeHeaderColors.getSelection());
-
-
         store.setValue(ERDUIConstants.PREF_GRID_ENABLED, gridCheck.getSelection());
         store.setValue(ERDUIConstants.PREF_GRID_SNAP_ENABLED, snapCheck.getSelection());
         store.setValue(ERDUIConstants.PREF_GRID_WIDTH, spinnerGridWidth.getSelection());

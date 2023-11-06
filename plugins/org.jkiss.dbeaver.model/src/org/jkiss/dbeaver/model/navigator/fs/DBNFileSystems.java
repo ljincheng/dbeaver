@@ -34,6 +34,8 @@ import org.jkiss.dbeaver.model.navigator.DBNProject;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.utils.CommonUtils;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,19 +56,26 @@ public class DBNFileSystems extends DBNNode implements DBPHiddenObject, EFSNIOLi
     @Override
     protected void dispose(boolean reflect) {
         super.dispose(reflect);
+        this.disposeFileSystems();
 
         EFSNIOMonitor.removeListener(this);
     }
 
     @Override
     public String getNodeType() {
-        return "FileSystemRoot";
+        return NodePathType.dbvfs.name();
     }
 
     @Override
     @Property(id = DBConstants.PROP_ID_NAME, viewable = true, order = 1)
     public String getNodeName() {
-        return "File Systems";
+        return "Remote file systems";
+    }
+
+    @NotNull
+    @Override
+    public String getName() {
+        return NodePathType.dbvfs.name();
     }
 
     @Override
@@ -111,12 +120,15 @@ public class DBNFileSystems extends DBNNode implements DBPHiddenObject, EFSNIOLi
     @Override
     public DBNFileSystem[] getChildren(DBRProgressMonitor monitor) throws DBException {
         if (children == null) {
-            this.children = readChildNodes(monitor);
+            this.children = readChildNodes(monitor, children);
         }
         return children;
     }
 
-    protected DBNFileSystem[] readChildNodes(DBRProgressMonitor monitor) throws DBException {
+    protected DBNFileSystem[] readChildNodes(
+        @NotNull DBRProgressMonitor monitor,
+        @Nullable DBNFileSystem[] mergeWith
+    ) throws DBException {
         monitor.beginTask("Read available file systems", 1);
         List<DBNFileSystem> result = new ArrayList<>();
         var project = getOwnerProject();
@@ -126,7 +138,18 @@ public class DBNFileSystems extends DBNNode implements DBPHiddenObject, EFSNIOLi
         DBFFileSystemManager fileSystemManager = project.getFileSystemManager();
 
         for (DBFVirtualFileSystem fs : fileSystemManager.getVirtualFileSystems()) {
-            DBNFileSystem newChild = new DBNFileSystem(this, fs);
+            DBNFileSystem newChild = null;
+            if (mergeWith != null) {
+                for (DBNFileSystem oldFS : mergeWith) {
+                    if (equalsFS(fs, oldFS.getFileSystem())) {
+                        newChild = oldFS;
+                        break;
+                    }
+                }
+            }
+            if (newChild == null) {
+                newChild = new DBNFileSystem(this, fs);
+            }
             result.add(newChild);
         }
 
@@ -135,34 +158,53 @@ public class DBNFileSystems extends DBNNode implements DBPHiddenObject, EFSNIOLi
         return result.toArray(new DBNFileSystem[0]);
     }
 
-    public DBNPathBase findNodeByPath(DBRProgressMonitor monitor, String path) throws DBException {
-        getChildren(monitor);
+    private boolean equalsFS(DBFVirtualFileSystem fs1, DBFVirtualFileSystem fs2) {
+        return fs1.getType().equals(fs2.getType()) && fs1.getId().equals(fs2.getId());
+    }
 
-        DBNFileSystemRoot fsNode = null;
-        DBNPathBase curPath = null;
-        for (String name : path.split("/")) {
+    public DBNPathBase findNodeByPath(@NotNull DBRProgressMonitor monitor, @NotNull String path) throws DBException {
+        return findNodeByPath(monitor, path, false);
+    }
+
+    public DBNPathBase findNodeByPath(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull String path,
+        boolean shortPath
+    ) throws DBException {
+        DBNNode curPath = null;
+        URI uri;
+        try {
+            uri = new URI(path);
+        } catch (URISyntaxException e) {
+            throw new DBException("Bad path: " + path, e);
+        }
+        String plainPath = uri.getSchemeSpecificPart();
+        for (String name : plainPath.split("/")) {
             if (name.isEmpty() || (curPath == null && name.endsWith(":"))) {
                 continue;
             }
-            if (fsNode == null) {
-                fsNode = getRootFolder(monitor, name);
-                if (fsNode == null) {
-                    return null;
-                }
-            } else {
+            {
                 if (curPath == null) {
+                    this.getChildren(monitor);
+                    if (!shortPath) {
+                        curPath = this.getFileSystem(uri.getScheme(), name);
+                    } else {
+                        curPath = this.getRootFolder(monitor, name);
+                    }
+                } else if (curPath instanceof DBNFileSystem fsNode) {
                     fsNode.getChildren(monitor);
-                    curPath = fsNode.getChild(name);
+                    curPath = fsNode.getRoot(name);
                 } else {
-                    curPath.getChildren(monitor);
-                    curPath = curPath.getChild(name);
+                    DBNPathBase pathNode = (DBNPathBase) curPath;
+                    pathNode.getChildren(monitor);
+                    curPath = pathNode.getChild(name);
                 }
                 if (curPath == null) {
                     return null;
                 }
             }
         }
-        return curPath == null ? fsNode : curPath;
+        return curPath instanceof DBNPathBase ? (DBNPathBase) curPath : null;
     }
 
     @Override
@@ -172,18 +214,33 @@ public class DBNFileSystems extends DBNNode implements DBPHiddenObject, EFSNIOLi
 
     @Override
     public DBNNode refreshNode(DBRProgressMonitor monitor, Object source) {
-        children = null;
+        refreshFileSystems(monitor);
         return this;
     }
 
-    public void resetFileSystems() {
-        children = null;
-        getModel().fireNodeUpdate(this, this, DBNEvent.NodeChange.REFRESH);
+    private void refreshFileSystems(DBRProgressMonitor monitor) {
+        if (children != null) {
+            try {
+                children = readChildNodes(monitor, children);
+            } catch (DBException e) {
+                log.error(e);
+            }
+            getModel().fireNodeUpdate(this, this, DBNEvent.NodeChange.REFRESH);
+        }
+    }
+
+    private void disposeFileSystems() {
+        if (children != null) {
+            for (DBNFileSystem fs : children) {
+                fs.dispose(false);
+            }
+            children = null;
+        }
     }
 
     @Override
     public String getNodeItemPath() {
-        return NodePathType.dbvfs.getPrefix() + ((DBNProject)getParentNode()).getRawNodeItemPath() + "/" + getNodeName();
+        return NodePathType.ext.getPrefix() + ((DBNProject) getParentNode()).getProject().getId() + "/" + getName();
     }
 
     @Override

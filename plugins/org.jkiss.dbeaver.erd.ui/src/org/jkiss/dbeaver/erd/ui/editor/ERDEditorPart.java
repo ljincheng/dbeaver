@@ -239,14 +239,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
     @Override
     public void init(IEditorSite site, IEditorInput input) throws PartInitException
     {
-        try {
-            // Use reflection to make it compile with older Eclipse versions
-            rootPart = ScalableFreeformRootEditPart.class
-                .getConstructor(Boolean.TYPE)
-                .newInstance(false);
-        } catch (Throwable e) {
-            rootPart = new ScalableFreeformRootEditPart();
-        }
+        rootPart = new ScalableFreeformRootEditPart();
         editDomain = new DefaultEditDomain(this);
         setEditDomain(editDomain);
 
@@ -862,7 +855,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
      */
     public void fillNotationsMenu(IMenuManager menu) {
         MenuManager ntMenu = new MenuManager(ERDUIMessages.menu_notation_style);
-        for (ERDNotationDescriptor ntType : ERDNotationRegistry.getInstance().getERDNotations()) {
+        for (ERDNotationDescriptor ntType : ERDNotationRegistry.getInstance().getNotations()) {
             ntMenu.add(new ChangeERDNotationStyleAction(ntType));
         }
         menu.add(ntMenu);
@@ -1210,10 +1203,8 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
                 doSave(new NullProgressMonitor());
                 refreshDiagram(true, true);
             } else if (ERDUIConstants.PREF_NOTATION_TYPE.equals(event.getProperty())) {
-                DBPPreferenceStore store = ERDUIActivator.getDefault().getPreferences();
-                ERDNotationDescriptor notation = ERDNotationRegistry.getInstance()
-                    .getNotation(store.getString(ERDUIConstants.PREF_NOTATION_TYPE));
-                getDiagram().setDiagramNotation(notation);
+                ERDNotationDescriptor defaultNotation = ERDNotationRegistry.getInstance().getActiveDescriptor();
+                getDiagram().setDiagramNotation(defaultNotation);
                 refreshDiagram(true, true);
             }
         }

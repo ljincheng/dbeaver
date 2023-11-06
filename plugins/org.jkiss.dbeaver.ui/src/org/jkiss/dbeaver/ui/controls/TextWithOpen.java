@@ -28,18 +28,16 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.ui.ide.IDE;
-import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBIcon;
-import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.app.DBPProject;
-import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIIcon;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.EditTextDialog;
 import org.jkiss.dbeaver.ui.internal.UIMessages;
+import org.jkiss.utils.IOUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,8 +97,9 @@ public class TextWithOpen extends Composite {
             });
         }
         {
-            if (!DBWorkbench.isDistributed() || !isMultiFileSystem()) {
-                // Local FS not available in TE when multi FS is applicable
+            {
+                // Local FS works only on local machine. Will not work for TE remote tasks.
+                // Do we need to do anything about it in UI?
                 final ToolItem toolItem = new ToolItem(toolbar, SWT.NONE);
                 toolItem.setImage(DBeaverIcons.getImage(DBIcon.TREE_FOLDER));
                 toolItem.setToolTipText(UIMessages.text_with_open_dialog_browse);
@@ -111,9 +110,9 @@ public class TextWithOpen extends Composite {
                     }
                 });
             }
-            if (isMultiFileSystem() && getProject() != null) {
+            if (isMultiFileSystem()) {
                 final ToolItem remoteFsItem = new ToolItem(toolbar, SWT.NONE);
-                remoteFsItem.setImage(DBeaverIcons.getImage(DBIcon.TYPE_REFERENCE));
+                remoteFsItem.setImage(DBeaverIcons.getImage((getStyle() & SWT.OPEN) != 0 ? UIIcon.OPEN_EXTERNAL : UIIcon.SAVE_EXTERNAL));
                 remoteFsItem.setToolTipText(UIMessages.text_with_open_dialog_browse_remote);
                 remoteFsItem.addSelectionListener(new SelectionAdapter() {
                     @Override
@@ -144,20 +143,14 @@ public class TextWithOpen extends Composite {
             });
             TextWithOpen.this.text.addModifyListener(e -> {
                 String fileName = TextWithOpen.this.text.getText().trim();
-                DBPProject project = getProject();
                 Path targetFile;
                 try {
-                    if (project != null && isMultiFileSystem()) {
-                        try {
-                            targetFile = DBUtils.resolvePathFromString(new VoidProgressMonitor(), project, fileName);
-                        } catch (DBException ex) {
-                            log.debug("Error resolving URI: " + ex.getMessage());
-                            targetFile = Path.of(fileName);
-                        }
+                    if (!IOUtils.isLocalFile(fileName)) {
+                        editItem.setEnabled(false);
                     } else {
                         targetFile = Path.of(fileName);
+                        editItem.setEnabled(Files.exists(targetFile) && !Files.isDirectory(targetFile));
                     }
-                    editItem.setEnabled(Files.exists(targetFile) && !Files.isDirectory(targetFile));
                 } catch (Exception ex) {
                     log.debug("Error getting file info: " + ex.getMessage());
                     editItem.setEnabled(false);

@@ -16,6 +16,8 @@
  */
 package org.jkiss.dbeaver.model.ai.format;
 
+import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSEntity;
@@ -29,24 +31,27 @@ public class DefaultRequestFormatter implements IAIFormatter {
         DBCExecutionContext executionContext,
         String completionText
     ) {
+        return completionText;
+    }
+
+    @Nullable
+    @Override
+    public String getExtraInstructions(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull DBSObjectContainer mainObject,
+        @NotNull DBCExecutionContext executionContext
+    ) {
+        // nothing to do
         return null;
     }
 
     @Override
-    public String postProcessPrompt(DBRProgressMonitor monitor,
-        DBSObjectContainer mainObject,
-        DBCExecutionContext executionContext,
-        String promptText) {
-        return promptText;
-    }
-
-    @Override
-    public void addPromptExtra(
+    public void addExtraDescription(
         DBRProgressMonitor monitor,
         DBSEntity object,
         StringBuilder description,
         boolean firstAttr
     ) {
-
+        // nothing to do
     }
 }
