@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -136,6 +137,18 @@ public class CodeHelper {
         }
 
         return str;
+    }
+	
+	public static String dropFirstUnderline(String str,int startIndex) {
+        if (isEmpty(str)) {
+            return str;
+        } 
+        String[] codeArray=str.split("_");
+        if(codeArray.length>startIndex) {
+        	String result=String.join("_", Arrays.copyOfRange(codeArray, startIndex, codeArray.length));
+        	 return result;
+        }
+        return "";
     }
 	
 	public static void addCodeLine(StringBuilder sql, String ddl) {

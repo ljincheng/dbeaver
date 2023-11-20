@@ -37,6 +37,12 @@ public class DBSTableCodeContext extends EngineContext{
 	public static final String KEY_TABLECODENAME2="tableCodeName2";
 	public static final String KEY_TABLECODEPARAM="tableCodeParam";
 	public static final String KEY_TABLECODEPARAM2="tableCodeParam2";
+	public static final String KEY_TABLECODENAME3="tableCodeName3";
+	public static final String KEY_TABLECODEPARAM3="tableCodeParam3";
+	public static final String KEY_TABLECODENAME4="tableCodeName4";
+	public static final String KEY_TABLECODEPARAM4="tableCodeParam4";
+	public static final String KEY_TABLECODENAME5="tableCodeName5";
+	public static final String KEY_TABLECODEPARAM5="tableCodeParam5";
 	public static final String KEY_PRIMARYCOLUMN="primaryColumn";
 	public static final String KEY_ENTITY="entity";
 	public static final String KEY_DAO="dao";
@@ -162,6 +168,14 @@ public class DBSTableCodeContext extends EngineContext{
 			dataMap.put(KEY_TABLECODENAME2,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName)));
 			dataMap.put(KEY_TABLECODEPARAM,CodeHelper.toLowerCamelCase(tableName));
 			dataMap.put(KEY_TABLECODEPARAM2,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName)));
+			
+			dataMap.put(KEY_TABLECODENAME3,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName,2)));
+			dataMap.put(KEY_TABLECODEPARAM3,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName,2)));
+			dataMap.put(KEY_TABLECODENAME4,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName,3)));
+			dataMap.put(KEY_TABLECODEPARAM4,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName,3)));
+			dataMap.put(KEY_TABLECODENAME5,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName,4)));
+			dataMap.put(KEY_TABLECODEPARAM5,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName,4)));
+			
 			Map<String,String> settingsData=new HashMap<String, String>(); 
 			if(settings!=null)
 			{
