@@ -7,9 +7,11 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -151,6 +153,40 @@ public class CodeHelper {
         return "";
     }
 	
+	public static String getLastUnderline(String str,int startIndex) {
+        if (isEmpty(str) || str.indexOf("_")<0) {
+            return str;
+        } 
+        String[] codeArray=str.split("_");
+        if(codeArray.length>startIndex) {
+        	String result=String.join("_", Arrays.copyOfRange(codeArray, codeArray.length-startIndex, codeArray.length));
+        	 return result;
+        }else {
+        	  return str;
+        }
+      
+    }
+	
+	public static String excludeText(String str,String[] excludekeys) {
+        if (isEmpty(str) || excludekeys==null || excludekeys.length==0) {
+            return str;
+        } 
+        String[] codeArray=str.split("_");
+        if(codeArray!=null) {
+        	List<String> values=new ArrayList<String>();
+        	for(int i=0,k=codeArray.length;i<k;i++) {
+        		String key=codeArray[i];
+        		if(!hasIn(key,excludekeys)) {
+        		values.add(key);	
+        		}
+        	}
+        	return String.join("_", values);
+        }
+        return str;
+      
+   }
+	
+	
 	public static void addCodeLine(StringBuilder sql, String ddl) {
         ddl = ddl.trim();
         if (!CommonUtils.isEmpty(ddl)) {
@@ -198,7 +234,7 @@ public class CodeHelper {
 		 {
 			 for(String s:strs)
 			 {
-				 if(s.equals(str))
+				 if(s.trim().equals(str))
 				 {
 					 return true;
 				 }

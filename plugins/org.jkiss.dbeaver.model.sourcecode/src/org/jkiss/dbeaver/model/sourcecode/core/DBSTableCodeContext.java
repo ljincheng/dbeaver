@@ -43,6 +43,10 @@ public class DBSTableCodeContext extends EngineContext{
 	public static final String KEY_TABLECODEPARAM4="tableCodeParam4";
 	public static final String KEY_TABLECODENAME5="tableCodeName5";
 	public static final String KEY_TABLECODEPARAM5="tableCodeParam5";
+	public static final String KEY_TABLECODENAME0="tableCodeName0";
+	public static final String KEY_TABLECODEPARAM0="tableCodeParam0";
+	public static final String KEY_TABLECODENAMESkip="tableCodeNameSkip";
+	public static final String KEY_TABLECODEPARAMSkip="tableCodeParamSkip";
 	public static final String KEY_PRIMARYCOLUMN="primaryColumn";
 	public static final String KEY_ENTITY="entity";
 	public static final String KEY_DAO="dao";
@@ -175,14 +179,20 @@ public class DBSTableCodeContext extends EngineContext{
 			dataMap.put(KEY_TABLECODEPARAM4,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName,3)));
 			dataMap.put(KEY_TABLECODENAME5,CodeHelper.toUpperCamelCase(CodeHelper.dropFirstUnderline(tableName,4)));
 			dataMap.put(KEY_TABLECODEPARAM5,CodeHelper.toLowerCamelCase(CodeHelper.dropFirstUnderline(tableName,4)));
+			dataMap.put(KEY_TABLECODENAME0,CodeHelper.toUpperCamelCase(CodeHelper.getLastUnderline(tableName,1)));
+			dataMap.put(KEY_TABLECODEPARAM0,CodeHelper.toLowerCamelCase(CodeHelper.getLastUnderline(tableName,1)));
 			
 			Map<String,String> settingsData=new HashMap<String, String>(); 
+			String[] skipCodeArray=null;
 			if(settings!=null)
 			{
 				for(int i=0,k=settings.size();i<k;i++)
 				{
 					FormItemContext formItem=settings.get(i);
 					settingsData.put(formItem.getId(), formItem.getValue());
+					if(formItem.getId()!=null && "skip".equals( formItem.getId()) ) {
+						skipCodeArray=formItem.getValue().split("\\,");
+					}
 				}
 				for(int i=0,k=settings.size();i<k;i++)
 				{
@@ -193,6 +203,9 @@ public class DBSTableCodeContext extends EngineContext{
 					}
 				}
 			}
+			dataMap.put(KEY_TABLECODENAMESkip,CodeHelper.toUpperCamelCase(CodeHelper.excludeText(tableName,skipCodeArray)));
+			dataMap.put(KEY_TABLECODEPARAMSkip,CodeHelper.toLowerCamelCase(CodeHelper.excludeText(tableName,skipCodeArray)));
+			
 			dataMap.put(KEY_SETTING,settingsData); 
 			setVariables(dataMap);
 		}
