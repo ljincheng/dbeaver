@@ -110,6 +110,8 @@ public class MySQLDataSource extends JDBCDataSource implements DBPObjectStatisti
                 } else {
                     return 255;
                 }
+            case DBPDataSource.FEATURE_LIMIT_AFFECTS_DML:
+                return true;
         }
         return super.getDataSourceFeature(featureId);
     }
@@ -925,6 +927,14 @@ public class MySQLDataSource extends JDBCDataSource implements DBPObjectStatisti
     @Association
     public boolean supportsTriggers() {
         return CommonUtils.getBoolean(getContainer().getDriver().getDriverParameter("supports-triggers"), true);
+    }
+
+    /**
+     * Returns true if local clients using is supported.
+     */
+    @Association
+    public boolean supportsNativeClients() {
+        return CommonUtils.getBoolean(getContainer().getDriver().getDriverParameter(MySQLConstants.DRIVER_PARAM_CLIENTS), true);
     }
 
     public boolean isSystemCatalog(String name) {

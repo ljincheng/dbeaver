@@ -192,6 +192,10 @@ public class RestClient {
                         returnType = bounds[0];
                     }
                 }
+                if (returnType instanceof ParameterizedType && ((ParameterizedType) returnType).getRawType() == Class.class) {
+                    // Convert to raw class type to force our serializer to work
+                    returnType = Class.class;
+                }
 
                 return gson.fromJson(contents, returnType);
             } catch (RuntimeException e) {
