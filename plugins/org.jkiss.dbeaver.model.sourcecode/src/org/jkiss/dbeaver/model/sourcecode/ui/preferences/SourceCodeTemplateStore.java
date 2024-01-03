@@ -2,6 +2,7 @@ package org.jkiss.dbeaver.model.sourcecode.ui.preferences;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +31,9 @@ import org.jkiss.dbeaver.model.sourcecode.internal.SourceCodeActivator;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.preferences.PreferenceStoreDelegate;
 import org.jkiss.dbeaver.utils.ContentUtils;
+import org.jkiss.dbeaver.utils.UnicodeReader;
 import org.jkiss.utils.CommonUtils;
+import org.jkiss.utils.IOUtils;
 import org.osgi.framework.Bundle;
 
 public class SourceCodeTemplateStore extends TemplateStore {
@@ -166,14 +169,32 @@ public class SourceCodeTemplateStore extends TemplateStore {
         log.error(x);
     }
 
-    private static class CustomTemplatesStore extends SimplePreferenceStore {
+//    public static String readFileToString(File file) throws IOException
+//    {
+//        try (InputStream fileStream = new FileInputStream(file)) {
+//            UnicodeReader unicodeReader = new UnicodeReader(fileStream, StandardCharsets.UTF_8);
+//            StringBuilder result = new StringBuilder((int) file.length());
+//            char[] buffer = new char[4000];
+//            for (;;) {
+//                int count = unicodeReader.read(buffer);
+//                if (count <= 0) {
+//                    break;
+//                }
+//                result.append(buffer, 0, count);
+//            }
+//            return result.toString();
+//        }
+//    }
+    
+	private static class CustomTemplatesStore extends SimplePreferenceStore {
         private CustomTemplatesStore()
         {
             super(DBWorkbench.getPlatform().getPreferenceStore());
             try {
                 File configurationFile = getConfigurationFile();
                 if (configurationFile.exists()) {
-                    setValue(PREF_STORE_KEY, ContentUtils.readFileToString(configurationFile));
+//                    setValue(PREF_STORE_KEY, readFileToString(configurationFile));
+                    setValue(PREF_STORE_KEY,IOUtils.toString(configurationFile, "UTF_8"));
                 }
             } catch (IOException e) {
                 log.error(e);
@@ -186,6 +207,7 @@ public class SourceCodeTemplateStore extends TemplateStore {
             return path.toFile();
         }
 
+       
         @Override
         public void save() throws IOException
         {
