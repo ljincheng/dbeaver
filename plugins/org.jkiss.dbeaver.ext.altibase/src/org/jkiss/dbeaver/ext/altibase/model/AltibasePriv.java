@@ -14,14 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jkiss.dbeaver.dpi.model;
+package org.jkiss.dbeaver.ext.altibase.model;
 
 import org.jkiss.code.NotNull;
+import org.jkiss.dbeaver.model.access.DBAPrivilege;
 
-import java.nio.file.Path;
-import java.util.List;
+public class AltibasePriv extends AltibaseObject<AltibaseGrantee> implements DBAPrivilege {
 
-public interface DPIDriverLibrariesProvider {
+    protected AltibasePriv(AltibaseGrantee user, String name) {
+        super(user, name, true);
+    }
+
     @NotNull
-    List<Path> getDriverLibsLocation(@NotNull String driverId);
+    @Override
+    public String getName() {
+        return super.getName();
+    }
 }
