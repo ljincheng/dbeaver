@@ -32,6 +32,7 @@ import org.jkiss.dbeaver.ui.preferences.PreferenceStoreDelegate;
 import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.utils.CommonUtils;
 import org.osgi.framework.Bundle;
+import org.jkiss.utils.IOUtils;
 
 public class SourceCodeTemplateStore extends TemplateStore {
 
@@ -173,7 +174,8 @@ public class SourceCodeTemplateStore extends TemplateStore {
             try {
                 File configurationFile = getConfigurationFile();
                 if (configurationFile.exists()) {
-                    setValue(PREF_STORE_KEY, ContentUtils.readFileToString(configurationFile));
+                    //setValue(PREF_STORE_KEY, ContentUtils.readFileToString(configurationFile));
+                    setValue(PREF_STORE_KEY,IOUtils.toString(configurationFile,"UTF_8"));
                 }
             } catch (IOException e) {
                 log.error(e);
