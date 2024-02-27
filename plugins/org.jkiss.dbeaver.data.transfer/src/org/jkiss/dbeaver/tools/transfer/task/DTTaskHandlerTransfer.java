@@ -16,6 +16,7 @@
  */
 package org.jkiss.dbeaver.tools.transfer.task;
 
+import org.eclipse.core.runtime.IStatus;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
@@ -153,23 +154,55 @@ public class DTTaskHandlerTransfer implements DBTTaskHandler, DBTTaskInfoCollect
         @NotNull DBTTaskExecutionListener listener,
         @NotNull DataTransferSettings settings
     ) {
-        int totalJobs = settings.getDataPipes().size();
-        if (totalJobs > settings.getMaxJobCount()) {
-            totalJobs = settings.getMaxJobCount();
+        final List<DataTransferPipe> dataPipes = settings.getDataPipes();
+        final int totalJobs = Math.min(dataPipes.size(), settings.getMaxJobCount());
+        if (totalJobs == 0) {
+            return null;
         }
-        Throwable error = null;
-        for (int i = 0; i < totalJobs; i++) {
-            DataTransferJob job = new DataTransferJob(settings, task, locale, log, listener);
-            try {
-                runnableContext.run(true, true, job);
-                totalStatistics.accumulate(job.getTotalStatistics());
-            } catch (InvocationTargetException e) {
-                error = e.getTargetException();
-            } catch (InterruptedException e) {
-                break;
+        final Throwable[] error = new Throwable[1];
+        try {
+            runnableContext.run(true, true, monitor -> {
+                final DataTransferJob[] jobs = new DataTransferJob[totalJobs];
+                for (int i = 0; i < totalJobs; i++) {
+                    DataTransferJob job = new DataTransferJob(settings, task, log, monitor, i);
+                    job.schedule();
+                    jobs[i] = job;
+                }
+                monitor.beginTask("Performing data transfer in parallel", settings.getDataPipes().size());
+                for (DataTransferJob job : jobs) {
+                    try {
+                        job.join();
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                    final IStatus result = job.getResult();
+                    if (result.getException() != null) {
+                        if (error[0] == null) {
+                            error[0] = result.getException();
+                        } else {
+                            error[0].addSuppressed(result.getException());
+                        }
+                    }
+                    totalStatistics.accumulate(job.getTotalStatistics());
+                }
+                monitor.done();
+                monitor.beginTask("Finalizing data transfer", 1);
+                try {
+                    // End of transfer - signal last pipe about it
+                    dataPipes.get(dataPipes.size() - 1).getConsumer().finishTransfer(monitor, null, task, true);
+                } finally {
+                    monitor.done();
+                }
+            });
+        } catch (InvocationTargetException e) {
+            if (error[0] == null) {
+                error[0] = e.getTargetException();
+            } else {
+                error[0].addSuppressed(e.getTargetException());
             }
+        } catch (InterruptedException ignored) {
         }
-        return error;
+        return error[0];
     }
 
     private void restoreReferentialIntegrity(@NotNull DBRRunnableContext runnableContext,

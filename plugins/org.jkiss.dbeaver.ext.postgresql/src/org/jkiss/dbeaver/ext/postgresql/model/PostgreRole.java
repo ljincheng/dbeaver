@@ -506,7 +506,7 @@ public class PostgreRole implements
                     "\n\tn.oid AS relnamespace,\n" +
                     "\tnspacl AS relacl,\n" +
                     "\tn.nspname AS relname,\n" +
-                    "\t'C' AS relkind,\n" +
+                    "\tcast('C' as \"char\") AS relkind,\n" +
                     "(aclexplode(nspacl)).grantee as granteeI\n" +
                     "FROM\n" +
                     "\tpg_catalog.pg_namespace n\n" +
@@ -709,6 +709,21 @@ public class PostgreRole implements
                 }
             }
         }
+    }
+
+    /**
+     * Specific tole type name for SQL statement correct generation.
+     */
+    @Nullable
+    public String getSpecificRoleType() {
+        return null;
+    }
+
+    /**
+     * Returns true if role/user/group can't see and change routines (procedures and functions) privileges.
+     */
+    public boolean supportsRoutinesPermissions() {
+        return true;
     }
 
     @Override

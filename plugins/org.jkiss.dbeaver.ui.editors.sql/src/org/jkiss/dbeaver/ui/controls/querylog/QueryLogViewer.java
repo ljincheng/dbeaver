@@ -1034,9 +1034,12 @@ public class QueryLogViewer extends Viewer implements QMMetaListener, DBPPrefere
 
     private DBPDataSourceContainer getDataSourceContainer(QMMStatementExecuteInfo stmtExec) {
         QMMConnectionInfo session = stmtExec.getStatement().getConnection();
-        String projectId = session.getProjectInfo() == null ? null : session.getProjectInfo().getId();
+        String projectName = session.getProjectInfo() == null ? null : session.getProjectInfo().getName();
+        if (CommonUtils.isEmpty(projectName)) {
+            projectName = session.getProjectInfo() == null ? null : session.getProjectInfo().getId();
+        }
         String containerId = session.getContainerId();
-        return DBUtils.findDataSource(projectId, containerId);
+        return DBUtils.findDataSource(projectName, containerId);
     }
 
     private class EventViewDialog extends BaseSQLDialog {
@@ -1211,6 +1214,7 @@ public class QueryLogViewer extends Viewer implements QMMetaListener, DBPPrefere
             if (eventBrowser != null) {
                 QMEventCriteria criteria = QMUtils.createDefaultCriteria(DBWorkbench.getPlatform().getPreferenceStore());
                 criteria.setSearchString(CommonUtils.isEmptyTrimmed(searchString) ? null : searchString.trim());
+                criteria.setFetchingSize(entriesPerPage);
 
                 monitor.beginTask("Load query history", 1); //$NON-NLS-1$
                 if (!CommonUtils.isEmpty(searchString)) {

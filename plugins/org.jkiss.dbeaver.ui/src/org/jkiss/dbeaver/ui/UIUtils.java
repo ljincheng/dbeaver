@@ -622,6 +622,16 @@ public class UIUtils {
     }
 
     @NotNull
+    public static Control createWarningLabel(
+        @NotNull Composite parent,
+        @NotNull String text,
+        int gridStyle,
+        int hSpan
+    ) {
+        return createInfoLabel(parent, text, gridStyle, hSpan, null, DBeaverIcons.getImage(DBIcon.SMALL_WARNING));
+    }
+
+    @NotNull
     public static Control createInfoLabel(
         @NotNull Composite parent,
         @NotNull String text,
@@ -629,11 +639,23 @@ public class UIUtils {
         int hSpan,
         @Nullable Runnable callback
     ) {
+        return createInfoLabel(parent, text, gridStyle, hSpan, callback, DBeaverIcons.getImage(DBIcon.SMALL_INFO));
+    }
+
+    @NotNull
+    public static Control createInfoLabel(
+        @NotNull Composite parent,
+        @NotNull String text,
+        int gridStyle,
+        int hSpan,
+        @Nullable Runnable callback,
+        @NotNull Image image
+    ) {
         final Control control;
 
         if (callback == null) {
             final CLabel label = new CLabel(parent, SWT.NONE);
-            label.setImage(DBeaverIcons.getImage(DBIcon.SMALL_INFO));
+            label.setImage(image);
             label.setText(text);
             control = label;
         } else {
@@ -1292,19 +1314,18 @@ public class UIUtils {
         @Nullable IWorkbenchPreferenceContainer pageContainer,
         @Nullable Object pageData
     ) {
-        final IPreferenceNode node = PlatformUI.getWorkbench().getPreferenceManager().getElements(PreferenceManager.PRE_ORDER).stream()
-            .filter(next -> next.getId().equals(pageId))
-            .findFirst()
-            .orElse(null);
-
+        final IPreferenceNode node = findPreferenceNode(pageId);
         final Link link = new Link(parent, 0);
 
         if (node == null) {
             link.setText(NLS.bind(WorkbenchMessages.PreferenceNode_NotFound, pageId));
         } else {
-            link.setText(NLS.bind(message, node.getLabelText()));
+            final boolean canOpenHere = findPreferenceNode(pageContainer, pageId) != null;
+            final String label = canOpenHere ? node.getLabelText() : NLS.bind(UIMessages.link_external_label, node.getLabelText());
+            link.setText(NLS.bind(message, label));
+            link.setToolTipText(canOpenHere ? null : UIMessages.link_external_tip);
             link.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
-                if (pageContainer != null) {
+                if (pageContainer != null && canOpenHere) {
                     // Open in the same dialog
                     pageContainer.openPage(pageId, pageData);
                 } else {
@@ -1321,6 +1342,27 @@ public class UIUtils {
         }
 
         return link;
+    }
+
+    @Nullable
+    private static IPreferenceNode findPreferenceNode(@NotNull String pageId) {
+        return findPreferenceNode(PlatformUI.getWorkbench().getPreferenceManager(), pageId);
+    }
+
+    @Nullable
+    private static IPreferenceNode findPreferenceNode(@Nullable IWorkbenchPreferenceContainer container, @NotNull String pageId) {
+        if (container instanceof PreferenceDialog dialog) {
+            return findPreferenceNode(dialog.getPreferenceManager(), pageId);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static IPreferenceNode findPreferenceNode(@NotNull PreferenceManager preferenceManager, @NotNull String pageId) {
+        return preferenceManager.getElements(PreferenceManager.POST_ORDER).stream()
+            .filter(next -> next.getId().equals(pageId))
+            .findFirst()
+            .orElse(null);
     }
 
     public static void addFocusTracker(IServiceLocator serviceLocator, String controlID, Control control)

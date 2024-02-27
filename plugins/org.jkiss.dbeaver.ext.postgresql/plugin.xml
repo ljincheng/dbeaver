@@ -33,6 +33,7 @@
         <serverType id="gcloudpg" name="Google Cloud SQL - PostgreSQL" class="org.jkiss.dbeaver.ext.postgresql.model.impls.PostgreServerGCloud" logo="icons/google_cloud_sql_logo.png" customURL="true" cloudServer="true" needsPort="false" supportsClient="false"/>
         <serverType id="cratedb" name="CrateDB" class="org.jkiss.dbeaver.ext.postgresql.model.impls.PostgreServerCrateDB" logo="icons/cratedb_logo.png" customURL="true"/>
         <serverType id="materialize" name="Materialize" class="org.jkiss.dbeaver.ext.postgresql.model.impls.materialize.PostgreServerMaterialize" logo="icons/materialize_logo.png" customURL="true"/>
+        <serverType id="risingwave" name="RisingWave" class="org.jkiss.dbeaver.ext.postgresql.model.impls.PostgreServerRisingWave" logo="icons/risingwave_logo.png" customURL="true"/>
     </extension>
 
     <extension point="org.jkiss.dbeaver.postgresql.fdw.config">
@@ -107,7 +108,7 @@
                                                 </items>
                                             </items>
                                         </folder>
-                                        <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableForeignKey" label="%tree.foreign_keys.node.name" icon="#foreign-keys" description="%tree.foreign_key.node.tip">
+                                        <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreTableForeignKey" label="%tree.foreign_keys.node.name" icon="#foreign-keys" description="%tree.foreign_key.node.tip" visibleIf="connected &amp;&amp; dataSource.serverType.supportsForeignKeys()">
                                             <items label="%tree.foreign_key.node.name" path="association" property="foreignKeys" icon="#foreign-key">
                                                 <items label="%tree.foreign_key_columns.node.name" itemLabel="%tree.column.node.name" path="column" property="attributeReferences" navigable="false" inline="true">
                                                 </items>
@@ -122,7 +123,7 @@
                                         <folder label="%tree.dependencies.node.name" icon="#references" description="%tree.dependencies.node.tip" virtual="true">
                                             <items label="%tree.dependency.node.name" path="dependency" property="dependencies" icon="#reference" virtual="true"/>
                                         </folder>
-                                        <folder label="%tree.references.node.name" icon="#references" description="%tree.references.node.tip" virtual="true">
+                                        <folder label="%tree.references.node.name" icon="#references" description="%tree.references.node.tip" virtual="true" visibleIf="connected &amp;&amp; dataSource.serverType.supportsForeignKeys()">
                                             <items label="%tree.reference.node.name" path="reference" property="references" icon="#reference" virtual="true">
                                                 <items label="%tree.reference_columns.node.name" itemLabel="%tree.column.node.name" path="column" property="attributeReferences" navigable="false" inline="true" virtual="true">
                                                 </items>
@@ -301,13 +302,13 @@
                             </folder>
                         </items>
                     </folder>
-                    <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreCharset" label="%tree.encodings.node.name" icon="#encodings" description="Encodings">
+                    <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreCharset" label="%tree.encodings.node.name" icon="#encodings" description="Encodings" visibleIf="connected &amp;&amp; dataSource.serverType.supportsEncodings()">
                         <items label="%tree.encoding.node.name" path="encoding" property="defaultInstance.encodings" icon="#encoding"/>
                     </folder>
                     <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreCollation" label="%tree.collations.node.name" icon="#collations" description="Collations" visibleIf="connected &amp;&amp; dataSource.serverType.supportsCollations()">
                         <items label="%tree.collation.node.name" path="collation" property="defaultInstance.collations" icon="#collation"/>
                     </folder>
-                    <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreLanguage" label="%tree.languages.node.name" icon="#languages" description="Languages">
+                    <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreLanguage" label="%tree.languages.node.name" icon="#languages" description="Languages" visibleIf="connected &amp;&amp; dataSource.serverType.supportsLanguages()">
                         <items label="%tree.language.node.name" path="language" property="defaultInstance.languages" icon="#language"/>
                     </folder>
                     <folder type="org.jkiss.dbeaver.ext.postgresql.model.PostgreAvailableExtension" label="%tree.avalextensions.node.name" icon="#extensions" description="%tree.extensions.node.tip" visibleIf="connected &amp;&amp; dataSource.serverType.supportsExtensions()">
@@ -338,7 +339,7 @@
                     dialect="postgresql">
                     <replace provider="generic" driver="postgresql"/>
                     <replace provider="postgresql" driver="postgresql"/>
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/net.postgis:postgis-jdbc:RELEASE[2.5.0]" ignore-dependencies="true" optional="true" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/net.postgis:postgis-geometry:RELEASE[2.5.0]" ignore-dependencies="true" optional="true" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/com.github.waffle:waffle-jna:RELEASE[1.9.1]" if="properties.gsslib=='sspi'" optional="true" bundle="!drivers.postgresql"/>
@@ -402,7 +403,7 @@
                     description="%driver.timescale.description"
                     categories="timeseries"
                     dialect="postgresql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -423,13 +424,13 @@
                     sampleURL="jdbc:postgresql://{host}[:{port}]/[{database}]"
                     useURL="true"
                     defaultPort="5432"
-                    webURL="https://yellowbrick.io/"
+                    webURL="https://yellowbrick.com/"
                     propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
                     description="Yellowbrick JDBC driver"
                     supportedConfigurationTypes="MANUAL,URL"
                     categories="sql"
                     dialect="postgresql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -456,7 +457,7 @@
                         description="%driver.yugabytedb.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -482,7 +483,7 @@
                         description="%driver.cockroach.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -508,7 +509,7 @@
                         description="%driver.materialize.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
@@ -586,7 +587,7 @@
                         description="%driver.gcloudpg.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql,cloud">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="jar" path="maven:/com.google.cloud.sql:postgres-socket-factory:RELEASE"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
@@ -616,12 +617,38 @@
                         description="%driver.cratedb.description"
                         supportedConfigurationTypes="MANUAL,URL"
                         categories="sql">
-                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.5.2]" bundle="!drivers.postgresql"/>
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
                     <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
 
                     <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
                     <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
                     <parameter name="serverType" value="cratedb"/>
+                    <property name="loginTimeout" value="20"/>
+                    <property name="connectTimeout" value="20"/>
+                </driver>
+
+                <driver
+                        id="postgres-risingwave-jdbc"
+                        label="RisingWave"
+                        icon="icons/risingwave_icon.png"
+                        iconBig="icons/risingwave_icon_big.png"
+                        class="org.postgresql.Driver"
+                        sampleURL="jdbc:postgresql://{host}[:{port}]/[{database}]"
+                        useURL="true"
+                        defaultPort="4566"
+                        defaultDatabase="dev"
+                        defaultUser="root"
+                        webURL="https://www.risingwave.com/"
+                        propertiesURL="https://jdbc.postgresql.org/documentation/head/connect.html#connection-parameters"
+                        description="%driver.risingwave.description"
+                        supportedConfigurationTypes="MANUAL,URL"
+                        categories="sql">
+                    <file type="jar" path="maven:/org.postgresql:postgresql:RELEASE[42.7.2]" bundle="!drivers.postgresql"/>
+                    <file type="license" path="https://raw.githubusercontent.com/pgjdbc/pgjdbc/master/LICENSE" bundle="!drivers.postgresql"/>
+
+                    <file type="license" path="drivers/postgresql/LICENSE.txt" bundle="drivers.postgresql"/>
+                    <file type="jar" path="drivers/postgresql" bundle="drivers.postgresql"/>
+                    <parameter name="serverType" value="risingwave"/>
                     <property name="loginTimeout" value="20"/>
                     <property name="connectTimeout" value="20"/>
                 </driver>

@@ -36,6 +36,7 @@ import org.jkiss.dbeaver.model.app.DBPProject;
 import org.jkiss.dbeaver.model.connection.DBPDriver;
 import org.jkiss.dbeaver.model.connection.DBPDriverSubstitutionDescriptor;
 import org.jkiss.dbeaver.model.navigator.DBNBrowseSettings;
+import org.jkiss.dbeaver.model.secret.DBSSecretValue;
 import org.jkiss.dbeaver.registry.DataSourceDescriptor;
 import org.jkiss.dbeaver.registry.DataSourcePageDescriptor;
 import org.jkiss.dbeaver.registry.DataSourceViewDescriptor;
@@ -141,7 +142,7 @@ public class EditConnectionWizard extends ConnectionWizard {
      */
     @Override
     public void addPages() {
-        if (dataSource.getDriver().isDeprecated()) {
+        if (dataSource.getDriver().isNotAvailable()) {
             addPage(new ConnectionPageDeprecation(dataSource.getDriver()));
             return;
         }
@@ -249,7 +250,7 @@ public class EditConnectionWizard extends ConnectionWizard {
      */
     @Override
     public boolean performFinish() {
-        if (dataSource.getDriver().isDeprecated()) {
+        if (dataSource.getDriver().isNotAvailable()) {
             return true;
         }
 
@@ -294,6 +295,12 @@ public class EditConnectionWizard extends ConnectionWizard {
 
         // Save
         saveSettings(originalDataSource);
+        // Set selected shared creds (creds may be resolved during auth model interactions)
+        DBSSecretValue selectedSharedCredentials = dataSource.getSelectedSharedCredentials();
+        if (selectedSharedCredentials != null) {
+            selectedSharedCredentials.setValue(originalDataSource.saveToSecret());
+            originalDataSource.setSelectedSharedCredentials(selectedSharedCredentials);
+        }
         return originalDataSource.persistConfiguration();
     }
 
@@ -340,7 +347,7 @@ public class EditConnectionWizard extends ConnectionWizard {
 
     @Override
     protected void saveSettings(DataSourceDescriptor dataSource) {
-        if (dataSource.getDriver().isDeprecated()) {
+        if (dataSource.getDriver().isNotAvailable()) {
             return;
         }
 

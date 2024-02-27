@@ -139,7 +139,7 @@ escapeCharacter: characterValueExpression;
 inPredicateValue: (tableSubquery|(LeftParen (valueExpression (Comma valueExpression)*) RightParen));
 
 rowValueConstructor: (rowValueConstructorElement|LeftParen rowValueConstructorList anyUnexpected?? RightParen|rowSubquery);
-rowValueConstructorElement: (valueExpression|nullSpecification|defaultSpecification);
+rowValueConstructorElement: (valueExpression|defaultSpecification);
 nullSpecification: NULL;
 defaultSpecification: DEFAULT;
 rowValueConstructorList: rowValueConstructorElement (Comma rowValueConstructorElement)*;
@@ -149,16 +149,21 @@ parameterSpecification: parameterName (indicatorParameter)?;
 parameterName: Colon identifier;
 indicatorParameter: (INDICATOR)? parameterName;
 dynamicParameterSpecification: QuestionMark;
-columnReference: (qualifier Period)? columnName;
+columnReference: ((qualifier Period)? (columnName))|(qualifier Period Asterisk);
 //columnReference: identifier (Period identifier (Period identifier (Period identifier)?)?)?;
+valueReference: (columnReference|valueRefNestedExpr) valueRefIndexingStep* (valueRefMemberStep valueRefIndexingStep*)*;
+valueRefNestedExpr: LeftParen valueReference RightParen;
+valueRefIndexingStep: LeftBracket (valueRefIndexingStepDirect|valueRefIndexingStepSlice) RightBracket;
+valueRefIndexingStepDirect: signedNumericLiteral;
+valueRefIndexingStepSlice: signedNumericLiteral? Colon signedNumericLiteral?;
+valueRefMemberStep: Period identifier;
 qualifier: (tableName|correlationName);
 correlationName: identifier;
 
 withClause: WITH RECURSIVE? cteList;
 cteList: with_list_element (Comma with_list_element)*;
-with_list_element: queryName (LeftParen withColumnList RightParen)? AS anyWordsWithProperty? subquery;
-withColumnList: columnName (Comma columnName)*;
-queryName: Identifier;
+with_list_element: queryName (LeftParen columnNameList RightParen)? AS anyWordsWithProperty? subquery;
+queryName: identifier;
 
 // select, subquery
 scalarSubquery: subquery;
@@ -173,7 +178,7 @@ simpleTable: (querySpecification|tableValueConstructor|explicitTable);
 querySpecification: SELECT (setQuantifier)? selectList tableExpression?;
 setQuantifier: (DISTINCT|ALL);
 selectList: selectSublist (Comma selectSublist)*; // (Comma selectSublist)* contains any quantifier for error recovery;
-selectSublist: (Asterisk|derivedColumn|qualifier Period Asterisk)? anyUnexpected??; // (.*?) for whole rule to handle select fields autocompletion when from immediately after select
+selectSublist: (Asterisk|derivedColumn)? anyUnexpected??; // (.*?) for whole rule to handle select fields autocompletion when from immediately after select
 derivedColumn: valueExpression (asClause)?;
 asClause: (AS)? columnName;
 tableExpression: fromClause whereClause? groupByClause? havingClause? orderByClause? limitClause?;
@@ -183,7 +188,7 @@ queryExpression: (joinedTable|nonJoinQueryTerm) (unionTerm|exceptTerm)*;
 
 // from
 fromClause: FROM tableReference (Comma tableReference)*;
-nonjoinedTableReference: (tableName (PARTITION anyProperty)? (correlationSpecification)?)|(derivedTable correlationSpecification);
+nonjoinedTableReference: (tableName (PARTITION anyProperty)? (correlationSpecification)?)|(derivedTable correlationSpecification?);
 tableReference: nonjoinedTableReference|joinedTable|tableReferenceHints|anyUnexpected??; // '.*' to handle incomplete queries
 tableReferenceHints: (tableHintKeywords|anyWord)+ anyProperty; // dialect-specific options, should be described and moved to dialects in future
 joinedTable: (nonjoinedTableReference|(LeftParen joinedTable RightParen)) (naturalJoinTerm|crossJoinTerm)+;
@@ -206,7 +211,7 @@ joinColumnList: columnNameList;
 whereClause: WHERE searchCondition;
 groupByClause: GROUP BY groupingColumnReferenceList;
 groupingColumnReferenceList: groupingColumnReference (Comma groupingColumnReference)*;
-groupingColumnReference: columnReference | anyWordsWithProperty;
+groupingColumnReference: valueReference | anyWordsWithProperty;
 havingClause: HAVING searchCondition;
 tableValueConstructor: VALUES (rowValueConstructor (Comma rowValueConstructor)*);
 explicitTable: TABLE tableName;
@@ -214,14 +219,16 @@ correspondingSpec: CORRESPONDING (BY LeftParen correspondingColumnList RightPare
 correspondingColumnList: columnNameList;
 caseExpression: (caseAbbreviation|simpleCase|searchedCase);
 caseAbbreviation: (NULLIF LeftParen valueExpression Comma valueExpression RightParen|COALESCE LeftParen valueExpression (Comma valueExpression)+ RightParen);
-simpleCase: CASE valueExpression (simpleWhenClause)+ (elseClause)? END;
-simpleWhenClause: WHEN valueExpression THEN result;
-result: valueExpression|NULL;
+simpleCase: CASE (valueExpression|searchCondition) (simpleWhenClause)+ (elseClause)? END;
+simpleWhenClause: WHEN (valueExpression|searchCondition) THEN result;
+result: valueExpression;
 elseClause: ELSE result;
 searchedCase: CASE (searchedWhenClause)+ (elseClause)? END;
 searchedWhenClause: WHEN searchCondition THEN result;
 castSpecification: CAST LeftParen castOperand AS dataType RightParen;
-castOperand: (valueExpression|NULL);
+castOperand: valueExpression;
+
+overClause: OVER LeftParen (PARTITION BY valueExpression (Comma valueExpression)*)? orderByClause? ((ROWS|RANGE) anyUnexpected)? RightParen;
 
 // functions and operators
 //valueExpression: (numericValueExpression|characterValueExpression|datetimeValueExpression|intervalValueExpression);
@@ -244,17 +251,20 @@ numericOperation:                           (((Asterisk|Solidus) factor)+ (sign 
 intervalOperation:       intervalQualifier?((((Asterisk|Solidus) factor)+ (sign intervalTerm)*)|((sign intervalTerm)+));
 intervalOperation2: Asterisk intervalFactor((((Asterisk|Solidus) factor)+ (sign intervalTerm)*)|((sign intervalTerm)+));
 
-valueExpressionPrimary: unsignedNumericLiteral|generalLiteral|generalValueSpecification|countAllExpression
+valueExpressionPrimary: valueExpressionCast|valueExpressionAtom;
+valueExpressionCast: valueExpressionAtom TypeCast dataType;
+valueExpressionAtom: unsignedNumericLiteral|generalLiteral|generalValueSpecification|countAllExpression
     |scalarSubquery|caseExpression|LeftParen valueExpression anyUnexpected?? RightParen|castSpecification
-    |anyWordsWithProperty2|columnReference|anyWordsWithProperty;
+    |aggregateExpression|nullSpecification|truthValue|variableExpression|anyWordsWithProperty2|valueReference|anyWordsWithProperty;
 
+variableExpression: BatchVariableName|ClientVariableName|ClientParameterName;
 
-numericPrimary: (valueExpressionPrimary|extractExpression|anyWordsWithProperty);
+numericPrimary: (valueExpressionPrimary|extractExpression);
 factor: sign? numericPrimary;
 term: factor ((Asterisk|Solidus) factor)*;
-numericValueExpression: term (sign term)*;
+// numericValueExpression: term (sign term)*;
 
-characterPrimary: (valueExpressionPrimary|anyWordsWithProperty);
+characterPrimary: (valueExpressionPrimary);
 characterValueExpression: characterPrimary (ConcatenationOperator characterPrimary)*;
 
 intervalPrimary: valueExpressionPrimary (intervalQualifier)?;
@@ -286,7 +296,7 @@ orderByClause: ORDER BY sortSpecificationList;
 limitClause: LIMIT valueExpression (OFFSET valueExpression)? (Comma valueExpression)?;
 sortSpecificationList: sortSpecification (Comma sortSpecification)*;
 sortSpecification: sortKey (orderingSpecification)?;
-sortKey: columnReference | UnsignedInteger | anyWordsWithProperty;
+sortKey: valueReference | UnsignedInteger | anyWordsWithProperty;
 orderingSpecification: (ASC|DESC);
 
 // schema definition
@@ -331,18 +341,18 @@ selectStatementSingleRow: SELECT (setQuantifier)? selectList INTO selectTargetLi
 selectTargetList: parameterSpecification (Comma parameterSpecification)*;
 sqlDataChangeStatement: (deleteStatement|insertStatement|updateStatement);
 deleteStatement: DELETE FROM tableName whereClause?;
-insertStatement: INSERT INTO tableName insertColumnsAndSource;
-insertColumnsAndSource: ((LeftParen insertColumnList RightParen)? queryExpression|DEFAULT VALUES);
+insertStatement: INSERT INTO tableName? insertColumnsAndSource;
+insertColumnsAndSource: ((LeftParen (insertColumnList?|Asterisk) RightParen?)? queryExpression|DEFAULT VALUES)?;
 insertColumnList: columnNameList;
 
 // UPDATE
 updateStatement: UPDATE anyWordsWithProperty?? tableReference? (SET setClauseList? fromClause? whereClause? orderByClause? limitClause? anyWordsWithProperty??)?;
 setClauseList: setClause (Comma setClause)*;
 setClause: ((setTarget | setTargetList) (EqualsOperator updateSource)?)|anyUnexpected??;
-setTarget: columnReference;
-setTargetList: LeftParen columnReference? (Comma columnReference)* RightParen?;
+setTarget: valueReference;
+setTargetList: LeftParen valueReference? (Comma valueReference)* RightParen?;
 updateSource: updateValue | (LeftParen updateValue (Comma updateValue)* RightParen?);
-updateValue: valueExpression|nullSpecification|DEFAULT;
+updateValue: valueExpression|DEFAULT;
 
 // transactions
 sqlTransactionStatement: (setTransactionStatement|setConstraintsModeStatement|commitStatement|rollbackStatement);
@@ -372,7 +382,10 @@ anyValue: rowValueConstructor|searchCondition;
 anyWordWithAnyValue: anyWord anyValue;
 anyProperty: LeftParen (anyValue (Comma anyValue)*) RightParen;
 anyWordsWithProperty: anyWord+ anyProperty?;
-anyWordsWithProperty2: anyWord+ anyProperty;
+anyWordsWithProperty2: anyWord+ anyProperty overClause?;
+
+aggregateExpression: actualIdentifier LeftParen aggregateExprParam+ RightParen (WITHIN GROUP LeftParen orderByClause RightParen)? (FILTER LeftParen WHERE searchCondition RightParen)?;
+aggregateExprParam: DISTINCT|ALL|ORDER|BY|ASC|DESC|LIMIT|SEPARATOR|OFFSET|rowValueConstructor;
 
 /*
 All the logical boundary terms between query construct levels should be explicitly mentioned here for the anyUnexpected to NOT cross them

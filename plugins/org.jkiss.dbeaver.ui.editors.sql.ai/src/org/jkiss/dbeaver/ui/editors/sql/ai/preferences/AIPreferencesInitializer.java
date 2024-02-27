@@ -31,11 +31,13 @@ public class AIPreferencesInitializer extends AbstractPreferenceInitializer {
         DBPPreferenceStore store = DBWorkbench.getPlatform().getPreferenceStore();
 
         PrefUtils.setDefaultPreferenceValue(store, AICompletionConstants.AI_COMPLETION_EXECUTE_IMMEDIATELY, false);
+        PrefUtils.setDefaultPreferenceValue(store, AICompletionConstants.AI_SEND_DESCRIPTION, false);
+        PrefUtils.setDefaultPreferenceValue(store, AICompletionConstants.AI_SEND_TYPE_INFO, true);
         PrefUtils.setDefaultPreferenceValue(store, AICompletionConstants.AI_COMPLETION_MAX_CHOICES, 1);
         PrefUtils.setDefaultPreferenceValue(store, AICompletionConstants.AI_INCLUDE_SOURCE_TEXT_IN_QUERY_COMMENT, true);
 
         PrefUtils.setDefaultPreferenceValue(store, AIConstants.GPT_MODEL, GPTModel.GPT_TURBO16.getName());
-        PrefUtils.setDefaultPreferenceValue(store, AIConstants.GPT_MODEL_TEMPERATURE, 0.0f);
-        PrefUtils.setDefaultPreferenceValue(store, AIConstants.GPT_LOG_QUERY, false);
+        PrefUtils.setDefaultPreferenceValue(store, AIConstants.AI_TEMPERATURE, 0.0f);
+        PrefUtils.setDefaultPreferenceValue(store, AIConstants.AI_LOG_QUERY, false);
     }
 }

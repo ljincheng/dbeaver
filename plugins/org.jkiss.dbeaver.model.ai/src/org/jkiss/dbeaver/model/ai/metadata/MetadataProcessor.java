@@ -26,7 +26,6 @@ import org.jkiss.dbeaver.model.ai.completion.DAICompletionContext;
 import org.jkiss.dbeaver.model.ai.completion.DAICompletionMessage;
 import org.jkiss.dbeaver.model.ai.completion.DAICompletionScope;
 import org.jkiss.dbeaver.model.ai.format.IAIFormatter;
-import org.jkiss.dbeaver.model.ai.openai.GPTModel;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContextDefaults;
 import org.jkiss.dbeaver.model.navigator.DBNUtils;
@@ -36,6 +35,7 @@ import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.DBSObjectContainer;
 import org.jkiss.dbeaver.model.struct.rdb.DBSSchema;
+import org.jkiss.dbeaver.model.struct.rdb.DBSTable;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTablePartition;
 import org.jkiss.utils.CommonUtils;
 
@@ -66,10 +66,15 @@ public class MetadataProcessor {
                 object,
                 DBPEvaluationContext.DDL
             ) : DBUtils.getQuotedIdentifier(object);
-            description.append('\n').append(name).append("(");
-            boolean firstAttr = addPromptAttributes(monitor, (DBSEntity) object, description, true);
+            description.append('\n');
+            formatter.addObjectDescriptionIfNeeded(description, object, monitor);
+            if (object instanceof DBSTable table) {
+                description.append(table.isView() ? "Create View: " : "Create Table: ");
+            }
+            description.append(name).append("(\n\t");
+            DBSEntityAttribute firstAttr = addPromptAttributes(monitor, (DBSEntity) object, description, formatter);
             formatter.addExtraDescription(monitor, (DBSEntity) object, description, firstAttr);
-            description.append(");");
+            description.append("\n);");
         } else if (object instanceof DBSObjectContainer) {
             monitor.subTask("Load cache of " + object.getName());
             ((DBSObjectContainer) object).cacheStructure(
@@ -88,7 +93,7 @@ public class MetadataProcessor {
                     isRequiresFullyQualifiedName(child, context)
                 );
                 if (description.length() + childText.length() > maxRequestLength * 3) {
-                    log.debug("Trim GPT metadata prompt  at table '" + child.getName() + "' - too long request");
+                    log.debug("Trim AI metadata prompt  at table '" + child.getName() + "' - too long request");
                     break;
                 }
                 description.append(childText);
@@ -106,8 +111,9 @@ public class MetadataProcessor {
         @NotNull DAICompletionContext context,
         @Nullable DBSObjectContainer mainObject,
         @NotNull IAIFormatter formatter,
-        @NotNull GPTModel model,
-        int maxRequestTokens
+        boolean isChatAPI,
+        int maxRequestTokens,
+        boolean chatCompletion
     ) throws DBException {
         if (mainObject == null || mainObject.getDataSource() == null) {
             throw new DBException("Invalid completion request");
@@ -117,12 +123,23 @@ public class MetadataProcessor {
 
         final StringBuilder sb = new StringBuilder();
 
-        if (model.isChatAPI()) {
-            sb.append("You must perform SQL completion. " +
-                "Your query must start with \"SELECT\" and be enclosed with triple backslash on new lines. " +
-                "Talk naturally, as if you were talking to a human.");
+        if (chatCompletion && isChatAPI) {
+            sb.append(
+                """
+                You MUST perform SQL completion.
+                Your query must start with "SELECT" and MUST be enclosed with Markdown code block.
+                Talk naturally, as if you were talking to a human.
+                """);
+        } else if (isChatAPI) {
+            sb.append(
+                """
+                Perform SQL completion. Start response with SELECT keyword.
+                AVOID using Markdown.
+                Any comments MUST be placed in SQL multiline comment block at start of the query.
+                AVOID single line comments.
+                """);
         } else {
-            sb.append("Perform SQL completion.");
+            sb.append("Perform SQL completion. AVOID using Markdown");
         }
 
         final String extraInstructions = formatter.getExtraInstructions(monitor, mainObject, executionContext);
@@ -155,7 +172,8 @@ public class MetadataProcessor {
                 ));
             }
         } else {
-            sb.append(generateObjectDescription(
+            sb.append(
+                generateObjectDescription(
                 monitor,
                 mainObject,
                 executionContext,
@@ -171,12 +189,13 @@ public class MetadataProcessor {
         );
     }
 
-    protected boolean addPromptAttributes(
+    protected DBSEntityAttribute addPromptAttributes(
         DBRProgressMonitor monitor,
         DBSEntity entity,
         StringBuilder prompt,
-        boolean firstAttr
+        IAIFormatter formatter
     ) throws DBException {
+        DBSEntityAttribute prevAttribute = null;
         if (SUPPORTS_ATTRS) {
             List<? extends DBSEntityAttribute> attributes = entity.getAttributes(monitor);
             if (attributes != null) {
@@ -184,13 +203,18 @@ public class MetadataProcessor {
                     if (DBUtils.isHiddenObject(attribute)) {
                         continue;
                     }
-                    if (!firstAttr) prompt.append(",");
-                    firstAttr = false;
+                    if (prevAttribute != null) {
+                        prompt.append(",");
+                        formatter.addObjectDescriptionIfNeeded(prompt, prevAttribute, monitor);
+                        prompt.append("\n\t");
+                    }
                     prompt.append(attribute.getName());
+                    formatter.addColumnTypeIfNeeded(prompt, attribute, monitor);
+                    prevAttribute = attribute;
                 }
             }
         }
-        return firstAttr;
+        return prevAttribute;
     }
 
     private boolean isRequiresFullyQualifiedName(@NotNull DBSObject object, @Nullable DBCExecutionContext context) {

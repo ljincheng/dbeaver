@@ -22,12 +22,16 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.sql.SQLDialect;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.*;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryDataContext;
+import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryExprType;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SourceResolutionResult;
+import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryResultTupleContext.SQLQueryResultColumn;
 
 public class SQLQueryValueColumnReferenceExpression extends SQLQueryValueExpression {
     private final SQLQueryQualifiedName tableName;
     private final SQLQuerySymbolEntry columnName;
-
+    
+    private SQLQueryResultColumn column = null;
+    
     public SQLQueryValueColumnReferenceExpression(@NotNull Interval range, @NotNull SQLQuerySymbolEntry columnName) {
         super(range);
         this.tableName = null;
@@ -53,11 +57,17 @@ public class SQLQueryValueColumnReferenceExpression extends SQLQueryValueExpress
     public SQLQuerySymbol getColumnNameIfTrivialExpression() {
         return this.columnName.getSymbol();
     }
+    
+    @Override
+    public SQLQueryResultColumn getColumnIfTrivialExpression() {
+        return this.column;
+    }
 
-    void propagateColumnDefinition(@Nullable SQLQuerySymbolDefinition columnDef, @NotNull SQLQueryRecognitionContext statistics) {
+    void propagateColumnDefinition(@Nullable SQLQueryResultColumn resultColumn, @NotNull SQLQueryRecognitionContext statistics) {
         // TODO consider ambiguity
-        if (columnDef != null) {
-            this.columnName.setDefinition(columnDef);
+        if (resultColumn != null) {
+            this.column = resultColumn;
+            this.columnName.setDefinition(resultColumn.symbol.getDefinition());
         } else {
             this.columnName.getSymbol().setSymbolClass(SQLQuerySymbolClass.ERROR);
             statistics.appendError(this.columnName, "Column not found in dataset");
@@ -67,48 +77,55 @@ public class SQLQueryValueColumnReferenceExpression extends SQLQueryValueExpress
     @Override
     void propagateContext(@NotNull SQLQueryDataContext context, @NotNull SQLQueryRecognitionContext statistics) {
         SQLDialect dialect = context.getDialect();
+        SQLQueryExprType type;
         if (this.tableName != null && this.tableName.isNotClassified() && this.columnName.isNotClassified()) {
-            SourceResolutionResult rr = context.resolveSource(this.tableName.toListOfStrings());
+            SourceResolutionResult rr = context.resolveSource(statistics.getMonitor(), this.tableName.toListOfStrings());
             if (rr != null) {
                 this.tableName.setDefinition(rr);
-                SQLQuerySymbolDefinition columnDef = rr.source.getDataContext().resolveColumn(this.columnName.getName());
-                this.propagateColumnDefinition(columnDef, statistics);
+                SQLQueryResultColumn resultColumn = rr.source.getDataContext().resolveColumn(statistics.getMonitor(), this.columnName.getName());
+                this.propagateColumnDefinition(resultColumn, statistics);
+                type = resultColumn != null ? resultColumn.type : SQLQueryExprType.UNKNOWN;
             } else {
                 this.tableName.setSymbolClass(SQLQuerySymbolClass.ERROR);
                 statistics.appendError(this.tableName.entityName, "Table or subquery not found");
+                type = SQLQueryExprType.UNKNOWN;
             }
         } else if (this.tableName == null && this.columnName.isNotClassified()) {
-            SQLQuerySymbolDefinition columnDef = context.resolveColumn(this.columnName.getName());
+            SQLQueryResultColumn resultColumn = context.resolveColumn(statistics.getMonitor(), this.columnName.getName());
 
             SQLQuerySymbolClass forcedClass = null;
-            if (columnDef == null) {
+            if (resultColumn == null) {
                 String rawString = columnName.getRawName();
                 if (dialect.isQuotedString(rawString)) {
                     forcedClass = SQLQuerySymbolClass.STRING;
                 } else {
-                    boolean isQuotedIdentifier = dialect.isQuotedIdentifier(this.columnName.getRawName());
-                    char quoteChar = this.columnName.getRawName().charAt(0);
-                    if ((!isQuotedIdentifier && (quoteChar == '"' || quoteChar == '`' || quoteChar == '\''))
-                        || (isQuotedIdentifier && columnDef == null)) {
-                        forcedClass = switch (quoteChar) {
-                            case '\'' -> SQLQuerySymbolClass.STRING;
-                            case '"', '`' -> SQLQuerySymbolClass.QUOTED;
-                            default -> null;
-                        };
-                    }
+                    forcedClass = SQLQueryModelRecognizer.tryFallbackSymbolForStringLiteral(dialect, this.columnName, resultColumn != null);
                 }
             }
 
             if (forcedClass != null) {
                 this.columnName.getSymbol().setSymbolClass(forcedClass);
+                type = forcedClass == SQLQuerySymbolClass.STRING ? SQLQueryExprType.STRING : SQLQueryExprType.UNKNOWN;
             } else {
-                this.propagateColumnDefinition(columnDef, statistics);
+                this.propagateColumnDefinition(resultColumn, statistics);
+                type = resultColumn != null ? resultColumn.type : SQLQueryExprType.UNKNOWN;
             }
+        } else {
+            type = SQLQueryExprType.UNKNOWN;
         }
+        this.type = type;
     }
 
     @Override
-    protected <R, T> R applyImpl(@NotNull SQLQueryNodeModelVisitor<T, R> visitor, @NotNull T node) {
-        return visitor.visitValueColumnRefExpr(this, node);
+    protected <R, T> R applyImpl(@NotNull SQLQueryNodeModelVisitor<T, R> visitor, @NotNull T arg) {
+        return visitor.visitValueColumnRefExpr(this, arg);
+    }
+    
+    @Override
+    public String toString() {
+        String name = this.tableName == null ? this.columnName.getName() 
+                : this.tableName.toIdentifierString() + "." + this.columnName.getName();
+        String type = this.type == null ? "<NULL>" : this.type.toString();
+        return "ColumnReference[" + name + ":" + type + "]";
     }
 }

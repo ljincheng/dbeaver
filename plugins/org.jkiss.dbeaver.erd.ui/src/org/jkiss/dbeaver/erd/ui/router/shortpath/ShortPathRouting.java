@@ -27,9 +27,11 @@ import org.jkiss.dbeaver.erd.ui.figures.EntityFigure;
 import org.jkiss.dbeaver.erd.ui.router.ERDConnectionRouter;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 public class ShortPathRouting extends ERDConnectionRouter {
 
+    private static final int POINT_DISTANCE = 7;
     private double indentation = 30.0;
     private static final int RIGHT = 180;
     private static final int LEFT = 0;
@@ -223,13 +225,11 @@ public class ShortPathRouting extends ERDConnectionRouter {
             ignoreInvalidate = true;
             processStaleConnections();
             isDirty = false;
-            List<?> updated = algorithm.solve();
+            List<Path> paths = computePaths();
             Connection current;
-            for (Object element : updated) {
-                Path path = (Path) element;
+            for (Path path : paths) {
                 current = (Connection) path.data;
                 current.revalidate();
-
                 PointList points = path.getPoints().getCopy();
                 Point ref1 = new PrecisionPoint(points.getPoint(1));
                 Point ref2 = new PrecisionPoint(points.getPoint(points.size() - 2));
@@ -241,7 +241,47 @@ public class ShortPathRouting extends ERDConnectionRouter {
                 current.translateToRelative(end);
                 points.setPoint(start, 0);
                 points.setPoint(end, points.size() - 1);
+               
+                int srcTrgAngel = 0;
+                int trgSrcAngel = 0;
+                if (current.getSourceAnchor().getOwner() instanceof EntityFigure) {
+                    Rectangle bounds = ((EntityFigure) current.getSourceAnchor().getOwner()).getBounds().getCopy();
+                    srcTrgAngel = 90 - getDirection(bounds, points.getPoint(0));
+                }
 
+                if (current.getTargetAnchor().getOwner() instanceof EntityFigure) {
+                    Rectangle bounds = ((EntityFigure) current.getTargetAnchor().getOwner()).getBounds().getCopy();
+                    trgSrcAngel = -90 + getDirection(bounds, points.getPoint(points.size() - 1));
+                }
+                int dxSrcTrg = (int) (Math.cos(Math.toRadians(srcTrgAngel)) * indentation);
+                int dySrcTrg = (int) (Math.sin(Math.toRadians(srcTrgAngel)) * indentation);
+                int dxTrgSrc = (int) (Math.cos(Math.toRadians(trgSrcAngel)) * indentation);
+                int dyTrgSrc = (int) (Math.sin(Math.toRadians(trgSrcAngel)) * indentation);
+
+                for (Entry<Connection, PointList> entry : getConnectionPoints().entrySet()) {
+                    if (entry.getKey().equals(current)) {
+                        continue;
+                    }
+                    for (int i = 0; i < entry.getKey().getPoints().size(); i++) {
+                        Point p = entry.getKey().getPoints().getPoint(i);
+                        int dxStart = Math.abs(start.x - p.x);
+                        int dyStart = Math.abs(start.y - p.y);
+                        int dxEnd = Math.abs(end.x - p.x);
+                        int dyEnd = Math.abs(end.y - p.y);
+                        if (dxStart == 0 && dyStart < POINT_DISTANCE) {
+                            start = new Point(start.x + dxSrcTrg, start.y - dySrcTrg);
+                            Point firstPoint = points.getPoint(0);
+                            firstPoint = new Point(firstPoint.x + dxSrcTrg, firstPoint.y - dySrcTrg);
+                            points.setPoint(firstPoint, 0);
+                        }
+                        if (dxEnd == 0 && dyEnd < POINT_DISTANCE) {
+                            end = new Point(end.x - dxTrgSrc, end.y - dyTrgSrc);
+                            Point endPoint = points.getPoint(points.size() - 1);
+                            endPoint = new Point(endPoint.x - dxTrgSrc, endPoint.y - dyTrgSrc);
+                            points.setPoint(endPoint, points.size() - 1);
+                        }
+                    }
+                }
                 if (indentation != 0) {
                     // first
                     PointList modifiedPoints = new PointList();
@@ -290,8 +330,48 @@ public class ShortPathRouting extends ERDConnectionRouter {
                     points.addPoint(lastPoint);
                     current.setPoints(points);
                 }
+                
             }
             ignoreInvalidate = false;
+        }
+    }
+
+    private List<Path> computePaths() {
+        // this is a way to get List<Path> from algorithm
+        List<Path> paths = algorithm.solve();
+        for (Path path : paths) {
+            removeOverlappingBendPoints(path);
+        }
+        // require to solve for new route calculation
+        paths = algorithm.solve();
+        return paths;
+    }
+
+    /**
+     * This method checks and remove bend point if it overlap entity
+     *
+     * @param path - path
+     */
+    private void removeOverlappingBendPoints(Path path) {
+        PointList bendPoints = path.getBendPoints();
+        if (bendPoints != null) {
+            PointList actualBendPoints = new PointList(bendPoints.size());
+            for (int index = 0; index < bendPoints.size(); index++) {
+                Point bp = bendPoints.getPoint(index);
+                boolean requireToSkipp = false;
+                for (Entry<IFigure, Rectangle> entry : figuresToBounds.entrySet()) {
+                    Rectangle rectangle = entry.getValue();
+                    if (rectangle.contains(bp)) {
+                        requireToSkipp = true;
+                        break;
+                    }
+                }
+                if (requireToSkipp) {
+                    continue;
+                }
+                actualBendPoints.addPoint(bp);
+            }
+            path.setBendPoints(actualBendPoints);
         }
     }
 

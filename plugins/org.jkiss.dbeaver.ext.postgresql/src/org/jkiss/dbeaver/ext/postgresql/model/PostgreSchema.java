@@ -912,7 +912,8 @@ public class PostgreSchema implements
         protected JDBCStatement prepareObjectsStatement(JDBCSession session, PostgreTableContainer container, PostgreTableBase forParent) throws SQLException {
             StringBuilder sql = new StringBuilder(
                 "SELECT c.oid,c.*,t.relname as tabrelname,rt.relnamespace as refnamespace,d.description" +
-                    (getDataSource().getServerType().supportsPGConstraintExpressionColumn() ? ", null as consrc_copy" : ", case when c.contype='c' then \"substring\"(pg_get_constraintdef(c.oid), 7) else null end consrc_copy") +
+                    (!getDataSource().getServerType().supportsPGConstraintExpressionColumn() ? ", null as consrc_copy" :
+                        ", case when c.contype='c' then \"substring\"(pg_get_constraintdef(c.oid), 7) else null end consrc_copy") +
                     "\nFROM pg_catalog.pg_constraint c" +
                     "\nINNER JOIN pg_catalog.pg_class t ON t.oid=c.conrelid" +
                     "\nLEFT OUTER JOIN pg_catalog.pg_class rt ON rt.oid=c.confrelid" +
@@ -1180,12 +1181,14 @@ public class PostgreSchema implements
         public JDBCStatement prepareLookupStatement(@NotNull JDBCSession session, @NotNull PostgreSchema owner, @Nullable PostgreProcedure object, @Nullable String objectName) throws SQLException {
             PostgreServerExtension serverType = owner.getDataSource().getServerType();
             String oidColumn = serverType.getProceduresOidColumn(); // Hack for Redshift SP support
+            boolean versionAtLeast7 = session.getDataSource().isServerVersionAtLeast(7, 2);
             JDBCPreparedStatement dbStat = session.prepareStatement(
                 "SELECT p." + oidColumn + " as poid,p.*," +
                     (session.getDataSource().isServerVersionAtLeast(8, 4) ? "pg_catalog.pg_get_expr(p.proargdefaults, 0)" : "NULL") + " as arg_defaults,d.description\n" +
                     "FROM pg_catalog." + serverType.getProceduresSystemTable() + " p\n" +
                     "LEFT OUTER JOIN pg_catalog.pg_description d ON d.objoid=p." + oidColumn +
-                    (session.getDataSource().isServerVersionAtLeast(7, 2) ? " AND d.objsubid = 0" : "") + // no links to columns
+                    (versionAtLeast7 ? " and d.classoid='pg_proc'::regclass " : "") + // to avoid objects duplication
+                    (versionAtLeast7 ? " AND d.objsubid = 0" : "") + // no links to columns
                     "\nWHERE p.pronamespace=?" +
                     (object == null ? "" : " AND p." + oidColumn + "=?") +
                     "\nORDER BY p.proname"

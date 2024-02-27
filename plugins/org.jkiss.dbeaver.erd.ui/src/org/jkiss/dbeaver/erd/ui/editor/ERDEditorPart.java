@@ -497,7 +497,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         // configure the viewer
         viewer.getControl().setBackground(UIUtils.getColorRegistry().get(ERDUIConstants.COLOR_ERD_DIAGRAM_BACKGROUND));
         viewer.setRootEditPart(rootPart);
-        viewer.setKeyHandler(new DBeaverNavigationKeyHandler(viewer));
+        installKeyHandler(viewer);
 
         registerDropTargetListeners(viewer);
 
@@ -505,6 +505,10 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         viewer.setEditPartFactory(getDecorator().createPartFactory());
 
         return viewer;
+    }
+
+    protected void installKeyHandler(GraphicalViewer viewer) {
+        viewer.setKeyHandler(new DBeaverNavigationKeyHandler(viewer));
     }
 
     protected void registerDropTargetListeners(GraphicalViewer viewer) {
@@ -1268,7 +1272,8 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
     }
 
     private void refreshEntityAndAttributes() {
-        for (ERDEntity entity : getDiagram().getEntities()) {
+        List<ERDEntity> entities = getDiagram().getEntities();
+        for (ERDEntity entity : entities) {
             entity.reloadAttributes(getDiagram());
         }
         for (Object object : getGraphicalViewer().getContents().getChildren()) {
