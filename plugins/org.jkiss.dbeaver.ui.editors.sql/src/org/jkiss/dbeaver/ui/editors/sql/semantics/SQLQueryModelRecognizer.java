@@ -37,6 +37,7 @@ import org.jkiss.dbeaver.model.struct.DBSObjectContainer;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryDataContext;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryDataSourceContext;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryDummyDataSourceContext;
+import org.jkiss.dbeaver.ui.editors.sql.semantics.context.SQLQueryExprType;
 import org.jkiss.dbeaver.ui.editors.sql.semantics.model.*;
 import org.jkiss.utils.Pair;
 
@@ -448,7 +449,9 @@ public class SQLQueryModelRecognizer {
                     } else {
                         tableName = null;
                     }
-                    STMTreeNode columnName = ref.findChildOfName(STMKnownRuleNames.columnName);
+                    STMTreeNode columnName = ref.getNodeKindId() == SQLStandardParser.RULE_columnName
+                        ? ref 
+                        : ref.findChildOfName(STMKnownRuleNames.columnName);
                     if (columnName != null) {
                         columnAction.accept(tableName, this.collectIdentifier(columnName, forceUnquotted));
                     }
@@ -860,24 +863,32 @@ public class SQLQueryModelRecognizer {
     
     @NotNull
     private SQLQuerySymbolEntry collectIdentifier(@NotNull STMTreeNode node, boolean forceUnquotted) {
+        // TODO refactor out all recognition-related exceptions, consider error node everywhere in parse tree and don't introduce unnecessary model nodes
         STMTreeNode actual = identifierDirectWrapperNames.contains(node.getNodeName()) ? node.getStmChild(0) : node;
         if (!actual.getNodeName().equals(STMKnownRuleNames.identifier)) {
             throw new UnsupportedOperationException("identifier expected while facing with " + node.getNodeName());
         }
-        STMTreeNode actualBody = actual.findChildOfName(STMKnownRuleNames.actualIdentifier).getStmChild(0);
-        String rawIdentifierString = actualBody.getTextContent();
-        if (actualBody.getPayload() instanceof Token t && t.getType() == SQLStandardLexer.Quotted) {
-            SQLQuerySymbolEntry entry = this.registerSymbolEntry(actualBody.getRealInterval(), rawIdentifierString, rawIdentifierString);
-            entry.getSymbol().setSymbolClass(SQLQuerySymbolClass.QUOTED);
-            return entry;
-        } else if (this.reservedWords.contains(rawIdentifierString.toUpperCase())) { // keywords are uppercased in dialect
-            SQLQuerySymbolEntry entry = this.registerSymbolEntry(actualBody.getRealInterval(), rawIdentifierString, rawIdentifierString);
-            entry.getSymbol().setSymbolClass(SQLQuerySymbolClass.RESERVED);
+        STMTreeNode actualIdentifier = actual.findChildOfName(STMKnownRuleNames.actualIdentifier);
+        if (actualIdentifier == null) {
+            SQLQuerySymbolEntry entry = this.registerSymbolEntry(actual.getRealInterval(), actual.getTextContent(), actual.getTextContent());
+            entry.getSymbol().setSymbolClass(SQLQuerySymbolClass.ERROR);
             return entry;
         } else {
-            SQLDialect dialect = this.obtainSqlDialect();
-            String actualIdentifierString = SQLUtils.identifierToCanonicalForm(dialect, rawIdentifierString, forceUnquotted, false);
-            return this.registerSymbolEntry(actualBody.getRealInterval(), actualIdentifierString, rawIdentifierString);
+            STMTreeNode actualBody = actualIdentifier.getStmChild(0);
+            String rawIdentifierString = actualBody.getTextContent();
+            if (actualBody.getPayload() instanceof Token t && t.getType() == SQLStandardLexer.Quotted) {
+                SQLQuerySymbolEntry entry = this.registerSymbolEntry(actualBody.getRealInterval(), rawIdentifierString, rawIdentifierString);
+                entry.getSymbol().setSymbolClass(SQLQuerySymbolClass.QUOTED);
+                return entry;
+            } else if (this.reservedWords.contains(rawIdentifierString.toUpperCase())) { // keywords are uppercased in dialect
+                SQLQuerySymbolEntry entry = this.registerSymbolEntry(actualBody.getRealInterval(), rawIdentifierString, rawIdentifierString);
+                entry.getSymbol().setSymbolClass(SQLQuerySymbolClass.RESERVED);
+                return entry;
+            } else {
+                SQLDialect dialect = this.obtainSqlDialect();
+                String actualIdentifierString = SQLUtils.identifierToCanonicalForm(dialect, rawIdentifierString, forceUnquotted, false);
+                return this.registerSymbolEntry(actualBody.getRealInterval(), actualIdentifierString, rawIdentifierString);
+            }
         }
     }
 
@@ -987,7 +998,12 @@ public class SQLQueryModelRecognizer {
         STMKnownRuleNames.columnReference,
         STMKnownRuleNames.valueReference,
         STMKnownRuleNames.valueExpressionCast,
-        STMKnownRuleNames.variableExpression
+        STMKnownRuleNames.variableExpression,
+        STMKnownRuleNames.truthValue,
+        STMKnownRuleNames.unsignedNumericLiteral,
+        STMKnownRuleNames.signedNumericLiteral,
+        STMKnownRuleNames.characterStringLiteral,
+        STMKnownRuleNames.datetimeLiteral
     );
 
     @NotNull
@@ -1078,8 +1094,17 @@ public class SQLQueryModelRecognizer {
                     default -> throw new UnsupportedOperationException("Unsupported variable expression: " + node.getTextContent());
                 };
             }
+            case SQLStandardParser.RULE_truthValue -> this.makeValueConstantExpression(node, SQLQueryExprType.BOOLEAN);
+            case SQLStandardParser.RULE_unsignedNumericLiteral -> this.makeValueConstantExpression(node, SQLQueryExprType.NUMERIC);
+            case SQLStandardParser.RULE_signedNumericLiteral -> this.makeValueConstantExpression(node, SQLQueryExprType.NUMERIC);
+            case SQLStandardParser.RULE_characterStringLiteral -> this.makeValueConstantExpression(node, SQLQueryExprType.STRING);
+            case SQLStandardParser.RULE_datetimeLiteral -> this.makeValueConstantExpression(node, SQLQueryExprType.DATETIME);
             default -> throw new UnsupportedOperationException("Unknown expression kind " + node.getNodeName());
         };
+    }
+    
+    private SQLQueryValueExpression makeValueConstantExpression(@NotNull STMTreeNode node, SQLQueryExprType type) {
+        return new SQLQueryValueConstantExpression(node.getRealInterval(), node.getTextContent(), type);
     }
 
     @NotNull
