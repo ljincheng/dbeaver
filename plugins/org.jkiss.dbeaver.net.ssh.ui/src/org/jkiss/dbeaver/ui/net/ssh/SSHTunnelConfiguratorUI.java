@@ -22,6 +22,7 @@ import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -65,9 +66,6 @@ import org.jkiss.dbeaver.utils.SystemVariablesResolver;
 import org.jkiss.utils.CommonUtils;
 
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -106,7 +104,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
 
         {
             Group settingsGroup = UIUtils.createControlGroup(composite, SSHUIMessages.model_ssh_configurator_group_settings, 1, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, SWT.DEFAULT);
-            credentialsPanel = new CredentialsPanel(settingsGroup);
+            credentialsPanel = new CredentialsPanel(settingsGroup, propertyChangeListener);
         }
 
         {
@@ -137,7 +135,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 final ConfigurationWrapper host = (ConfigurationWrapper) hostsViewer.getStructuredSelection().getFirstElement();
                 if (DBWorkbench.getPlatformUI().confirmAction(
                     "Confirm host deletion",
-                    "Are you sure you want to delete host '" + host.configuration + "'?"
+                    "Are you sure you want to delete host '" + host.configuration.toDisplayString() + "'?"
                 )) {
                     credentialsPanel.lastConfiguration = null;
                     final int index = configurations.indexOf(host);
@@ -179,16 +177,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 }
 
                 if (last != null && last != current) {
-                    final SSHHostConfiguration updated;
-
-                    try {
-                        updated = credentialsPanel.saveSettings();
-                    } catch (DBException ex) {
-                        DBWorkbench.getPlatformUI().showWarningMessageBox("Error saving SSH configuration", ex.getMessage());
-                        updateConfigurationSelection(last);
-                        return;
-                    }
-
+                    final SSHHostConfiguration updated = credentialsPanel.saveSettings();
                     if (!last.configuration.equals(updated)) {
                         last.configuration = updated;
                         hostsViewer.refresh();
@@ -204,6 +193,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 moveDownItem.setEnabled(index < count - 1);
 
                 loadConfiguration(current);
+                propertyChangeListener.run();
             });
 
             final ViewerColumnController<Object, ConfigurationWrapper> controller = new ViewerColumnController<>("ssh_hosts", hostsViewer);
@@ -572,13 +562,8 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
 
     @Override
     public void saveSettings(@NotNull DBWHandlerConfiguration configuration) {
-        try {
-            // Save current configuration just in case
-            credentialsPanel.lastConfiguration.configuration = credentialsPanel.saveSettings();
-        } catch (DBException e) {
-            DBWorkbench.getPlatformUI().showError("Error saving SSH configuration", e.getMessage());
-            throw new IllegalStateException("Error saving SSH configuration", e);
-        }
+        // Save current configuration just in case
+        credentialsPanel.lastConfiguration.configuration = credentialsPanel.saveSettings();
 
         final SSHHostConfiguration[] hosts = configurations.stream()
             .map(wrapper -> wrapper.configuration)
@@ -637,7 +622,44 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
 
     @Override
     public boolean isComplete() {
-        return false;
+        return getErrorMessage() == null;
+    }
+
+    @Nullable
+    @Override
+    public String getErrorMessage() {
+        // Validate the current configuration first so that we get real-time feedback
+        if (credentialsPanel.lastConfiguration != null) {
+            final String message = validateConfiguration(credentialsPanel.saveSettings());
+            if (message != null) {
+                return message;
+            }
+        }
+        // Then validate all remaining configurations
+        for (ConfigurationWrapper wrapper : configurations) {
+            if (credentialsPanel.lastConfiguration != null && wrapper == credentialsPanel.lastConfiguration) {
+                continue;
+            }
+            final String message = validateConfiguration(wrapper.configuration);
+            if (message != null) {
+                return message;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static String validateConfiguration(@NotNull SSHHostConfiguration configuration) {
+        if (configuration.hostname().isBlank()) {
+            return "Hostname is not specified";
+        }
+        final SSHAuthConfiguration auth = configuration.auth();
+        if (auth instanceof SSHAuthConfiguration.KeyFile keyFile && keyFile.path().isBlank() ||
+            auth instanceof SSHAuthConfiguration.KeyData keyData && keyData.data().isBlank()
+        ) {
+            return "Private key is not specified";
+        }
+        return null;
     }
 
     private static class CredentialsPanel extends Composite {
@@ -653,11 +675,13 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
         private final Text passwordText;
         private final Button savePasswordCheckbox;
 
-        public CredentialsPanel(@NotNull Composite parent) {
+        public CredentialsPanel(@NotNull Composite parent, @NotNull Runnable propertyChangeListener) {
             super(parent, SWT.NONE);
 
             setLayout(GridLayoutFactory.fillDefaults().numColumns(2).create());
             setLayoutData(new GridData(GridData.FILL_BOTH));
+
+            final ModifyListener listener = e -> propertyChangeListener.run();
 
             {
                 UIUtils.createControlLabel(this, SSHUIMessages.model_ssh_configurator_label_host_ip);
@@ -667,6 +691,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
 
                 hostNameText = new Text(hostPortComp, SWT.BORDER);
                 hostNameText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+                hostNameText.addModifyListener(listener);
                 hostPortText = UIUtils.createLabelText(hostPortComp, SSHUIMessages.model_ssh_configurator_label_port, String.valueOf(SSHConstants.DEFAULT_PORT));
                 setNumberEditStyles(hostPortText);
             }
@@ -682,6 +707,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     updateAuthMethodVisibility();
+                    propertyChangeListener.run();
                 }
             });
 
@@ -695,6 +721,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 DBWorkbench.isDistributed()
             );
             privateKeyText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+            privateKeyText.getTextControl().addModifyListener(listener);
             if (DBWorkbench.isDistributed()) {
                 privateKeyText.getTextControl().setEditable(false);
             }
@@ -741,7 +768,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 privateKeyText.setText(key.data());
                 authMethodCombo.select(SSHConstants.AuthType.PUBLIC_KEY.ordinal());
             } else if (configuration.auth() instanceof SSHAuthConfiguration.KeyFile key) {
-                privateKeyText.setText(key.path().toString());
+                privateKeyText.setText(key.path());
                 authMethodCombo.select(SSHConstants.AuthType.PUBLIC_KEY.ordinal());
             } else if (configuration.auth() instanceof SSHAuthConfiguration.Agent) {
                 authMethodCombo.select(SSHConstants.AuthType.AGENT.ordinal());
@@ -752,7 +779,7 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
         }
 
         @NotNull
-        public SSHHostConfiguration saveSettings() throws DBException {
+        public SSHHostConfiguration saveSettings() {
             final String password = CommonUtils.nullIfEmpty(passwordText.getText().trim());
             final boolean savePassword = savePasswordCheckbox.getSelection();
 
@@ -760,23 +787,10 @@ public class SSHTunnelConfiguratorUI implements IObjectPropertyConfigurator<Obje
                 case PASSWORD -> new SSHAuthConfiguration.Password(password, savePassword);
                 case PUBLIC_KEY -> {
                     final String privateKey = privateKeyText.getText().trim();
-                    if (privateKey.isEmpty()) {
-                        throw new DBException("Private key must not be empty");
-                    }
                     if (DBWorkbench.isDistributed()) {
                         yield new SSHAuthConfiguration.KeyData(privateKey, password, savePassword);
                     } else {
-                        final Path path;
-                        try {
-                            path = Path.of(privateKey);
-                        } catch (InvalidPathException e) {
-                            // https://github.com/eclipse-jdt/eclipse.jdt.core/issues/1394
-                            throw new DBException("Invalid private key path: %s".formatted(privateKey));
-                        }
-                        if (Files.notExists(path)) {
-                            throw new DBException("Private key file does not exist: " + path);
-                        }
-                        yield new SSHAuthConfiguration.KeyFile(path, password, savePassword);
+                        yield new SSHAuthConfiguration.KeyFile(privateKey, password, savePassword);
                     }
                 }
                 case AGENT -> new SSHAuthConfiguration.Agent();
