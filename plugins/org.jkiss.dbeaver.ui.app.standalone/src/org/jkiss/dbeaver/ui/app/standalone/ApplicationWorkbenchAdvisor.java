@@ -104,7 +104,10 @@ public class ApplicationWorkbenchAdvisor extends IDEWorkbenchAdvisor {
         WORKBENCH_PREF_PAGE_ID + "/org.eclipse.epp.mpc.projectnatures",
         "org.eclipse.ui.internal.console.ansi.preferences.AnsiConsolePreferencePage",
         WORKBENCH_PREF_PAGE_ID + "/org.eclipse.ui.browser.preferencePage",
-        "org.eclipse.jsch.ui.SSHPreferences"
+        "org.eclipse.jsch.ui.SSHPreferences",
+
+        WORKBENCH_PREF_PAGE_ID + "/" + EDITORS_PREF_PAGE_ID,
+        WORKBENCH_PREF_PAGE_ID + "/" + EDITORS_PREF_PAGE_ID + "/org.eclipse.ui.preferencePages.AutoSave",
 
         // Team preferences - not needed in CE
         //"org.eclipse.team.ui.TeamPreferences",
@@ -117,8 +120,6 @@ public class ApplicationWorkbenchAdvisor extends IDEWorkbenchAdvisor {
             WORKBENCH_PREF_PAGE_ID + "/org.eclipse.ui.browser.preferencePage",
             WORKBENCH_PREF_PAGE_ID + "/org.eclipse.search.preferences.SearchPreferencePage",
             WORKBENCH_PREF_PAGE_ID + "/org.eclipse.text.quicksearch.PreferencesPage",
-            WORKBENCH_PREF_PAGE_ID + "/" + EDITORS_PREF_PAGE_ID,
-            WORKBENCH_PREF_PAGE_ID + "/" + EDITORS_PREF_PAGE_ID + "/org.eclipse.ui.preferencePages.AutoSave",
             WORKBENCH_PREF_PAGE_ID + "/" + EDITORS_PREF_PAGE_ID + "/org.eclipse.ui.preferencePages.FileEditors" //"File Associations"
     };
 
@@ -276,13 +277,14 @@ public class ApplicationWorkbenchAdvisor extends IDEWorkbenchAdvisor {
         
         FontPreferenceOverrides.hideFontPrefs(pm, fontPrefIdsToHide);
         
-        for (String epp : getExcludedPreferencePageIds()) {
-            pm.remove(epp);
-        }
         patchPreferencePages(pm, EDITORS_PREF_PAGES, PrefPageDatabaseEditors.PAGE_ID);
         patchPreferencePages(pm, UI_PREF_PAGES, PrefPageDatabaseUserInterface.PAGE_ID);
         patchPreferencePages(pm, GENERAL_PREF_PAGES, WORKBENCH_PREF_PAGE_ID);
         patchPreferencePages(pm, NETWORK_PREF_PAGES, PrefPageConnectionsGeneral.PAGE_ID);
+
+        for (String epp : getExcludedPreferencePageIds()) {
+            pm.remove(epp);
+        }
     }
 
     @NotNull
@@ -367,7 +369,9 @@ public class ApplicationWorkbenchAdvisor extends IDEWorkbenchAdvisor {
         try {
             IWorkbenchWindow window = getWorkbenchConfigurer().getWorkbench().getActiveWorkbenchWindow();
             if (window != null) {
-                ApplicationWorkbenchAdvisor.closeOpenEditors(window, false);
+                if (!ApplicationWorkbenchAdvisor.closeOpenEditors(window, false, true)) {
+                    return false;
+                }
             }
             return ApplicationWorkbenchAdvisor.cancelRunningTasks(true) && ApplicationWorkbenchAdvisor.closeActiveTransactions(false);
         } catch (Throwable e) {
@@ -376,8 +380,8 @@ public class ApplicationWorkbenchAdvisor extends IDEWorkbenchAdvisor {
         }
     }
 
-    public static boolean closeOpenEditors(IWorkbenchWindow window, boolean forceRevert) {
-        if (!forceRevert &&
+    public static boolean closeOpenEditors(IWorkbenchWindow window, boolean forceRevert, boolean showConfirmation) {
+        if (showConfirmation && !forceRevert &&
                 !MessageDialogWithToggle.NEVER.equals(ConfirmationDialog.getSavedPreference(DBeaverPreferences.CONFIRM_EXIT))
         ) {
             // Workaround of #703 bug. NEVER doesn't make sense for Exit confirmation. It is the same as ALWAYS.

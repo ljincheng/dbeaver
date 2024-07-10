@@ -107,7 +107,7 @@ public class DBExecUtils {
             ACTIVE_CONTEXTS.add(context);
         }
         // Set proxy auth (if required)
-        // Note: authenticator may be changed by Eclipse frameword on startup or later.
+        // Note: authenticator may be changed by Eclipse framework on startup or later.
         // That's why we set new default authenticator on connection initiation
         boolean hasProxy = false;
         for (DBWHandlerConfiguration handler : context.getConnectionConfiguration().getHandlers()) {
@@ -458,19 +458,18 @@ public class DBExecUtils {
     public static void recoverSmartCommit(DBCExecutionContext executionContext) {
         DBPDataSourceContainer container = executionContext.getDataSource().getContainer();
         DBPPreferenceStore preferenceStore = container.getPreferenceStore();
-        boolean recoverSmartCommit;
-        if (preferenceStore.contains(ModelPreferences.TRANSACTIONS_SMART_COMMIT)
-            && preferenceStore.contains(ModelPreferences.TRANSACTIONS_SMART_COMMIT_RECOVER)
-        ) {
-            // First check specific datasource settings
-            recoverSmartCommit = preferenceStore.getBoolean(ModelPreferences.TRANSACTIONS_SMART_COMMIT)
-                && preferenceStore.getBoolean(ModelPreferences.TRANSACTIONS_SMART_COMMIT_RECOVER);
-        } else {
-            // Or use settings from the connection type
-            DBPConnectionType connectionType = container.getConnectionConfiguration().getConnectionType();
-            recoverSmartCommit = connectionType.isSmartCommit() && connectionType.isSmartCommitRecover();
+        DBPConnectionType connectionType = container.getConnectionConfiguration().getConnectionType();
+        // First check specific datasource settings
+        // Or use settings from the connection type
+        boolean isSmartCommitEnable = preferenceStore.contains(ModelPreferences.TRANSACTIONS_SMART_COMMIT) ?
+            preferenceStore.getBoolean(ModelPreferences.TRANSACTIONS_SMART_COMMIT) : connectionType.isSmartCommit();
+        if (!isSmartCommitEnable) {
+            return;
         }
-        if (recoverSmartCommit) {
+        boolean isRecoverSmartCommitEnable = preferenceStore.contains(ModelPreferences.TRANSACTIONS_SMART_COMMIT_RECOVER) ?
+            preferenceStore.getBoolean(ModelPreferences.TRANSACTIONS_SMART_COMMIT_RECOVER)
+            : connectionType.isSmartCommitRecover();
+        if (isRecoverSmartCommitEnable) {
             DBCTransactionManager transactionManager = DBUtils.getTransactionManager(executionContext);
             if (transactionManager != null) {
                 new AbstractJob("Recover smart commit mode") {
@@ -907,7 +906,7 @@ public class DBExecUtils {
             }
 */
 
-            if (!mdMonitor.isForceCacheUsage()) {
+            {
                 monitor.subTask("Complete metadata load");
                 // Reload attributes in row identifiers
                 for (DBDRowIdentifier rowIdentifier : locatorMap.values()) {
@@ -941,6 +940,10 @@ public class DBExecUtils {
     }
 
     public static String getAttributeReadOnlyStatus(@NotNull DBDAttributeBinding attribute) {
+        return getAttributeReadOnlyStatus(attribute, true);
+    }
+
+    public static String getAttributeReadOnlyStatus(@NotNull DBDAttributeBinding attribute, boolean checkValidKey) {
         if (attribute == null || attribute.getMetaAttribute() == null) {
             return "Null meta attribute";
         }
@@ -951,6 +954,11 @@ public class DBExecUtils {
         if (rowIdentifier == null) {
             String status = attribute.getRowIdentifierStatus();
             return status != null ? status : "No row identifier found";
+        }
+        if (checkValidKey) {
+            if (rowIdentifier.isIncomplete()) {
+                return "No valid row identifier found";
+            }
         }
         DBSEntity dataContainer = rowIdentifier.getEntity();
         if (!(dataContainer instanceof DBSDataManipulator)) {
