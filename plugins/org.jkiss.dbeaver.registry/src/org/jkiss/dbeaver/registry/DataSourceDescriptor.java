@@ -181,6 +181,7 @@ public class DataSourceDescriptor
     private transient DBWNetworkHandler proxyHandler;
     private transient DBWTunnel tunnelHandler;
     private final List<DBPDataSourceTask> users = new ArrayList<>();
+    private transient String clientApplicationName;
     // DPI controller
     private transient DPIProcessController dpiController;
 
@@ -650,6 +651,17 @@ public class DataSourceDescriptor
         }
 
         updateObjectFilter(type.getName(), parentObject == null ? null : FilterMapping.getFilterContainerUniqueID(parentObject), filter);
+    }
+
+    @Nullable
+    @Override
+    public String getClientApplicationName() {
+        return this.clientApplicationName;
+    }
+
+    @Override
+    public void setClientApplicationName(@NotNull String applicationName) {
+        this.clientApplicationName = applicationName;
     }
 
     void clearFilters() {
@@ -1136,13 +1148,8 @@ public class DataSourceDescriptor
     }
 
     private boolean connect0(DBRProgressMonitor monitor, boolean initialize, boolean reflect) throws DBException {
-        DBSSecretController secretController = null;
-
         log.debug("Connect with '" + getName() + "' (" + getId() + ")");
-        if (getProject().isUseSecretStorage()) {
-            // Resolve secrets
-            secretController = DBSSecretController.getProjectSecretController(getProject());
-        }
+
         resolveSecretsIfNeeded();
 
         if (isSharedCredentials() && !isSharedCredentialsSelected()) {
@@ -1157,7 +1164,7 @@ public class DataSourceDescriptor
         }
 
         resolvedConnectionInfo = new DBPConnectionConfiguration(connectionInfo);
-
+        patchConnectionProperties(monitor, resolvedConnectionInfo);
         // Update auth properties if possible
         lastConnectionError = null;
         try {
@@ -1199,7 +1206,7 @@ public class DataSourceDescriptor
                 }
             }
 
-            resolveConnectVariables(secretController);
+            resolvePropertiesFromProfile();
 
             // Handle tunnelHandler
             // Open tunnelHandler and replace connection info with new one
@@ -1323,6 +1330,14 @@ public class DataSourceDescriptor
         }
     }
 
+
+    protected void patchConnectionProperties(
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull DBPConnectionConfiguration resolvedConnectionInfo
+    ) throws DBException {
+
+    }
+
     private void terminateChildProcesses() {
         synchronized (childProcesses) {
             for (Iterator<DBRProcessDescriptor> iter = childProcesses.iterator(); iter.hasNext(); ) {
@@ -1335,34 +1350,33 @@ public class DataSourceDescriptor
         }
     }
 
-    private void resolveConnectVariables(DBSSecretController secretController) throws DBException {
-        // Resolve variables
-        if (preferenceStore.getBoolean(ModelPreferences.CONNECT_USE_ENV_VARS) ||
-            !CommonUtils.isEmpty(resolvedConnectionInfo.getConfigProfileName())) {
+    private void resolvePropertiesFromProfile() throws DBException {
+        DBSSecretController secretController = getProject().isUseSecretStorage() ?
+            DBSSecretController.getProjectSecretController(getProject()) : null;
+        // Update config from profile
+        if (!CommonUtils.isEmpty(resolvedConnectionInfo.getConfigProfileName())) {
             // Update config from profile
-            if (!CommonUtils.isEmpty(resolvedConnectionInfo.getConfigProfileName())) {
-                // Update config from profile
-                DBWNetworkProfile profile = registry.getNetworkProfile(
-                    resolvedConnectionInfo.getConfigProfileSource(),
-                    resolvedConnectionInfo.getConfigProfileName());
-                if (profile != null) {
-                    if (secretController != null) {
-                        profile.resolveSecrets(secretController);
-                    }
-                    for (DBWHandlerConfiguration handlerCfg : profile.getConfigurations()) {
-                        if (handlerCfg.isEnabled()) {
-                            resolvedConnectionInfo.updateHandler(new DBWHandlerConfiguration(handlerCfg));
-                        }
+            DBWNetworkProfile profile = registry.getNetworkProfile(
+                resolvedConnectionInfo.getConfigProfileSource(),
+                resolvedConnectionInfo.getConfigProfileName());
+            if (profile != null) {
+                if (secretController != null) {
+                    profile.resolveSecrets(secretController);
+                }
+                for (DBWHandlerConfiguration handlerCfg : profile.getConfigurations()) {
+                    if (handlerCfg.isEnabled()) {
+                        resolvedConnectionInfo.updateHandler(new DBWHandlerConfiguration(handlerCfg));
                     }
                 }
             }
-            // Process variables
-            if (preferenceStore.getBoolean(ModelPreferences.CONNECT_USE_ENV_VARS)) {
-                IVariableResolver variableResolver = new DataSourceVariableResolver(
-                    this, this.resolvedConnectionInfo);
-                this.resolvedConnectionInfo.resolveDynamicVariables(variableResolver);
-            }
         }
+        // Process variables
+        if (preferenceStore.getBoolean(ModelPreferences.CONNECT_USE_ENV_VARS)) {
+            IVariableResolver variableResolver = new DataSourceVariableResolver(
+                this, this.resolvedConnectionInfo);
+            this.resolvedConnectionInfo.resolveDynamicVariables(variableResolver);
+        }
+
     }
 
     private void resolveSecretsIfNeeded() throws DBException {
@@ -1409,8 +1423,12 @@ public class DataSourceDescriptor
             try (DBCSession session = DBUtils.openMetaSession(monitor, this, "Read server information")) {
                 DBCTransactionManager txnManager = DBUtils.getTransactionManager(session.getExecutionContext());
                 if (txnManager != null && !txnManager.isAutoCommit()) {
-                    txnManager.setAutoCommit(monitor, true);
-                    revertMetaToManualCommit = true;
+                    try {
+                        txnManager.setAutoCommit(monitor, true);
+                        revertMetaToManualCommit = true;
+                    } catch (Throwable e) {
+                        log.debug("Cannot set auto-commit flag: " + e.getMessage());
+                    }
                 }
 
                 try {
@@ -2129,11 +2147,15 @@ public class DataSourceDescriptor
         boolean canSavePassword)
     {
         DBPAuthInfo authInfo;
-        authInfo = DBWorkbench.getPlatformUI().promptUserCredentials(prompt,
-            RegistryMessages.dialog_connection_auth_username, user,
+        authInfo = DBWorkbench.getPlatformUI().promptUserCredentials(
+            prompt,
+            null,
+            RegistryMessages.dialog_connection_auth_username,
+            user,
             authType == DBWTunnel.AuthCredentials.PASSWORD
                 ? RegistryMessages.dialog_connection_auth_passphrase
-                : RegistryMessages.dialog_connection_auth_password, password,
+                : RegistryMessages.dialog_connection_auth_password,
+            password,
             false,
             canSavePassword
         );

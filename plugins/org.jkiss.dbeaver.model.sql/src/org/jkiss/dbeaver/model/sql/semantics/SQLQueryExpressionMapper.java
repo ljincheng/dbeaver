@@ -173,22 +173,23 @@ class SQLQueryExpressionMapper extends SQLQueryTreeMapper<SQLQueryRowsSourceMode
                         Interval range = Interval.of(n.getRealInterval().a, childNode.getRealInterval().b);
                         source = switch (childNode.getNodeKindId()) {
                             case SQLStandardParser.RULE_naturalJoinTerm -> {
-                                Optional<STMTreeNode> joinConditionNode =
-                                    Optional.ofNullable(childNode.findFirstChildOfName(STMKnownRuleNames.joinSpecification))
-                                        .map(cn -> cn.findFirstChildOfName(STMKnownRuleNames.joinCondition));
-                                if (joinConditionNode.isPresent()) {
-                                    try (SQLQueryModelRecognizer.LexicalScopeHolder condScope = r.openScope()) {
-                                        condScope.lexicalScope.registerSyntaxNode(joinConditionNode.get());
+                                Optional<STMTreeNode> joinSpecificationNode = Optional.ofNullable(childNode.findFirstChildOfName(STMKnownRuleNames.joinSpecification));
+                                Optional<STMTreeNode> joinConditionNode = joinSpecificationNode.map(cn -> cn.findFirstChildOfName(STMKnownRuleNames.joinCondition));
+                                try (SQLQueryModelRecognizer.LexicalScopeHolder condScope = r.openScope()) {
+                                    if (joinSpecificationNode.isPresent()) {
+                                        condScope.lexicalScope.registerSyntaxNode(joinSpecificationNode.get());
+                                    }
+                                    if (joinConditionNode.isPresent()) {
                                         yield joinConditionNode.map(cn -> cn.findFirstChildOfName(STMKnownRuleNames.searchCondition))
                                             .map(r::collectValueExpression)
                                             .map(e -> new SQLQueryRowsNaturalJoinModel(range, childNode, currSource, nextSource, e,
                                                 condScope.lexicalScope))
                                             .orElseGet(() -> new SQLQueryRowsNaturalJoinModel(range, childNode, currSource, nextSource,
-                                                Collections.emptyList()));
+                                                Collections.emptyList(), condScope.lexicalScope));
+                                    } else {
+                                        yield new SQLQueryRowsNaturalJoinModel(range, childNode, currSource, nextSource,
+                                            r.collectColumnNameList(childNode), condScope.lexicalScope);
                                     }
-                                } else {
-                                    yield new SQLQueryRowsNaturalJoinModel(range, childNode, currSource, nextSource,
-                                        r.collectColumnNameList(childNode));
                                 }
                             }
                             case SQLStandardParser.RULE_crossJoinTerm ->
@@ -336,7 +337,7 @@ class SQLQueryExpressionMapper extends SQLQueryTreeMapper<SQLQueryRowsSourceMode
         },
         STMKnownRuleNames.nonjoinedTableReference, (n, cc, r) -> {
             // can they both be missing?
-            SQLQueryRowsSourceModel source = cc.isEmpty() ? r.collectTableReference(n) : cc.get(0);
+            SQLQueryRowsSourceModel source = cc.isEmpty() ? r.collectTableReference(n, false) : cc.get(0);
 
             // TODO column reference at PARTITION clause
 
@@ -345,12 +346,17 @@ class SQLQueryExpressionMapper extends SQLQueryTreeMapper<SQLQueryRowsSourceMode
                 STMTreeNode correlationNameNode = correlationSpecNode.findFirstChildOfName(STMKnownRuleNames.correlationName);
                 SQLQuerySymbolEntry correlationName = correlationNameNode == null ? null : r.collectIdentifier(correlationNameNode);
                 if (correlationName != null) {
-                    source = new SQLQueryRowsCorrelatedSourceModel(n, source, correlationName, r.collectColumnNameList(correlationSpecNode));
+                    List<SQLQuerySymbolEntry> correlationColumNames = r.collectColumnNameList(correlationSpecNode);
+                    source = new SQLQueryRowsCorrelatedSourceModel(n, source, correlationName, correlationColumNames);
+                    SQLQueryLexicalScope aliasesScope = new SQLQueryLexicalScope(correlationColumNames.size() + 1);
+                    aliasesScope.registerItem(correlationName);
+                    correlationColumNames.forEach(aliasesScope::registerItem);
+                    source.registerLexicalScope(aliasesScope);
                 }
             }
             return source;
         },
-        STMKnownRuleNames.explicitTable, (n, cc, r) -> r.collectTableReference(n),
+        STMKnownRuleNames.explicitTable, (n, cc, r) -> r.collectTableReference(n, false),
         STMKnownRuleNames.tableValueConstructor, (n, cc, r) -> {
             List<SQLQueryValueExpression> values = n.findChildrenOfName(STMKnownRuleNames.rowValueConstructor).stream()
                 .map(r::collectValueExpression).toList();

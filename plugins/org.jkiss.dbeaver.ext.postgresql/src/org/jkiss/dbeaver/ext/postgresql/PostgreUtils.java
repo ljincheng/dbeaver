@@ -703,8 +703,8 @@ public class PostgreUtils {
                 continue;
             }
             String privString = permString.substring(0, divPos2);
-            String grantor = permString.substring(divPos2 + 1);
-
+            String grantorName = permString.substring(divPos2 + 1);
+            PostgreRoleReference grantor = new PostgreRoleReference(owner.getDatabase(), grantorName, null);
             List<PostgrePrivilegeGrant> privileges = new ArrayList<>();
             for (int k = 0; k < privString.length(); k++) {
                 char pCode = privString.charAt(k);
@@ -714,7 +714,7 @@ public class PostgreUtils {
                     k++;
                 }
                 privileges.add(new PostgrePrivilegeGrant(
-                    new PostgreRoleReference(owner.getDatabase(), grantor, null),
+                    grantor,
                     grantee,
                     owner.getDatabase().getName(),
                     owner.getSchema().getName(),
@@ -725,7 +725,7 @@ public class PostgreUtils {
                 ));
             }
             if (isDefault) {
-                permissions.add(new PostgreDefaultPrivilege(owner, grantee, privileges));
+                permissions.add(new PostgreDefaultPrivilege(owner, grantee, grantor, privileges));
             } else {
                 permissions.add(new PostgreObjectPrivilege(owner, grantee, privileges));
             }
@@ -957,7 +957,7 @@ public class PostgreUtils {
         try {
             final java.sql.Array value = dbResult.getArray(columnName);
             return value != null ? (T[]) value.getArray() : null;
-        } catch (SQLFeatureNotSupportedException ignored) {
+        } catch (SQLFeatureNotSupportedException | UnsupportedOperationException | IncompatibleClassChangeError ignored) {
             // Some drivers (ODBC) might not have an implementation for that API, just ignore and try with a string
         } catch (Exception e) {
             exception = e;

@@ -19,7 +19,6 @@ package org.jkiss.dbeaver.ext.oracle.model;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTableColumn;
@@ -31,11 +30,11 @@ import org.jkiss.dbeaver.model.struct.DBSTypedObjectEx;
 import org.jkiss.dbeaver.model.struct.DBSTypedObjectExt3;
 import org.jkiss.dbeaver.model.struct.DBSTypedObjectExt4;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableColumn;
+import org.jkiss.dbeaver.runtime.DBWorkbench;
 
 import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -44,7 +43,6 @@ import java.util.List;
 public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implements
     DBSTableColumn, DBSTypedObjectEx, DBSTypedObjectExt3, DBPHiddenObject, DBPNamedObject2, DBSTypedObjectExt4<OracleDataType>, DBPObjectWithLazyDescription
 {
-    private static final Log log = Log.getLog(OracleTableColumn.class);
 
     private OracleDataType type;
     private OracleDataTypeModifier typeMod;
@@ -205,7 +203,7 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
     @Property(viewable = true, editable = true, updatable = true, length = PropertyLength.MULTILINE, order = 100)
     @LazyProperty(cacheValidator = CommentLoadValidator.class)
     public String getComment(DBRProgressMonitor monitor) {
-        if (isPersisted() && comment == null) {
+        if (isPersisted() && comment == null && !DBWorkbench.getPlatform().isUnitTestMode()) {
             // Load comments for all table columns
             getTable().loadColumnComments(monitor);
         }
@@ -250,8 +248,8 @@ public class OracleTableColumn extends JDBCTableColumn<OracleTableBase> implemen
             if (!dataTypes.contains(column.getDataType())) {
                 dataTypes.add(column.getDataType());
             }
-            Collections.sort(dataTypes, DBUtils.nameComparator());
-            return dataTypes.toArray(new DBSDataType[dataTypes.size()]);
+            dataTypes.sort(DBUtils.nameComparator());
+            return dataTypes.toArray(new DBSDataType[0]);
         }
     }
 
