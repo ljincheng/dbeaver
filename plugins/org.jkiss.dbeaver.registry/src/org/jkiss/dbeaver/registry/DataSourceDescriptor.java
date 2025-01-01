@@ -993,27 +993,22 @@ public class DataSourceDescriptor
 
     @Override
     public void resolveSecrets(DBSSecretController secretController) throws DBException {
-        try {
-            if (!isSharedCredentials()) {
-                // try to load private user credentials
-                String secretValue = secretController.getPrivateSecretValue(getSecretValueId());
-                loadFromSecret(secretValue);
-                if (secretValue == null && !DBWorkbench.isDistributed()) {
-                    // Backward compatibility
-                    loadFromLegacySecret(secretController);
-                }
-            } else {
-                this.availableSharedCredentials = secretController.discoverCurrentUserSecrets(this);
-                if (this.availableSharedCredentials.size() == 1) {
-                    setSelectedSharedCredentials(availableSharedCredentials.get(0));
-                }
+        if (!isSharedCredentials()) {
+            // try to load private user credentials
+            String secretValue = secretController.getPrivateSecretValue(getSecretValueId());
+            loadFromSecret(secretValue);
+            if (secretValue == null && !DBWorkbench.isDistributed()) {
+                // Backward compatibility
+                loadFromLegacySecret(secretController);
             }
-        } finally {
-            // we always consider the secret to be resolved,
-            // because in case of an error during the resolve,
-            // we will not be able to save the new secret, look at #persistSecretIfNeeded
-            this.secretsResolved = true;
+        } else {
+            this.availableSharedCredentials = secretController.discoverCurrentUserSecrets(this);
+            if (this.availableSharedCredentials.size() == 1) {
+                setSelectedSharedCredentials(availableSharedCredentials.get(0));
+            }
         }
+
+        secretsResolved = true;
     }
 
     @Override
@@ -2181,14 +2176,21 @@ public class DataSourceDescriptor
         }
 
         //do not store handlers in secret for shared connections
-        if (!isSharedCredentials() && CommonUtils.isEmpty(connectionInfo.getConfigProfileName())) {
+        if (!isSharedCredentials()) {
             // Handlers. If config profile is set then props are saved there
+            DBWNetworkProfile activeProfile = CommonUtils.isEmpty(connectionInfo.getConfigProfileName())
+                ? null
+                : this.getRegistry().getNetworkProfile(connectionInfo.getConfigProfileSource(), connectionInfo.getConfigProfileName());
+
             List<Map<String, Object>> handlersConfigs = new ArrayList<>();
             for (DBWHandlerConfiguration hc : connectionInfo.getHandlers()) {
-                Map<String, Object> handlerProps = hc.saveToSecret();
-                if (!handlerProps.isEmpty()) {
-                    handlerProps.put(RegistryConstants.ATTR_ID, hc.getId());
-                    handlersConfigs.add(handlerProps);
+                DBWHandlerConfiguration profileConfig = activeProfile == null ? null : activeProfile.getConfiguration(hc.getHandlerDescriptor());
+                if (profileConfig == null || !profileConfig.isEnabled()) {
+                    Map<String, Object> handlerProps = hc.saveToSecret();
+                    if (!handlerProps.isEmpty()) {
+                        handlerProps.put(RegistryConstants.ATTR_ID, hc.getId());
+                        handlersConfigs.add(handlerProps);
+                    }
                 }
             }
             if (!handlersConfigs.isEmpty()) {
