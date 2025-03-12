@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2024 DBeaver Corp and others
+ * Copyright (C) 2010-2025 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,19 +39,15 @@ import org.jkiss.dbeaver.model.sql.semantics.*;
 import org.jkiss.dbeaver.model.sql.semantics.OffsetKeyedTreeMap.NodesIterator;
 import org.jkiss.dbeaver.model.sql.semantics.completion.SQLQueryCompletionContext;
 import org.jkiss.dbeaver.model.sql.semantics.model.SQLQueryModel;
-import org.jkiss.dbeaver.model.stm.*;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.editors.EditorUtils;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorUtils;
 import org.jkiss.dbeaver.utils.ListNode;
 
-import java.util.ArrayDeque;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.*;
-import java.util.regex.Pattern;
 
 public class SQLBackgroundParsingJob {
 
@@ -163,14 +159,14 @@ public class SQLBackgroundParsingJob {
      * Prepare completion context for the specified position in the text
      */
     @NotNull
-    public SQLQueryCompletionContext obtainCompletionContext(DBRProgressMonitor monitor, @NotNull Position completionRequestPostion) {
+    public SQLQueryCompletionContext obtainCompletionContext(DBRProgressMonitor monitor, @NotNull Position completionRequestPosition) {
         SQLScriptItemAtOffset scriptItem = null;
         do {
             final long requestStamp = System.currentTimeMillis();
             CompletableFuture<Long> expectedParsingSessionFinishStamp;
             synchronized (this.syncRoot) {
                 if (scriptItem == null || this.queuedForReparse.size() == 0) {
-                    int requestOffset = completionRequestPostion.getOffset();
+                    int requestOffset = completionRequestPosition.getOffset();
                     // the offset may be covered by adjacent scriptItem but still queued due to actual scriptItem being temporarily dropped
                     NodesIterator<QueuedRegionInfo> qit = this.queuedForReparse.nodesIteratorAt(requestOffset);
                     QueuedRegionInfo region = qit.getCurrValue() != null ? qit.getCurrValue() : (qit.prev() ? qit.getCurrValue() : null);
@@ -187,14 +183,21 @@ public class SQLBackgroundParsingJob {
                                 if (DEBUG) {
                                     log.debug("obtained model for " + scriptItem.item.getOriginalText());
                                 }
-                                return this.prepareCompletionContext(scriptItem, completionRequestPostion.getOffset());
+                                DBCExecutionContext executionContext = this.editor.getExecutionContext();
+                                SQLDialect dialect = this.obtainCurrentSqlDialect(executionContext);
+                                return SQLQueryCompletionContext.prepareCompletionContext(
+                                    scriptItem,
+                                    completionRequestPosition.getOffset(),
+                                    executionContext,
+                                    dialect
+                                );
                             }
                         } else if (this.queuedForReparse.size() <= 0) {
                             // no script items here, so fallback to offquery context
                             if (DEBUG) {
                                 log.debug("fallback to offquery context");
                             }
-                            return SQLQueryCompletionContext.prepareOffquery(0, completionRequestPostion.getOffset());
+                            return SQLQueryCompletionContext.prepareOffquery(0, completionRequestPosition.getOffset());
                         }
                     }
                 }
@@ -206,64 +209,13 @@ public class SQLBackgroundParsingJob {
                 // when the job is not scheduled yet (so join returns immediately)
                 // job.schedule() performed only after the series of keypresses at after-change event
                 if (getFutureOrCancel(expectedParsingSessionFinishStamp, monitor.getNestedMonitor()) < requestStamp) {
-                    return SQLQueryCompletionContext.prepareEmpty(0, completionRequestPostion.getOffset());
+                    return SQLQueryCompletionContext.prepareEmpty(0, completionRequestPosition.getOffset());
                 }
             } catch (InterruptedException | ExecutionException e) {
                 break;
             }
-        } while (!completionRequestPostion.isDeleted());
-        return SQLQueryCompletionContext.prepareEmpty(0, completionRequestPostion.getOffset());
-    }
-
-    @NotNull
-    private SQLQueryCompletionContext prepareCompletionContext(@NotNull SQLScriptItemAtOffset scriptItem, int offset) {
-        int position = offset - scriptItem.offset;
-
-        SQLQueryModel model = scriptItem.item.getQueryModel();
-        if (model != null) {
-            if (scriptItem.item.hasContextBoundaryAtLength() && position >= scriptItem.item.length()) {
-                return SQLQueryCompletionContext.prepareOffquery(scriptItem.offset, offset);
-            } else {
-                STMTreeNode syntaxNode = model.getSyntaxNode();
-                if (scriptItem.item.getOriginalText().length() <= SQLQueryCompletionContext.getMaxKeywordLength()
-                    && LSMInspections.matchesAnyWord(scriptItem.item.getOriginalText())
-                    && position <= scriptItem.item.getOriginalText().length()
-                ) {
-                    return SQLQueryCompletionContext.prepareOffquery(scriptItem.offset, offset);
-                }
-
-                LSMInspections inspections = new LSMInspections(this.obtainCurrentSqlDialect(this.editor.getExecutionContext()), syntaxNode);
-                LSMInspections.SyntaxInspectionResult syntaxInspectionResult = inspections.prepareAbstractSyntaxInspection(position);
-                SQLQueryModel.LexicalContextResolutionResult context = model.findLexicalContext(Math.min(position, model.getSyntaxNode().getRealInterval().b));
-                if (context.deepestContext() == null) {
-                    return SQLQueryCompletionContext.prepareEmpty(0, offset);
-                }
-
-                LSMInspections.NameInspectionResult nameInspectionResult = inspections.collectNameNodes(position);
-                if (nameInspectionResult.positionToInspect() != position) {
-                    syntaxInspectionResult = inspections.prepareAbstractSyntaxInspection(nameInspectionResult.positionToInspect());
-                }
-                ArrayDeque<STMTreeNode> nameNodes = nameInspectionResult.nameNodes();
-
-                SQLQueryLexicalScopeItem lexicalItem = context.lexicalItem();
-                if (nameNodes.isEmpty() || (lexicalItem != null && nameNodes.getLast().getRealInterval().b != lexicalItem.getSyntaxNode().getRealInterval().b)) {
-                    lexicalItem = null;
-                }
-                return SQLQueryCompletionContext.prepare(
-                        scriptItem,
-                        offset,
-                        this.editor.getExecutionContext(),
-                        syntaxInspectionResult,
-                        context,
-                        lexicalItem,
-                        nameNodes.toArray(STMTreeNode[]::new),
-                        nameInspectionResult.hasPeriod(),
-                        nameInspectionResult.currentTerm()
-                );
-            }
-        } else {
-            return SQLQueryCompletionContext.prepareEmpty(0, offset);
-        }
+        } while (!completionRequestPosition.isDeleted());
+        return SQLQueryCompletionContext.prepareEmpty(0, completionRequestPosition.getOffset());
     }
 
     @NotNull
@@ -402,7 +354,13 @@ public class SQLBackgroundParsingJob {
             if (this.job.getState() != Job.RUNNING) {
                 this.job.cancel();
             }
-            this.job.schedule(schedulingTimeoutMilliseconds * (this.isRunning ? 2 : 1));
+            long delay;
+            if (event != null && SQLConstants.DOT.equals(event.getText())) {
+                delay = this.isRunning ? schedulingTimeoutMilliseconds / 2 : 0;
+            } else {
+                delay = schedulingTimeoutMilliseconds * (this.isRunning ? 2 : 1);
+            }
+            this.job.schedule(delay);
         }
     }
 
@@ -624,7 +582,13 @@ public class SQLBackgroundParsingJob {
                 }
                 try {
                     recognitionContext.reset();
-                    SQLQueryModel queryModel = SQLQueryModelRecognizer.recognizeQuery(recognitionContext, element.getOriginalText());
+                    SQLQueryModel queryModel = element instanceof SQLControlCommand
+                        ? SQLCommandModelRecognizer.recognizeCommand(
+                            recognitionContext,
+                            element.getText(),
+                            this.editor instanceof SQLEditor e ? e.getGlobalScriptContext() : null
+                        )
+                        : SQLQueryModelRecognizer.recognizeQuery(recognitionContext, element.getOriginalText());
 
                     if (queryModel != null) {
                         if (DEBUG) {

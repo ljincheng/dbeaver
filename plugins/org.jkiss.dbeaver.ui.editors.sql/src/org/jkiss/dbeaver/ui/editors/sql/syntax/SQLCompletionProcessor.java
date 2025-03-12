@@ -1,6 +1,6 @@
 /*
  * DBeaver - Universal Database Manager
- * Copyright (C) 2010-2024 DBeaver Corp and others
+ * Copyright (C) 2010-2025 DBeaver Corp and others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.exec.DBExecUtils;
+import org.jkiss.dbeaver.model.impl.sql.BasicSQLDialect;
+import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.AbstractJob;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableParametrized;
@@ -41,13 +43,13 @@ import org.jkiss.dbeaver.model.sql.parser.SQLParserPartitions;
 import org.jkiss.dbeaver.model.sql.parser.SQLWordPartDetector;
 import org.jkiss.dbeaver.model.sql.registry.SQLCommandHandlerDescriptor;
 import org.jkiss.dbeaver.model.sql.registry.SQLCommandsRegistry;
+import org.jkiss.dbeaver.model.sql.semantics.completion.SQLQueryCompletionProposal;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorUtils;
 import org.jkiss.dbeaver.ui.editors.sql.SQLPreferenceConstants;
 import org.jkiss.dbeaver.ui.editors.sql.SQLPreferenceConstants.SQLAutocompletionMode;
-import org.jkiss.dbeaver.ui.editors.sql.semantics.SQLQueryCompletionAnalyzer;
-import org.jkiss.dbeaver.ui.editors.sql.semantics.SQLQueryCompletionProposal;
+import org.jkiss.dbeaver.ui.editors.sql.semantics.SQLEditorQueryCompletionAnalyzer;
 import org.jkiss.dbeaver.ui.editors.sql.templates.SQLContext;
 import org.jkiss.dbeaver.ui.editors.sql.templates.SQLTemplateCompletionProposal;
 import org.jkiss.dbeaver.ui.editors.sql.templates.SQLTemplatesRegistry;
@@ -62,11 +64,10 @@ import java.util.stream.Collectors;
  * The SQL content assist processor. This content assist processor proposes text
  * completions and computes context information for a SQL content type.
  */
-public class SQLCompletionProcessor implements IContentAssistProcessor
-{
+public class SQLCompletionProcessor implements IContentAssistProcessor {
     private static final Log log = Log.getLog(SQLCompletionProcessor.class);
 
-    private static IContextInformationValidator VALIDATOR = new Validator();
+    private static final IContextInformationValidator VALIDATOR = new Validator();
     private static boolean lookupTemplates = false;
     private static boolean simpleMode = false;
 
@@ -129,7 +130,8 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
             document,
             documentOffset,
             editor.extractQueryAtPos(documentOffset),
-            simpleMode);
+            simpleMode
+        );
         SQLWordPartDetector wordDetector = request.getWordDetector();
 
 
@@ -148,7 +150,7 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
 
         request.setContentType(contentType);
 
-        List<? extends Object> proposals;
+        List<?> proposals;
         try {
             switch (contentType) {
                 case IDocument.DEFAULT_CONTENT_TYPE:
@@ -172,20 +174,45 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
 
                     DBPDataSource dataSource = editor.getDataSource();
 
-                    SQLAutocompletionMode mode = SQLAutocompletionMode.fromPreferences(this.editor.getActivePreferenceStore());
+                    DBPPreferenceStore store = this.editor.getActivePreferenceStore();
+                    SQLAutocompletionMode mode = SQLAutocompletionMode.fromPreferences(store);
+                    boolean useNewCompletionEngine = mode.useNewAnalyzer
+                        && store.getBoolean(SQLPreferenceConstants.ADVANCED_HIGHLIGHTING_ENABLE)
+                        && store.getBoolean(SQLPreferenceConstants.READ_METADATA_FOR_SEMANTIC_ANALYSIS)
+                        && dataSource.getSQLDialect() instanceof BasicSQLDialect;
 
                     // UIUtils.waitJobCompletion(..) uses job.isFinished() which is not dropped on reschedule,
                     // so we should be able to recreate the whole job object including all its non-reusable dependencies.
                     List<Supplier<ProposalsComputationJobHolder>> completionJobSuppliers = new ArrayList<>();
 
-                    if (request.getWordPart() != null && mode.useOldAnalyzer) {
+                    if (useNewCompletionEngine) {
+                        // new analyzer is reusable
+                        SQLEditorQueryCompletionAnalyzer newAnalyzer = new SQLEditorQueryCompletionAnalyzer(
+                            monitor -> this.editor.obtainCompletionContext(monitor, completionRequestPosition),
+                            request,
+                            () -> completionRequestPosition.getOffset()
+                        );
+                        completionJobSuppliers.add(() -> new ProposalsComputationJobHolder(new NewProposalSearchJob(newAnalyzer)) {
+                            @Override
+                            public List<?> getProposals() {
+                                return newAnalyzer.getResult();
+                            }
+
+                            @Override
+                            public Integer getProposalsOriginOffset() {
+                                return newAnalyzer.getActualContextOffset();
+                            }
+                        });
+                    }
+
+                    if (request.getWordPart() != null && mode.useOldAnalyzer || !useNewCompletionEngine) {
                         if (dataSource != null) {
                             completionJobSuppliers.add(() -> {
                                 // old analyzer is not reusable, but it doesn't matter because see the next comment below
                                 SQLCompletionAnalyzer analyzer = new SQLCompletionAnalyzer(request);
                                 return new ProposalsComputationJobHolder(new ProposalSearchJob(analyzer)) {
                                     @Override
-                                    public List<? extends Object> getProposals() {
+                                    public List<?> getProposals() {
                                         return analyzer.getProposals();
                                     }
 
@@ -203,22 +230,6 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
                         }
                     }
 
-                    if (mode.useNewAnalyzer) {
-                        // new analyzer is reusable
-                        SQLQueryCompletionAnalyzer newAnalyzer = new SQLQueryCompletionAnalyzer(this.editor, request, completionRequestPosition);
-                        completionJobSuppliers.add(() -> new ProposalsComputationJobHolder(new NewProposalSearchJob(newAnalyzer)) {
-                            @Override
-                            public List<? extends Object> getProposals() {
-                                return newAnalyzer.getResult();
-                            }
-
-                            @Override
-                            public Integer getProposalsOriginOffset() {
-                                return newAnalyzer.getActualContextOffset();
-                            }
-                        });
-                    }
-
                     proposals = this.computeProposalsWithJobs(request, completionRequestPosition, completionJobSuppliers);
                     break;
                 default:
@@ -227,7 +238,7 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
             }
 
             int actualCompletionOffset = completionRequestPosition.getOffset();
-            List<ICompletionProposal> result = new ArrayList<>(proposals.size());
+            LinkedHashSet<ICompletionProposal> result = new LinkedHashSet<>(proposals.size());
             if (actualCompletionOffset != request.getDocumentOffset()) {
                 for (Object cp : proposals) {
                     if (cp instanceof ICompletionProposal proposal && (
@@ -251,7 +262,7 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
         }
     }
 
-    private List<? extends Object> computeProposalsWithJobs(
+    private List<?> computeProposalsWithJobs(
         @NotNull SQLCompletionRequest request,
         @NotNull Position completionRequestPosition,
         @NotNull List<Supplier<ProposalsComputationJobHolder>> completionJobSuppliers
@@ -519,9 +530,9 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
     }
 
     private class NewProposalSearchJob extends AbstractJob {
-        private final SQLQueryCompletionAnalyzer analyzer;
+        private final SQLEditorQueryCompletionAnalyzer analyzer;
 
-        public NewProposalSearchJob(SQLQueryCompletionAnalyzer analyzer) {
+        public NewProposalSearchJob(SQLEditorQueryCompletionAnalyzer analyzer) {
             super("Analyzing query for proposals...");
             this.analyzer = analyzer;
         }
@@ -556,7 +567,7 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
             this.job.schedule();
         }
 
-        public abstract List<? extends Object> getProposals();
+        public abstract List<?> getProposals();
 
         public abstract Integer getProposalsOriginOffset();
     }
