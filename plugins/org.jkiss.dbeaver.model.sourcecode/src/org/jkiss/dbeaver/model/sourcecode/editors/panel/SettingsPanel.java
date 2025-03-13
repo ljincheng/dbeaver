@@ -136,22 +136,22 @@ public class SettingsPanel implements UIEventNotifier,UIActionEvent,ContentListe
                 String type=formItem.getType();
                 Control control=null;
    			 if("file".equalsIgnoreCase(type)) {
-   				control=createOutputFolderChooser(table, formItem.getValue(),item,1,formItem);
+					control = createOutputFolderChooser(table, formItem.getValue(),item,1,formItem).getTextControl();
    			 }else {
    				 control=UIUtils.createLabelText(table,  null,formItem.getValue()); 
    			 }
                 return control;
             }
             @Override
-            protected void saveEditorValue(Control control, int index, TableItem item) {
+			protected void saveEditorValue(Control control, int index, TableItem item) {
             	String value=null;
-            	if(control instanceof TextWithOpen)
-            	{
-            		 value=((TextWithOpen) control).getText();
-            	}else {
+//				if (control instanceof TextWithOpen)
+//            	{
+//            		 value=((TextWithOpen) control).getText();
+//            	}else {
             		
             	  value=((Text) control).getText();
-            	}
+//            	}
             	 FormItemContext formItem=(FormItemContext)item.getData("data");
                 item.setText(1,value); 
                 formItem.setValue(value);
@@ -285,7 +285,7 @@ public class SettingsPanel implements UIEventNotifier,UIActionEvent,ContentListe
 	  public static TextWithOpen createOutputFolderChooser(final Composite parent,  @Nullable String value,TableItem tableItem,int textIndex,FormItemContext formItem)
 	    {
 		  boolean multiFS=false;
-	         TextWithOpen directoryText = new TextWithOpen(parent,multiFS) {
+			TextWithOpen directoryText = new TextWithOpen(parent,multiFS) {
 	            @Override
 	            protected void openBrowser(boolean remoteFS) {
 	                DirectoryDialog dialog = new DirectoryDialog(parent.getShell(), SWT.NONE);

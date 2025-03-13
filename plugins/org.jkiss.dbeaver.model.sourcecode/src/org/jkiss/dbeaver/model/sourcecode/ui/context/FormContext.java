@@ -85,7 +85,7 @@ public class FormContext {
                 String type=formItem.getType();
                 Control control=null;
    			 if("file".equalsIgnoreCase(type)) {
-   				control=createOutputFolderChooser(table, formItem.getValue(),item,1,formItem);
+   				control=createOutputFolderChooser(table, formItem.getValue(),item,1,formItem).getTextControl();
    			 }else {
    				 control=UIUtils.createLabelText(table,  null,formItem.getValue()); 
    			 }
@@ -94,13 +94,13 @@ public class FormContext {
             @Override
             protected void saveEditorValue(Control control, int index, TableItem item) {
             	String value=null;
-            	if(control instanceof TextWithOpen)
-            	{
-            		 value=((TextWithOpen) control).getText();
-            	}else {
+//            	if(control instanceof TextWithOpen)
+//            	{
+//            		 value=((TextWithOpen) control).getText();
+//            	}else {
             		
             	  value=((Text) control).getText();
-            	}
+//            	}
             	 FormItemContext formItem=(FormItemContext)item.getData("data");
                 item.setText(1,value); 
                 formItem.setValue(value);

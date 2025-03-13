@@ -1,10 +1,12 @@
 #!/bin/bash
 
-#export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.0.4.1.jdk/Contents/Home
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.0.4+7/Contents/Home
 
-#export PATH=$JAVA_HOME/bin:$PATH
+export PATH=$JAVA_HOME/bin:$PATH
 java --version
 
+[ ! -d ../dbeaver-common ] && git clone https://github.com/dbeaver/dbeaver-common.git ../dbeaver-common
+[ ! -d ../dbeaver-jdbc-libsql ] && git clone https://github.com/dbeaver/dbeaver-jdbc-libsql.git ../dbeaver-jdbc-libsql
 
 cd product/aggregate
 mvn clean install -Pall-platforms -T 1C
@@ -24,4 +26,4 @@ echo "-Dfile.encoding=utf-8" >> product/community/target/products/org.jkiss.dbea
 echo "Mac版本处理-vm 和 ../Eclipse/jre/Contents/Home/bin/java"
 #sed -ie "s|^-vm$|#-vm|g"  product/community/target/products/org.jkiss.dbeaver.core.product/macosx/cocoa/x86_64/DBeaver.app/Contents/Eclipse/dbeaver.ini
 #sed -ie "s|^../Eclipse/jre/Contents/Home/bin/java$|#../Eclipse/jre/Contents/Home/bin/java|g"  product/community/target/products/org.jkiss.dbeaver.core.product/macosx/cocoa/x86_64/DBeaver.app/Contents/Eclipse/dbeaver.ini
-sed -ie "s|^../Eclipse/jre/Contents/Home/lib/libjli.dylib|/Library/Java/JavaVirtualMachines/jdk-17.0.4.1.jdk/Contents/Home/lib/libjli.dylib|g"   product/community/target/products/org.jkiss.dbeaver.core.product/macosx/cocoa/x86_64/DBeaver.app/Contents/Eclipse/dbeaver.ini
+sed -ie "s|^../Eclipse/jre/Contents/Home/lib/libjli.dylib|/Library/Java/JavaVirtualMachines/jdk-21.0.4+7/Contents/Home/lib/libjli.dylib|g"   product/community/target/products/org.jkiss.dbeaver.core.product/macosx/cocoa/x86_64/DBeaver.app/Contents/Eclipse/dbeaver.ini
