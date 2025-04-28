@@ -16,11 +16,9 @@
  */
 package org.jkiss.dbeaver.ui.app.standalone.tipoftheday;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.progress.UIJob;
+import org.eclipse.ui.application.IWorkbenchWindowConfigurer;
+import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.IWorkbenchWindowInitializer;
 import org.jkiss.utils.CommonUtils;
@@ -29,19 +27,12 @@ public class TipOfTheDayInitializer implements IWorkbenchWindowInitializer {
     private static final String PROP_NOT_FIRST_RUN = "tipOfTheDayInitializer.notFirstRun";
 
     @Override
-    public void initializeWorkbenchWindow(IWorkbenchWindow window) {
+    public void initializeWorkbenchWindow(@NotNull IWorkbenchWindowConfigurer configurer) {
+        IWorkbenchWindow window = configurer.getWindow();
         if (!isTipsEnabled() || window.getWorkbench().getWorkbenchWindowCount() > 1) {
             return;
         }
-        // Show tips with delay to let UI initialize properly
-        new UIJob(window.getShell().getDisplay(), "Show tip of the day") {
-            @Override
-            public IStatus runInUIThread(IProgressMonitor monitor) {
-                ShowTipOfTheDayHandler.showTipOfTheDay(window);
-                return Status.OK_STATUS;
-            }
-        }.schedule(3000);
-
+        ShowTipOfTheDayHandler.showTipOfTheDay(window);
     }
 
     private static boolean isTipsEnabled() {
