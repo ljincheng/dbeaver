@@ -176,18 +176,13 @@ public class UIUtils {
         };
     }
 
-    public static void createToolBarSeparator(Composite toolBar, int style) {
-        Label label = new Label(toolBar, SWT.NONE);
-        label.setImage(DBeaverIcons.getImage((style & SWT.HORIZONTAL) == SWT.HORIZONTAL ? UIIcon.SEPARATOR_H : UIIcon.SEPARATOR_V));
-    }
-
     public static void createLabelSeparator(Composite toolBar, int style) {
         Label label = new Label(toolBar, SWT.SEPARATOR | style);
         label.setLayoutData(new GridData(style == SWT.HORIZONTAL ? GridData.FILL_HORIZONTAL : GridData.FILL_VERTICAL));
     }
 
     public static void createToolBarSeparator(ToolBar toolBar, int style) {
-        Label label = new Label(toolBar, SWT.NONE);
+        Label label = new Label(toolBar, SWT.NONE);//SEPARATOR | style);
         label.setImage(DBeaverIcons.getImage((style & SWT.HORIZONTAL) == SWT.HORIZONTAL ? UIIcon.SEPARATOR_H : UIIcon.SEPARATOR_V));
         new ToolItem(toolBar, SWT.SEPARATOR).setControl(label);
     }
@@ -725,12 +720,12 @@ public class UIUtils {
             .grab(true, false).create());
         final Label imageLabel = new Label(composite, SWT.NONE);
         imageLabel.setImage(DBeaverIcons.getImage(DBIcon.SMALL_INFO));
-        imageLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.BEGINNING, false, false));
+        imageLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, true));
 
         final Link link = new Link(composite, SWT.NONE);
         link.setText(text);
         link.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> callback.run()));
-        link.setLayoutData(GridDataFactory.fillDefaults().grab(true, false).create());
+        link.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, true, true));
 
         return link;
     }
@@ -1275,7 +1270,9 @@ public class UIUtils {
         @Nullable SelectionListener selectionListener
     ) {
         Button button = new Button(parent, SWT.PUSH);
-        button.setText(label);
+        if (label != null) {
+            button.setText(label);
+        }
         button.setFont(JFaceResources.getDialogFont());
         if (icon != null) {
             button.setImage(DBeaverIcons.getImage(icon));
@@ -1688,7 +1685,7 @@ public class UIUtils {
         return new RGB(r, g, b);
     }
 
-    public static boolean isParent(Control parent, Control child) {
+    public static boolean isParent(@NotNull Control parent, @Nullable Control child) {
         for (Control c = child; c != null; c = c.getParent()) {
             if (c == parent) {
                 return true;
@@ -1727,7 +1724,7 @@ public class UIUtils {
     }
 
     public static Point drawMessageOverControl(Control control, GC gc, String message, int offset) {
-        Rectangle bounds = control.getBounds();
+        Rectangle bounds = getControlPaintBounds(control);
         Point textSize = gc.textExtent(message);
 
         if (textSize.x > bounds.width) {
@@ -1750,6 +1747,26 @@ public class UIUtils {
         }
 
         return textSize;
+    }
+
+    @NotNull
+    private static Rectangle getControlPaintBounds(@NotNull Control control) {
+        Rectangle bounds;
+        if (control instanceof Scrollable scrollable) {
+            bounds = scrollable.getClientArea();
+        } else {
+            bounds = control.getBounds();
+        }
+        if (control instanceof Tree tree) {
+            int height = tree.getHeaderHeight();
+            bounds.y += height;
+            bounds.height -= height;
+        } else if (control instanceof Table table) {
+            int height = table.getHeaderHeight();
+            bounds.y += height;
+            bounds.height -= height;
+        }
+        return bounds;
     }
 
     public static SharedTextColors getSharedTextColors() {
@@ -2129,6 +2146,7 @@ public class UIUtils {
             shellSize.x = Math.max(shellSize.x, compSize.x);
             shellSize.y = Math.max(shellSize.y, compSize.y);
             shell.setSize(shellSize);
+            needsLayout = true;
         }
 
         if (shellLocation.x + shellSize.x > displayArea.width || shellLocation.y + shellSize.y > displayArea.height) {
@@ -2139,7 +2157,7 @@ public class UIUtils {
         }
 
         if (needsLayout) {
-            shell.layout(true);
+            shell.layout(true, true);
         }
     }
 
@@ -2364,7 +2382,7 @@ public class UIUtils {
 
     public static void installAndUpdateMainFont(@NotNull Control control) {
         BaseThemeSettings.instance.addPropertyListener(
-            UIFonts.DBEAVER_FONTS_MAIN_FONT,
+            UIFonts.DBeaver.MAIN_FONT,
             s -> applyMainFont(control),
             control
         );
@@ -2395,7 +2413,7 @@ public class UIUtils {
     }
 
     private static boolean mainFontIsDefault() {
-        final FontData[] mainFontData = JFaceResources.getFontRegistry().getFontData(UIFonts.DBEAVER_FONTS_MAIN_FONT);
+        final FontData[] mainFontData = JFaceResources.getFontRegistry().getFontData(UIFonts.DBeaver.MAIN_FONT);
         final FontData[] defaultFontData = JFaceResources.getFontRegistry().getFontData(JFaceResources.DEFAULT_FONT);
         return Arrays.equals(mainFontData, defaultFontData);
     }
@@ -2593,5 +2611,15 @@ public class UIUtils {
 
     public static void setDefaultTextControlWidthHint(@NotNull Control widget) {
         setWidgetWidthHint(widget, 150);
+    }
+
+    /**
+     * Makes the background of the specified control mimic the background of another control
+     */
+    public static void mimicControlBackground(@NotNull Composite control, @NotNull Control otherControl) {
+        control.addPaintListener(e -> {
+            e.gc.setBackground(otherControl.getBackground());
+            e.gc.fillRectangle(control.getClientArea());
+        });
     }
 }

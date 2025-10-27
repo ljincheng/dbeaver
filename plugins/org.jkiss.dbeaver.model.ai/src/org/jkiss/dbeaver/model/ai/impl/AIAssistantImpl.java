@@ -22,191 +22,245 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.ai.*;
 import org.jkiss.dbeaver.model.ai.engine.*;
+import org.jkiss.dbeaver.model.ai.internal.AIMessages;
 import org.jkiss.dbeaver.model.ai.registry.*;
 import org.jkiss.dbeaver.model.ai.utils.ThrowableSupplier;
 import org.jkiss.dbeaver.model.app.DBPWorkspace;
-import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
+import org.jkiss.dbeaver.model.exec.DBCMessageException;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.dbeaver.model.sql.SQLUtils;
-import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.CommonUtils;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Flow;
 
 public class AIAssistantImpl implements AIAssistant {
     private static final Log log = Log.getLog(AIAssistantImpl.class);
 
     private static final int MANY_REQUESTS_RETRIES = 3;
     private static final int MANY_REQUESTS_TIMEOUT = 500;
+    public static final String LOG_INDENT = "\t";
+    protected static final int MAX_FUNCTION_CALLS = 5;
 
-    protected final AISettingsRegistry settingsRegistry = AISettingsRegistry.getInstance();
-    protected final AIEngineRegistry engineRegistry = AIEngineRegistry.getInstance();
-    protected final AISqlFormatterRegistry formatterRegistry = AISqlFormatterRegistry.getInstance();
-    protected final AISchemaGeneratorRegistry generatorRegistry = AISchemaGeneratorRegistry.getInstance();
-    protected final AIDatabaseSnapshotService metadataPromptService = new AIDatabaseSnapshotService(
-        generatorRegistry
-    );
+    protected final DBPWorkspace workspace;
 
-    @Override
-    public void initialize(@NotNull DBPWorkspace workspace) {
-        // no-op
+    protected final AIEngineRequestFactory requestFactory;
+    protected AISqlFormatter sqlFormatter;
+
+    public AIAssistantImpl(@NotNull DBPWorkspace workspace) {
+        this.workspace = workspace;
+        this.requestFactory = createRequestFactory();
+        this.sqlFormatter = createSqlFormatter();
     }
 
-    /**
-     * Translate the specified text to SQL.
-     *
-     * @param monitor the progress monitor
-     * @param request the translate request
-     * @return the translated SQL
-     * @throws DBException if an error occurs
-     */
-    @NotNull
-    @Override
-    public String translateTextToSql(
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull AITranslateRequest request
-    ) throws DBException {
-        AIEngine engine = request.engine() != null ?
-            request.engine() :
-            getActiveEngine();
+    protected AISqlFormatter createSqlFormatter() {
+        try {
+            return AIAssistantRegistry.getInstance().getDescriptor().createSqlFormatter();
+        } catch (DBException e) {
+            log.error("Error creating SQL formatter", e);
+            return new SimpleSqlFormatterImpl();
+        }
+    }
 
-        AIMessage userMessage = new AIMessage(AIMessageType.USER, request.text());
-
-        AIPromptBuilder promptBuilder = createPromptBuilder();
-        promptBuilder
-            .addContexts(AIPromptBuilder.describeContext(request.context().getDataSource()))
-            .addInstructions(AIPromptBuilder.createInstructionList(request.context().getDataSource()))
-            .addGoals(
-                "Translate natural language text to SQL."
-            )
-            .addOutputFormats(
-                "Place any explanation or comments before the SQL code block.",
-                "Provide the SQL query in a fenced Markdown code block."
-            )
-            .addDatabaseSnapshot(metadataPromptService.createDbSnapshot(monitor, request.context(), buildOptions(monitor, engine)));
-        addSqlCompletionInstructions(promptBuilder);
-        String prompt = promptBuilder.build();
-
-        List<AIMessage> chatMessages = List.of(
-            AIMessage.systemMessage(prompt),
-            userMessage
-        );
-
-        AIEngineRequest completionRequest = AIEngineRequest.of(monitor, engine, chatMessages);
-
-        AIEngineResponse completionResponse = requestCompletion(engine, monitor, completionRequest);
-
-        MessageChunk[] messageChunks = processAndSplitCompletion(
-            monitor,
-            request.context(),
-            completionResponse.variants().getFirst()
-        );
-
-        return AITextUtils.convertToSQL(
-            userMessage,
-            messageChunks,
-            request.context().getExecutionContext().getDataSource()
+    protected AIEngineRequestFactory createRequestFactory() {
+        return new AIEngineRequestFactory(
+            new AIDatabaseSnapshotService(),
+            new DummyTokenCounter()
         );
     }
 
-    /**
-     * Translate the specified user command to SQL.
-     *
-     * @param monitor the progress monitor
-     * @param request the command request
-     * @return the command result
-     * @throws DBException if an error occurs
-     */
     @NotNull
     @Override
-    public AICommandResult command(
+    public AIAssistantResponse generateText(
         @NotNull DBRProgressMonitor monitor,
-        @NotNull AICommandRequest request
+        @Nullable AIDatabaseContext context,
+        @NotNull AIPromptGenerator systemGenerator,
+        @NotNull List<AIMessage> messages
     ) throws DBException {
-        AIEngine engine = request.engine() != null ?
-            request.engine() :
-            getActiveEngine();
+        checkAiEnablement();
 
-        AIPromptBuilder promptBuilder = createPromptBuilder();
-        promptBuilder
-            .addContexts(AIPromptBuilder.describeContext(request.context().getDataSource()))
-            .addInstructions(AIPromptBuilder.createInstructionList(request.context().getDataSource()))
-            .addGoals(
-                "Translate natural language text to SQL."
-            )
-            .addOutputFormats(
-                "Place any explanation or comments before the SQL code block.",
-                "Provide the SQL query in a fenced Markdown code block."
-            )
-            .addDatabaseSnapshot(metadataPromptService.createDbSnapshot(monitor, request.context(), buildOptions(monitor, engine)));
-        addSqlCompletionInstructions(promptBuilder);
-        String prompt = promptBuilder.build();
+        AIEngineDescriptor engineDescriptor = getEngineDescriptor();
+        try (AIEngine<?> engine = engineDescriptor.createEngineInstance()) {
+            AIEngineRequest completionRequest = buildAiEngineRequest(
+                monitor,
+                context,
+                systemGenerator,
+                messages,
+                engine,
+                engineDescriptor
+            );
+            AIFunctionContext functionContext = createAiFunctionContext(monitor, context, systemGenerator, messages);
 
-        List<AIMessage> chatMessages = List.of(
-            AIMessage.systemMessage(prompt),
-            AIMessage.userMessage(request.text())
-        );
+            AIEngineRequest request = completionRequest;
+            for (int tryIndex = 0; tryIndex < MAX_FUNCTION_CALLS; tryIndex++) {
+                AIEngineResponse completionResponse = requestCompletion(engine, monitor, request);
 
-        AIEngineRequest completionRequest = AIEngineRequest.of(monitor, engine, chatMessages);
+                if (completionResponse.getType() == AIMessageType.FUNCTION) {
+                    AIFunctionCall functionCall = completionResponse.getFunctionCall();
+                    if (functionCall != null) {
+                        functionContext.addFunctionCall(functionCall);
+                        AIFunctionResult result = callFunction(functionContext, functionCall);
+                        String stringValue = CommonUtils.toString(result.getValue());
+                        if (result.getType() == AIFunctionResult.FunctionType.ACTION) {
+                            return new AIAssistantResponse(AIAssistantResponse.Type.FUNCTION, stringValue);
+                        } else {
+                            List<AIMessage> newMessages = new ArrayList<>(request.getMessages());
+                            newMessages.add(new AIMessage(AIMessageType.USER, stringValue));
+                            AIEngineRequest newRequest = new AIEngineRequest(newMessages);
+                            newRequest.setFunctions(request.getFunctions());
 
-        AIEngineResponse completionResponse = requestCompletion(engine, monitor, completionRequest);
+                            request = newRequest;
+                            continue;
+                        }
+                    }
+                } else {
+                    List<String> variants = completionResponse.getVariants();
+                    if (variants != null && !variants.isEmpty()) {
+                        return new AIAssistantResponse(AIAssistantResponse.Type.TEXT, variants.getFirst());
+                    }
+                }
+                return new AIAssistantResponse(AIAssistantResponse.Type.ERROR, AIMessages.ai_empty_engine_response);
+            }
+            throw new DBException("Too many AI function calls (" + MAX_FUNCTION_CALLS + ")");
+        }
+    }
 
-        MessageChunk[] messageChunks = processAndSplitCompletion(
+    @NotNull
+    public AIEngineRequest buildAiEngineRequest(
+        @NotNull DBRProgressMonitor monitor,
+        @Nullable AIDatabaseContext context,
+        @NotNull AIPromptGenerator systemGenerator,
+        @NotNull List<AIMessage> messages,
+        @NotNull AIEngine<?> engine,
+        @NotNull AIEngineDescriptor engineDescriptor
+    ) throws DBException {
+        return requestFactory.build(
             monitor,
-            request.context(),
-            completionResponse.variants().getFirst()
+            engine,
+            engineDescriptor,
+            systemGenerator,
+            context,
+            messages
         );
+    }
 
-        String finalSQL = null;
-        StringBuilder messages = new StringBuilder();
-        for (MessageChunk chunk : messageChunks) {
-            if (chunk instanceof MessageChunk.Code code) {
-                finalSQL = code.text();
-            } else if (chunk instanceof MessageChunk.Text textChunk) {
-                messages.append(textChunk.text());
+    @NotNull
+    private static AIFunctionContext createAiFunctionContext(
+        @NotNull DBRProgressMonitor monitor,
+        @Nullable AIDatabaseContext context,
+        @NotNull AIPromptGenerator systemGenerator,
+        @NotNull List<AIMessage> messages
+    ) {
+        return new AIFunctionContext(
+            monitor,
+            context,
+            systemGenerator,
+            messages
+        );
+    }
+
+    @NotNull
+    protected AIFunctionResult callFunction(
+        @NotNull AIFunctionContext context,
+        @NotNull AIFunctionCall functionCall
+    ) throws DBException {
+        AIFunctionRegistry registry = AIFunctionRegistry.getInstance();
+        String functionName = functionCall.getFunctionName();
+        AIFunctionDescriptor function = registry.getFunction(functionName);
+        if (function == null) {
+            throw new DBCMessageException("Function '" + functionName + "' not found");
+        }
+        functionCall.setFunction(function);
+        return registry.callFunction(context, function, functionCall.getArguments());
+    }
+
+    protected void checkAiEnablement() throws DBException {
+        if (AISettingsManager.getInstance().getSettings().isAiDisabled()) {
+            throw new DBException("AI integration is disabled");
+        }
+    }
+
+    public static String getActiveEngineId() {
+        return AISettingsManager.getInstance().getSettings().activeEngine();
+    }
+
+    public boolean isEngineSupports(Class<?> api) {
+        return AIEngineRegistry.getInstance().isEngineSupports(
+            getActiveEngineId(),
+            api);
+    }
+
+    @NotNull
+    public AIEngine<?> createEngine() throws DBException {
+        return AIEngineRegistry.getInstance().createEngine(getActiveEngineId());
+    }
+
+    @NotNull
+    public AIEngineDescriptor getEngineDescriptor() throws DBException {
+        AIEngineDescriptor descriptor = AIEngineRegistry.getInstance().getEngineDescriptor(getActiveEngineId());
+        if (descriptor == null) {
+            log.trace("Active engine is not present in the configuration, switching to default active engine");
+            AIEngineDescriptor defaultCompletionEngineDescriptor =
+                AIEngineRegistry.getInstance().getDefaultCompletionEngineDescriptor();
+            if (defaultCompletionEngineDescriptor == null) {
+                throw new DBException("AI engine  not found");
+            }
+            descriptor = defaultCompletionEngineDescriptor;
+        }
+        return descriptor;
+    }
+
+    @NotNull
+    protected AIEngineResponse requestCompletion(
+        @NotNull AIEngine<?> engine,
+        @NotNull DBRProgressMonitor monitor,
+        @NotNull AIEngineRequest request
+    ) throws DBException {
+        try {
+            boolean loggingEnabled = isLoggingEnabled();
+            if (loggingEnabled) {
+                log.debug("AI request:\n" + CommonUtils.addTextIndent(request.getMessages().toString(), LOG_INDENT));
+            }
+
+            AIEngineResponse completionResponse = callWithRetry(() -> engine.requestCompletion(monitor, request));
+
+            if (loggingEnabled) {
+                log.debug("AI response:\n" + CommonUtils.addTextIndent(completionResponse.toString(), LOG_INDENT));
+            }
+
+            return completionResponse;
+        } catch (Exception e) {
+            if (e instanceof DBException dbe) {
+                throw dbe;
+            } else {
+                throw new DBException("Error requesting completion", e);
             }
         }
-        return new AICommandResult(finalSQL, messages.toString());
     }
 
-    /**
-     * Check if the AI assistant has valid configuration.
-     *
-     * @return true if the AI assistant has valid configuration, false otherwise
-     * @throws DBException if an error occurs
-     */
-    @Override
-    public boolean hasValidConfiguration() throws DBException {
-        AIEngineSettings<?> activeEngineConfiguration = getActiveEngineConfiguration();
+    protected boolean isLoggingEnabled() throws DBException {
+        AIEngineProperties activeEngineConfiguration = getActiveEngineConfiguration();
         if (activeEngineConfiguration == null) {
             log.warn("No active AI engine configuration found");
             return false;
         }
 
-        return activeEngineConfiguration.isValid();
+        return activeEngineConfiguration.isLoggingEnabled();
     }
 
-    protected MessageChunk[] processAndSplitCompletion(
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull AIDatabaseContext context,
-        @NotNull String completion
-    ) throws DBException {
-        String processedCompletion = formatterRegistry.getSqlPostProcessor().formatGeneratedQuery(
-            monitor,
-            context.getExecutionContext(),
-            context.getScopeObject(),
-            completion
-        );
-
-        return AITextUtils.splitIntoChunks(
-            SQLUtils.getDialectFromDataSource(context.getExecutionContext().getDataSource()),
-            processedCompletion
-        );
+    @Nullable
+    private AIEngineProperties getActiveEngineConfiguration() throws DBException {
+        AISettingsManager settingsManager = AISettingsManager.getInstance();
+        String activeEngine = settingsManager.getSettings().activeEngine();
+        if (activeEngine == null || activeEngine.isEmpty()) {
+            log.warn("No active AI engine configured");
+            return null;
+        }
+        return settingsManager.getSettings().getEngineConfiguration(activeEngine);
     }
 
-    private static <T> T callWithRetry(ThrowableSupplier<T, DBException> supplier) throws DBException {
+
+    protected static <T> T callWithRetry(ThrowableSupplier<T, DBException> supplier) throws DBException {
         int retry = 0;
         while (retry < MANY_REQUESTS_RETRIES) {
             try {
@@ -222,114 +276,4 @@ public class AIAssistantImpl implements AIAssistant {
         throw new DBException("Request failed after " + MANY_REQUESTS_RETRIES + " attempts");
     }
 
-    @NotNull
-    @Override
-    public AIEngine getActiveEngine() throws DBException {
-        return engineRegistry.getCompletionEngine(settingsRegistry.getSettings().activeEngine());
-    }
-
-    @Nullable
-    @Override
-    public AIEngineDescriptor getActiveEngineDescriptor() {
-        return engineRegistry.getEngineDescriptor(settingsRegistry.getSettings().activeEngine());
-    }
-
-    protected AIEngineResponse requestCompletion(
-        @NotNull AIEngine engine,
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull AIEngineRequest request
-    ) throws DBException {
-        try {
-            boolean loggingEnabled = isLoggingEnabled();
-            if (loggingEnabled) {
-                log.debug("AI request:\n" + CommonUtils.addTextIndent(request.toString(), "\t"));
-            }
-
-            AIEngineResponse completionResponse = callWithRetry(() -> engine.requestCompletion(monitor, request));
-
-            if (loggingEnabled) {
-                log.debug("AI response:\n" + CommonUtils.addTextIndent(completionResponse.toString(), "\t"));
-            }
-
-            return completionResponse;
-        } catch (Exception e) {
-            if (e instanceof DBException) {
-                throw (DBException) e;
-            } else {
-                throw new DBException("Error requesting completion", e);
-            }
-        }
-    }
-
-    protected Flow.Publisher<AIEngineResponseChunk> requestCompletionStream(
-        @NotNull AIEngine engine,
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull AIEngineRequest request
-    ) throws DBException {
-        try {
-            Flow.Publisher<AIEngineResponseChunk> publisher = callWithRetry(() -> engine.requestCompletionStream(monitor, request));
-            boolean loggingEnabled = isLoggingEnabled();
-
-            return subscriber -> {
-                if (loggingEnabled) {
-                    log.debug("Requesting completion stream [request=" + request + "]");
-                    publisher.subscribe(new LogSubscriber(log, subscriber));
-                } else {
-                    publisher.subscribe(subscriber);
-                }
-            };
-        } catch (Exception e) {
-            log.error("Error requesting completion stream", e);
-
-            if (e instanceof DBException) {
-                throw (DBException) e;
-            } else {
-                throw new DBException("Error requesting completion stream", e);
-            }
-        }
-    }
-
-    protected AIPromptBuilder createPromptBuilder() throws DBException {
-        return AIPromptBuilder.create();
-    }
-
-    /**
-     * Adds any extra instruction for SQL completion
-     */
-    protected void addSqlCompletionInstructions(AIPromptBuilder promptBuilder) {
-
-    }
-
-    protected AIDdlGenerationOptions buildOptions(
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull AIEngine engine
-    ) throws DBException {
-        DBPPreferenceStore preferenceStore = DBWorkbench.getPlatform().getPreferenceStore();
-
-        return AIDdlGenerationOptions.builder()
-            .withMaxRequestTokens(engine.getContextWindowSize(monitor))
-            .withSendObjectComment(preferenceStore.getBoolean(AIConstants.AI_SEND_DESCRIPTION))
-            .withSendColumnTypes(DBWorkbench.getPlatform().getPreferenceStore().getBoolean(AIConstants.AI_SEND_TYPE_INFO))
-            .build();
-    }
-
-    private boolean isLoggingEnabled() throws DBException {
-        AIEngineSettings<?> activeEngineConfiguration = getActiveEngineConfiguration();
-        if (activeEngineConfiguration == null) {
-            log.warn("No active AI engine configuration found");
-            return false;
-        }
-
-        return activeEngineConfiguration.isLoggingEnabled();
-    }
-
-    @Nullable
-    private AIEngineSettings<?> getActiveEngineConfiguration() throws DBException {
-        String activeEngine = settingsRegistry.getSettings().activeEngine();
-        if (activeEngine == null || activeEngine.isEmpty()) {
-            log.warn("No active AI engine configured");
-            return null;
-        }
-        return settingsRegistry.getSettings().getEngineConfiguration(activeEngine);
-    }
 }

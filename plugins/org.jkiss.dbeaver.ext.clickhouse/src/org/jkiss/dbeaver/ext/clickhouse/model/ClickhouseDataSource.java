@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 
 public class ClickhouseDataSource extends GenericDataSource {
@@ -199,9 +200,18 @@ public class ClickhouseDataSource extends GenericDataSource {
                 return type;
             }
         }
-        return super.resolveDataType(monitor, typeFullName);
+
+        DBSDataType type = super.resolveDataType(monitor, typeFullName);
+        if (type != null) {
+            return type;
+        }
+
+        // As a last resort, try to find the type without modifiers
+        String baseTypeName = ClickhouseTypeParser.getTypeNameWithoutModifiers(typeFullName);
+        return super.resolveDataType(monitor, baseTypeName);
     }
 
+    @NotNull
     @Override
     public String getDefaultDataTypeName(@NotNull DBPDataKind dataKind) {
         switch (dataKind) {
@@ -261,9 +271,9 @@ public class ClickhouseDataSource extends GenericDataSource {
     @NotNull
     @Override
     public DBPDataKind resolveDataKind(@NotNull String typeName, int valueType) {
-        if (typeName.startsWith("Array")) {
+        if (typeName.startsWith(ClickhouseConstants.DATA_TYPE_ARRAY)) {
             return DBPDataKind.ARRAY;
-        } else if (ClickhouseTypeParser.isComplexType(typeName)) {
+        } else if (typeName.startsWith(ClickhouseConstants.DATA_TYPE_TUPLE)) {
             return DBPDataKind.STRUCT;
         }
         return super.resolveDataKind(typeName, valueType);
@@ -305,5 +315,25 @@ public class ClickhouseDataSource extends GenericDataSource {
             }
             return null;
         }
+    }
+
+    @Override
+    protected boolean isConnectionReadOnlyBroken() {
+        return isDriverVersionAtLeast(0, 8);
+    }
+
+    @Override
+    protected Connection openConnection(@NotNull DBRProgressMonitor monitor, @Nullable JDBCExecutionContext context, @NotNull String purpose) throws DBCException {
+        Connection connection = super.openConnection(monitor, context, purpose);
+
+        if (getContainer().isConnectionReadOnly() && isConnectionReadOnlyBroken()) {
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("SET readonly=1");
+            } catch (SQLException e) {
+                log.error("Failed to set readonly mode", e);
+            }
+        }
+
+        return connection;
     }
 }

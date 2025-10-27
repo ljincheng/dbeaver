@@ -49,10 +49,7 @@ import org.jkiss.dbeaver.ui.dialogs.IWizardPageNavigable;
 import org.jkiss.dbeaver.ui.dialogs.MultiPageWizardDialog;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Task configuration wizard dialog
@@ -110,11 +107,11 @@ public class TaskConfigurationWizardDialog extends MultiPageWizardDialog {
 
     @NotNull
     @Override
-    protected EnumSet<PageCompletionMark> getShownCompletionMarks() {
+    protected Set<PageCompletionMark> getShownCompletionMarks() {
         if (getWizard().isCurrentTaskSaved()) {
             return EnumSet.noneOf(PageCompletionMark.class);
         } else {
-            return EnumSet.of(PageCompletionMark.COMPLETE, PageCompletionMark.CURRENT);
+            return EnumSet.of(PageCompletionMark.COMPLETE);
         }
     }
 
@@ -141,7 +138,7 @@ public class TaskConfigurationWizardDialog extends MultiPageWizardDialog {
     @Override
     protected void createBottomLeftArea(Composite pane) {
         // Task management controls
-        getWizard().createTaskSaveButtons(pane, true, 1);
+        getWizard().createTaskActions(pane, 1);
     }
 
     @Override
@@ -188,7 +185,7 @@ public class TaskConfigurationWizardDialog extends MultiPageWizardDialog {
         if (button != null) {
             button.setEnabled(false);
         }
-        getWizard().updateSaveTaskButton(false);
+        getWizard().enableTaskButtons(false);
         super.disableButtonsOnProgress();
     }
 
@@ -198,7 +195,7 @@ public class TaskConfigurationWizardDialog extends MultiPageWizardDialog {
         if (button != null) {
             button.setEnabled(true);
         }
-        getWizard().updateSaveTaskButton(true);
+        getWizard().enableTaskButtons(true);
         super.enableButtonsAfterProgress();
     }
 
@@ -245,7 +242,7 @@ public class TaskConfigurationWizardDialog extends MultiPageWizardDialog {
     @Override
     public void updateButtons() {
         super.updateButtons();
-        getWizard().updateSaveTaskButtons();
+        getWizard().updateTaskButtons();
         if (getTaskWizard().canFinish()) {
             Button finishButton = getButton(IDialogConstants.OK_ID);
             if (finishButton != null && !finishButton.isDisposed()) {

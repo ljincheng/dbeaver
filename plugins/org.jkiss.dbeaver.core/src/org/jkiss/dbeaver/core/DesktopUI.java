@@ -54,6 +54,7 @@ import org.jkiss.dbeaver.model.runtime.load.ILoadVisualizer;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.runtime.DBeaverNotifications;
+import org.jkiss.dbeaver.runtime.ui.DBPPlatformUI;
 import org.jkiss.dbeaver.runtime.ui.console.ConsoleUserInterface;
 import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.actions.datasource.DataSourceInvalidateHandler;
@@ -91,10 +92,10 @@ public class DesktopUI extends ConsoleUserInterface {
     }
 
     static void disposeUI() {
-        DesktopUI instance = getInstance();
-        if (instance != null) {
+        DBPPlatformUI platformUI = DBWorkbench.getPlatformUI();
+        if (platformUI instanceof DesktopUI desktopUI) {
             try {
-                instance.dispose();
+                desktopUI.dispose();
             } catch (Throwable e) {
                 log.error(e);
             }
@@ -427,6 +428,7 @@ public class DesktopUI extends ConsoleUserInterface {
         }.execute();
     }
 
+    @Nullable
     @Override
     public DBAPasswordChangeInfo promptUserPasswordChange(String prompt, String userName, String oldPassword, boolean userEditable, boolean oldPasswordVisible) {
         // Ask user
@@ -526,7 +528,7 @@ public class DesktopUI extends ConsoleUserInterface {
 
     @Override
     public void executeWithProgress(@NotNull Runnable runnable) {
-        UIExecutionQueue.queueExec(runnable);
+        UIUtils.syncExec(runnable);
     }
 
     @Override
@@ -729,5 +731,4 @@ public class DesktopUI extends ConsoleUserInterface {
             return 800; // see org.eclipse.ui.internal.progress.ProgressManager.getLongOperationTime()
         }
     }
-
 }
