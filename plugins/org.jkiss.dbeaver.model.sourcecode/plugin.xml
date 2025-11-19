@@ -105,13 +105,13 @@
         <key commandId="org.jkiss.dbeaver.sourcecode.template.save" contextId="org.jkiss.dbeaver.ui.context.resultset" schemeId="org.eclipse.ui.defaultAcceleratorConfiguration" sequence="CTRL+S"/>
       </extension>
      <extension point="org.eclipse.ui.commandImages">
-     	<image commandId="org.jkiss.dbeaver.sourcecode.saveCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/save.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.copyCode" icon="platform:/plugin/org.jkiss.dbeaver.ui.app.standalone/icons/eclipse/copy.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.refreshCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.exportCode" icon="platform:/plugin/org.jkiss.dbeaver.ui.app.standalone/icons/eclipse/export.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.saveCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/save.svg"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.copyCode" icon="platform:/plugin/org.jkiss.dbeaver.ui.app.standalone/icons/eclipse/copy.svg"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.refreshCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.svg"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.exportCode" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/file/export.svg"/>
      	<image commandId="org.jkiss.dbeaver.sourcecode.newAdd" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/add.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.delete" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/delete.png"/>
-     	<image commandId="org.jkiss.dbeaver.sourcecode.template.save" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.png"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.delete" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/delete.svg"/>
+     	<image commandId="org.jkiss.dbeaver.sourcecode.template.save" icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/resultset_refresh.svg"/>
      </extension>
      
       <extension point="org.eclipse.ui.commands">

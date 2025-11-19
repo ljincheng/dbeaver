@@ -38,7 +38,8 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSProcedure;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTable;
 import org.jkiss.dbeaver.runtime.DBWorkbench;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
-import org.jkiss.dbeaver.ui.UIIcon;
+//import org.jkiss.dbeaver.ui.UIIcon;
+import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.resultset.IResultSetController;
 import org.jkiss.dbeaver.ui.controls.resultset.IResultSetSelection;
@@ -134,7 +135,7 @@ public class GeneratorSourceCodeContributor  extends CompoundContributionItem {
 
     private static ContributionItem makeAction(String text, SourceCodeGeneratorDescriptor sqlGenerator, List<?> objects) {
         return new ActionContributionItem(
-            new Action(text, DBeaverIcons.getImageDescriptor(UIIcon.SQL_TEXT)) {
+            new Action(text, DBeaverIcons.getImageDescriptor(DBIcon.SQL_TEXT)) {
                 @Override
                 public void run() {
                     IWorkbenchPage activePage = UIUtils.getActiveWorkbenchWindow().getActivePage();

@@ -45,7 +45,7 @@ import org.jkiss.dbeaver.ui.UIIcon;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.CustomTableEditor;
 import org.jkiss.dbeaver.ui.css.CSSUtils;
-import org.jkiss.dbeaver.ui.css.DBStyles;
+//import org.jkiss.dbeaver.ui.css.DBStyles;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.dbeaver.ui.editors.sql.dialogs.ViewSQLDialog;
 import org.jkiss.utils.CommonUtils;
@@ -221,7 +221,8 @@ public class TemplatePanel implements UIEventNotifier,UIActionEvent,ContentListe
         Composite statusBar = new Composite(statusComposite, SWT.NONE);
         statusBar.setBackgroundMode(SWT.INHERIT_FORCE);
         statusBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        CSSUtils.setCSSClass(statusBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+        //CSSUtils.setCSSClass(statusBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+        CSSUtils.setCSSClass(statusBar, CSSUtils.COLORED_BY_CONNECTION_TYPE);
         RowLayout toolbarsLayout = new RowLayout(SWT.HORIZONTAL);
         toolbarsLayout.marginTop = 0;
         toolbarsLayout.marginBottom = 0;
@@ -237,7 +238,8 @@ public class TemplatePanel implements UIEventNotifier,UIActionEvent,ContentListe
        	 	editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_NEWADD,"New add",null,"Add new Template",false));
        	 	editToolBarManager.add(ActionUtils.makeCommandContribution(site, EntityCodeViewHandler.CODE_DELETE,"Delete",null,"Delete Template",false));
    			ToolBar editorToolBar = editToolBarManager.createControl(statusBar);
-	        CSSUtils.setCSSClass(editorToolBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	        //CSSUtils.setCSSClass(editorToolBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	        CSSUtils.setCSSClass(editorToolBar, CSSUtils.COLORED_BY_CONNECTION_TYPE);
        }
 	}
 	

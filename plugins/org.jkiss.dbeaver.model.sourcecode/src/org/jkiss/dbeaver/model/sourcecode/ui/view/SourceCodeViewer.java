@@ -51,7 +51,7 @@ import org.jkiss.dbeaver.ui.controls.VerticalButton;
 import org.jkiss.dbeaver.ui.controls.VerticalFolder;
 import org.jkiss.dbeaver.ui.controls.resultset.handler.ResultSetHandlerTogglePanel;
 import org.jkiss.dbeaver.ui.css.CSSUtils;
-import org.jkiss.dbeaver.ui.css.DBStyles;
+//import org.jkiss.dbeaver.ui.css.DBStyles;
 import org.jkiss.utils.CommonUtils;
 
 public final class SourceCodeViewer extends AbstractViewerNotifierContext implements SelectionListener{
@@ -100,14 +100,16 @@ public final class SourceCodeViewer extends AbstractViewerNotifierContext implem
 		this.viewerPanel = UIUtils.createPlaceholder(mainPanel, 1);
 		this.viewerPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
 //		this.viewerPanel.setData(CONTROL_ID, this);
-		CSSUtils.setCSSClass(this.viewerPanel, DBStyles.COLORED_BY_CONNECTION_TYPE);
+		//CSSUtils.setCSSClass(this.viewerPanel, DBStyles.COLORED_BY_CONNECTION_TYPE);
+		CSSUtils.setCSSClass(this.viewerPanel, CSSUtils.COLORED_BY_CONNECTION_TYPE);
 		UIUtils.setHelp(this.viewerPanel, IHelpContextIds.CTX_RESULT_SET_VIEWER);
 	    //this.viewerPanel.setRedraw(false);
 
 		//右边板面的选择卡
 		this.panelSwitchFolder = new VerticalFolder(mainPanel, SWT.RIGHT);
 		this.panelSwitchFolder.setLayoutData(new GridData(GridData.FILL_VERTICAL));
-		CSSUtils.setCSSClass(this.panelSwitchFolder, DBStyles.COLORED_BY_CONNECTION_TYPE);
+		//CSSUtils.setCSSClass(this.panelSwitchFolder, DBStyles.COLORED_BY_CONNECTION_TYPE);
+		CSSUtils.setCSSClass(this.panelSwitchFolder, CSSUtils.COLORED_BY_CONNECTION_TYPE);
 
 		// 分组控件
 		this.viewerSash = UIUtils.createPartDivider(site.getPart(), this.viewerPanel, SWT.HORIZONTAL | SWT.SMOOTH);
@@ -156,7 +158,8 @@ public final class SourceCodeViewer extends AbstractViewerNotifierContext implem
 	public void init_pannels()
 	{
 		 this.panelFolder = new CTabFolder(this.viewerSash, SWT.FLAT | SWT.TOP);
-         CSSUtils.setCSSClass(panelFolder, DBStyles.COLORED_BY_CONNECTION_TYPE);
+         //CSSUtils.setCSSClass(panelFolder, DBStyles.COLORED_BY_CONNECTION_TYPE);
+         CSSUtils.setCSSClass(panelFolder, CSSUtils.COLORED_BY_CONNECTION_TYPE);
 //			new TabFolderReorder(panelFolder);
 			this.panelFolder.marginWidth = 0;
 			this.panelFolder.marginHeight = 0;
@@ -246,7 +249,8 @@ public final class SourceCodeViewer extends AbstractViewerNotifierContext implem
 	        statusBar = new Composite(statusComposite, SWT.NONE);
 	        statusBar.setBackgroundMode(SWT.INHERIT_FORCE);
 	        statusBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-	        CSSUtils.setCSSClass(statusBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	        //CSSUtils.setCSSClass(statusBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	        CSSUtils.setCSSClass(statusBar, CSSUtils.COLORED_BY_CONNECTION_TYPE);
 	        RowLayout toolbarsLayout = new RowLayout(SWT.HORIZONTAL);
 	        toolbarsLayout.marginTop = 0;
 	        toolbarsLayout.marginBottom = 0;
@@ -265,7 +269,8 @@ public final class SourceCodeViewer extends AbstractViewerNotifierContext implem
 	        	 
 	    			
 	    			 ToolBar editorToolBar = editToolBarManager.createControl(statusBar);
-	 	            CSSUtils.setCSSClass(editorToolBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	 	            //CSSUtils.setCSSClass(editorToolBar, DBStyles.COLORED_BY_CONNECTION_TYPE);
+	 	             CSSUtils.setCSSClass(editorToolBar, CSSUtils.COLORED_BY_CONNECTION_TYPE);
 
 
 	        }

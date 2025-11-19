@@ -5,7 +5,7 @@ Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: org.jkiss.dbeaver.model.sourcecode;singleton:=true
 Bundle-Version: 1.0.132.qualifier
 Bundle-Release-Date: 20201019
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-RequiredExecutionEnvironment: JavaSE-21
 Bundle-ActivationPolicy: lazy
 Bundle-Activator: org.jkiss.dbeaver.model.sourcecode.internal.SourceCodeActivator
 Export-Package: org.jkiss.dbeaver.model.sourcecode,
