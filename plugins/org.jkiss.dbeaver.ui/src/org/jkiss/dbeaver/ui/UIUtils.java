@@ -1884,8 +1884,7 @@ public class UIUtils {
      * Runs task in Eclipse progress service.
      * NOTE: this call can't be canceled if it will block in IO
      */
-    public static void runInProgressService(final DBRRunnableWithProgress runnable)
-    throws InvocationTargetException, InterruptedException {
+    public static void runInProgressService(final DBRRunnableWithProgress runnable) throws InvocationTargetException, InterruptedException {
         getDefaultRunnableContext().run(true, true, runnable);
     }
 
@@ -1979,6 +1978,7 @@ public class UIUtils {
         runInUI(context, runnable);
     }
 
+    @NotNull
     public static Display getDisplay() {
         try {
             return PlatformUI.getWorkbench().getDisplay();
@@ -2472,7 +2472,7 @@ public class UIUtils {
     }
 
     public static void populateToolItemCommandIds(ToolBarManager toolbarManager) {
-        // used for accessibility automation, see dbeaver-qa-auto
+        // used for accessibility automation, see qa-auto-dbeaver
         ToolBar toolBar = toolbarManager.getControl();
         if (toolBar == null || toolBar.isDisposed()) {
             return;
