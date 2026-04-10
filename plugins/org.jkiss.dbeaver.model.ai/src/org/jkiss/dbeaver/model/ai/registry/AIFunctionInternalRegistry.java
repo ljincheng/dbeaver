@@ -21,7 +21,6 @@ import org.eclipse.core.runtime.Platform;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.ai.*;
 
 import java.util.LinkedHashMap;
@@ -33,17 +32,14 @@ import java.util.Map;
  */
 public class AIFunctionInternalRegistry {
 
-    private static final Log log = Log.getLog(AIFunctionInternalRegistry.class);
-    private static AIFunctionInternalRegistry instance;
-
     private final Map<String, AIFunctionDescriptor> functionsById = new LinkedHashMap<>();
 
-    public AIFunctionInternalRegistry(@NotNull AIAgentInternalDescriptor agentDescriptor) {
+    public AIFunctionInternalRegistry(@NotNull AIToolboxInternalDescriptor toolbox) {
         IConfigurationElement[] extElements = Platform.getExtensionRegistry()
             .getConfigurationElementsFor(AIFunctionInternalDescriptor.EXTENSION_ID);
         for (IConfigurationElement ext : extElements) {
             if ("function".equals(ext.getName())) {
-                AIFunctionInternalDescriptor fd = new AIFunctionInternalDescriptor(agentDescriptor, ext);
+                AIFunctionInternalDescriptor fd = new AIFunctionInternalDescriptor(toolbox, ext);
                 functionsById.put(fd.getId(), fd);
             }
         }
@@ -70,7 +66,7 @@ public class AIFunctionInternalRegistry {
         @NotNull AIFunctionDescriptor descriptor,
         @NotNull Map<String, Object> arguments
     ) throws DBException {
-        AIFunction function = descriptor.createInstance();
+        AIFunction function = descriptor.getInstance();
         return function.callFunction(context, arguments);
     }
 }
